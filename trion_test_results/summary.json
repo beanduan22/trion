@@ -1,0 +1,128 @@
+{
+  "num_generated": 20,
+  "num_bugs": 10,
+  "num_crashes": 3,
+  "avg_score": 0.900943853240068,
+  "top_patterns": [
+    {
+      "category": "normalization",
+      "name": "instancenorm_relu",
+      "avg_reward": 0.49999999833333336,
+      "count": 3
+    },
+    {
+      "category": "broadcast",
+      "name": "exp_div_softplus",
+      "avg_reward": 0.4999999975,
+      "count": 2
+    },
+    {
+      "category": "broadcast",
+      "name": "mul_add_relu",
+      "avg_reward": 0.4999999975,
+      "count": 2
+    },
+    {
+      "category": "broadcast",
+      "name": "swish",
+      "avg_reward": 0.4999999975,
+      "count": 2
+    },
+    {
+      "category": "branch",
+      "name": "conv_branch_add",
+      "avg_reward": 0.4999999975,
+      "count": 2
+    },
+    {
+      "category": "branch",
+      "name": "dual_pool_add",
+      "avg_reward": 0.4999999975,
+      "count": 2
+    },
+    {
+      "category": "fusion",
+      "name": "conv_bn_relu",
+      "avg_reward": 0.4999999950000001,
+      "count": 1
+    },
+    {
+      "category": "fusion",
+      "name": "conv_bn_relu_maxpool",
+      "avg_reward": 0.4999999950000001,
+      "count": 1
+    },
+    {
+      "category": "layout",
+      "name": "channel_shuffle",
+      "avg_reward": 0.4999999950000001,
+      "count": 1
+    },
+    {
+      "category": "layout",
+      "name": "pad_conv",
+      "avg_reward": 0.4999999950000001,
+      "count": 1
+    },
+    {
+      "category": "broadcast",
+      "name": "reciprocal_mul",
+      "avg_reward": 0.4999999950000001,
+      "count": 1
+    },
+    {
+      "category": "broadcast",
+      "name": "sqrt_div_rms",
+      "avg_reward": 0.4999999950000001,
+      "count": 1
+    },
+    {
+      "category": "fusion",
+      "name": "depthwise_conv_bn_relu",
+      "avg_reward": 0.3761764917725285,
+      "count": 4
+    },
+    {
+      "category": "fusion",
+      "name": "matmul_bias_gelu",
+      "avg_reward": 0.3333377640050279,
+      "count": 3
+    },
+    {
+      "category": "normalization",
+      "name": "layernorm_residual_add",
+      "avg_reward": 0.3333377640050279,
+      "count": 3
+    },
+    {
+      "category": "constant",
+      "name": "pow_canonical",
+      "avg_reward": 0.249999999375,
+      "count": 4
+    },
+    {
+      "category": "fusion",
+      "name": "gap_linear",
+      "avg_reward": 0.24999999875,
+      "count": 2
+    },
+    {
+      "category": "layout",
+      "name": "flatten_unsqueeze_concat",
+      "avg_reward": 0.24999999875,
+      "count": 2
+    },
+    {
+      "category": "layout",
+      "name": "squeeze_unsqueeze",
+      "avg_reward": 0.24999999875,
+      "count": 2
+    },
+    {
+      "category": "constant",
+      "name": "div_by_constant",
+      "avg_reward": 0.24999999875,
+      "count": 2
+    }
+  ]
+}

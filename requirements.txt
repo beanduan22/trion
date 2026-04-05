@@ -1,0 +1,21 @@
+# Core (required)
+numpy>=1.24
+onnx>=1.14
+onnxruntime>=1.16         # reference + ORT target backend
+
+# PyTorch eager reference (recommended)
+torch>=2.0
+onnx2torch>=1.5           # ONNX → PyTorch conversion
+
+# TVM target backend (optional)
+# Install from source: https://tvm.apache.org/docs/install/
+# apache-tvm>=0.14
+
+# TensorRT target backend (optional)
+# Requires CUDA + TensorRT SDK
+# tensorrt>=8.6
+# pycuda>=2022.2
+
+# XLA target backend via TensorFlow (optional)
+# tensorflow>=2.13
+# onnx-tf>=1.10
