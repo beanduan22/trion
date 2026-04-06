@@ -1,31 +1,107 @@
 {
   "campaign": "v6",
-  "total_bugs": 202,
+  "verified_bugs": 195,
+  "removed_duplicates": [
+    "bug_0043",
+    "bug_0047",
+    "bug_0175",
+    "bug_0180",
+    "bug_0181",
+    "bug_0182",
+    "bug_0195"
+  ],
+  "false_positives": 0,
+  "bug_types": {
+    "crash+discrepancy": 4,
+    "discrepancy": 184,
+    "crash": 7
+  },
   "score_stats": {
     "min": 0.0505,
     "max": 12.0,
-    "mean": 1.6395
+    "mean": 1.6522
   },
   "bugs_by_compiler": {
-    "torch_compile": 121,
-    "tflite": 58,
+    "torch_compile": 119,
+    "tflite": 54,
     "openvino": 37,
     "onnxruntime": 21,
     "tvm": 15,
     "xla": 15,
-    "tensorflow": 13,
-    "torchscript": 11,
+    "tensorflow": 12,
+    "torchscript": 9,
     "pytorch_eager": 2
   },
-  "bugs_by_class": {
-    "torch_compile": 102,
-    "tflite": 58,
-    "onnxruntime": 15,
+  "crash_counts_by_compiler": {
+    "tflite": 16,
+    "xla": 12,
+    "tvm": 12,
+    "tensorflow": 11,
+    "torch_compile": 9,
+    "torchscript": 8,
+    "onnxruntime": 6,
+    "openvino": 4,
+    "pytorch_eager": 2
+  },
+  "discrepancy_counts_by_compiler": {
+    "torch_compile": 115,
+    "tflite": 46,
+    "openvino": 35,
+    "onnxruntime": 18,
     "xla": 9,
-    "openvino": 8,
-    "tensorflow": 6,
-    "torchscript": 3,
-    "tvm": 1
+    "tvm": 9,
+    "tensorflow": 7,
+    "torchscript": 5
+  },
+  "unique_crash_categories": {
+    "tflite/other_crash": 16,
+    "tensorflow/tensorflow_tflite_user_code_error": 8,
+    "tflite/tensorflow_tflite_user_code_error": 8,
+    "tensorflow/other_crash": 8,
+    "openvino/other_crash": 6,
+    "onnxruntime/onnxruntime_shape_inference_error": 4,
+    "torchscript/other_crash": 4,
+    "openvino/openvino_frontend_parse_error": 4,
+    "xla/shape_broadcast_mismatch": 4,
+    "tvm/shape_broadcast_mismatch": 4,
+    "torch_compile/other_crash": 3,
+    "xla/concat_shape_mismatch": 2,
+    "tvm/concat_shape_mismatch": 2,
+    "xla/grouped_conv_shape_error": 2,
+    "tvm/grouped_conv_shape_error": 2,
+    "tflite/tflite_conv_transpose_not_supported": 2,
+    "pytorch_eager/onnxruntime_shape_inference_error": 2,
+    "tensorflow/tensorflow_padding_type_error": 2,
+    "tflite/tensorflow_padding_type_error": 2,
+    "tflite/tflite_maxpool_not_supported": 2,
+    "onnxruntime/onnxruntime_slice_shape_error": 2,
+    "torchscript/padding_size_error": 2,
+    "torch_compile/padding_size_error": 2,
+    "xla/padding_size_error": 2,
+    "tvm/padding_size_error": 2,
+    "torchscript/depth_to_space_unimplemented": 2,
+    "torch_compile/depth_to_space_unimplemented": 2,
+    "xla/depth_to_space_unimplemented": 2,
+    "tvm/depth_to_space_unimplemented": 2,
+    "tflite/tflite_extract_patches_not_supported": 2,
+    "tensorflow/xla_unsupported_op": 1
+  },
+  "crash_category_examples": {
+    "concat_shape_mismatch": "bug_0000",
+    "tensorflow_tflite_user_code_error": "bug_0000",
+    "grouped_conv_shape_error": "bug_0009",
+    "tflite_conv_transpose_not_supported": "bug_0009",
+    "onnxruntime_shape_inference_error": "bug_0013",
+    "other_crash": "bug_0013",
+    "tensorflow_padding_type_error": "bug_0013",
+    "openvino_frontend_parse_error": "bug_0013",
+    "xla_unsupported_op": "bug_0017",
+    "tflite_maxpool_not_supported": "bug_0017",
+    "shape_broadcast_mismatch": "bug_0023",
+    "onnxruntime_slice_shape_error": "bug_0035",
+    "padding_size_error": "bug_0079",
+    "depth_to_space_unimplemented": "bug_0152",
+    "tflite_extract_patches_not_supported": "bug_0166"
   },
   "top_patterns": {
     "cast_roundtrip": 55,
@@ -34,7 +110,7 @@
     "add_layernorm": 27,
     "floor_ceil_round": 23,
     "variance_whitening": 21,
-    "div_by_constant": 21,
+    "div_by_constant": 20,
     "log_clamp": 19,
     "sqrt_reciprocal_mul": 19,
     "aspp_dilated_branch": 18,
@@ -47,12 +123,12 @@
     "swish": 14,
     "l2_normalize": 14,
     "dilated_conv_bn_relu": 14,
-    "sub_mul_add": 14
+    "spatial_reduce_mean": 14
   },
   "pattern_library": {
-    "total_patterns": 124,
+    "total": 124,
     "categories": {
-      "fusion": 24,
+      "fusion": 13,
       "layout": 20,
       "broadcast": 18,
       "normalization": 18,
@@ -62,18 +138,18 @@
     }
   },
   "fuzzing_config": {
-    "num_models_generated": 1000,
-    "pattern_budget_per_model": 6,
-    "tolerance_threshold": 0.01,
-    "bug_score_threshold": 0.1,
-    "num_input_mutations": 3,
-    "reference_backend": "pytorch_eager",
-    "target_backends": [
+    "num_models": 1000,
+    "pattern_budget": 6,
+    "tolerance": 0.01,
+    "bug_score_threshold": 0.05,
+    "num_mutations": 3,
+    "reference": "pytorch_eager",
+    "backends": [
       "onnxruntime",
       "torchscript",
       "torch_compile",
-      "xla",
       "tvm",
+      "xla",
       "tensorflow",
       "tflite",
       "openvino"

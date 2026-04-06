@@ -100,22 +100,48 @@ Transformer attention variants that stress compiler fusion and tiling:
 
 ---
 
-## Campaign Results — v6
+## Campaign Results — v6 (Verified)
 
-**1000 models generated**, **8 backends tested**, **202 confirmed bugs found**.
+**1000 models generated**, **8 backends tested**, **195 verified bugs** (7 duplicate crash bugs removed, 0 false positives).
+
+### Bug Types
+
+| Type | Count | Description |
+|---|---|---|
+| Discrepancy-only | 184 | Numerical output diverges from PyTorch eager reference |
+| Crash-only | 7 | Backend crashes with no numerical output |
+| Crash + Discrepancy | 4 | Both crash and numerical divergence observed |
 
 ### Bugs by Compiler
 
-| Compiler | Bugs | % of total |
+| Compiler | Total Bugs | Crashes | Discrepancies |
+|---|---|---|---|
+| torch.compile | 119 | 9 | 115 |
+| TFLite | 54 | 16 | 46 |
+| OpenVINO | 37 | 4 | 35 |
+| ONNXRuntime | 21 | 6 | 18 |
+| TVM | 15 | 12 | 9 |
+| XLA | 15 | 12 | 9 |
+| TensorFlow | 12 | 11 | 7 |
+| TorchScript | 9 | 8 | 5 |
+
+### Unique Crash Categories
+
+| Category | Backends | Example Bug |
 |---|---|---|
-| torch.compile | 121 | 59.9% |
-| TFLite | 58 | 28.7% |
-| OpenVINO | 37 | 18.3% |
-| ONNXRuntime | 21 | 10.4% |
-| TVM | 15 | 7.4% |
-| XLA | 15 | 7.4% |
-| TensorFlow | 13 | 6.4% |
-| TorchScript | 11 | 5.4% |
+| `padding_size_error` | torch_compile, torchscript, tvm, xla | bug_0079 |
+| `depth_to_space_unimplemented` | torch_compile, torchscript, tvm, xla | bug_0152 |
+| `shape_broadcast_mismatch` | tvm, xla | bug_0023 |
+| `grouped_conv_shape_error` | tvm, xla | bug_0009 |
+| `concat_shape_mismatch` | tvm, xla | bug_0000 |
+| `onnxruntime_shape_inference_error` | onnxruntime | bug_0013 |
+| `onnxruntime_slice_shape_error` | onnxruntime | bug_0035 |
+| `openvino_frontend_parse_error` | openvino | bug_0013 |
+| `tflite_maxpool_not_supported` | tflite | bug_0017 |
+| `tflite_conv_transpose_not_supported` | tflite | bug_0009 |
+| `tflite_extract_patches_not_supported` | tflite | bug_0166 |
+| `tensorflow_padding_type_error` | tensorflow, tflite | bug_0013 |
+| `xla_unsupported_op` | tensorflow/xla | bug_0017 |
 
 ### Score Distribution
 
@@ -123,9 +149,9 @@ Transformer attention variants that stress compiler fusion and tiling:
 |---|---|
 | Min score | 0.0505 |
 | Max score | 12.0000 |
-| Mean score | 1.6395 |
+| Mean score | 1.6522 |
 
-Score = sum of relative L2 discrepancies across all backends, weighted by crash severity.
+Score = sum of relative L2 discrepancies across all backends + optimization-induced divergence (Δ_opt). Crashes are tracked separately and do not inflate scores.
 
 ### Top Bug-Triggering Patterns
 
@@ -137,7 +163,7 @@ Score = sum of relative L2 discrepancies across all backends, weighted by crash 
 | add_layernorm | 27 |
 | floor_ceil_round | 23 |
 | variance_whitening | 21 |
-| div_by_constant | 21 |
+| div_by_constant | 20 |
 | log_clamp | 19 |
 | sqrt_reciprocal_mul | 19 |
 | aspp_dilated_branch | 18 |
