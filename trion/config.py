@@ -44,5 +44,6 @@ class TrionConfig:
     # ── Output ────────────────────────────────────────────────────────────────
     output_dir: str = "trion_results"
     save_bugs: bool = True
+    save_all: bool = False       # save every model, not just bugs
     verbose: bool = True
     bug_score_threshold: float = 0.1   # score above which we log a "bug"

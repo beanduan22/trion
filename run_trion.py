@@ -38,6 +38,8 @@ def parse_args():
     p.add_argument("--tvm-opt-level",  type=int,   default=3)
     p.add_argument("--fp16",           action="store_true")
     p.add_argument("--no-save",        action="store_true")
+    p.add_argument("--save-all",       action="store_true",
+                   help="Save every generated model, not just bugs")
     p.add_argument("--quiet",          action="store_true")
     p.add_argument("--bug-threshold",  type=float, default=0.05)
     return p.parse_args()
@@ -57,6 +59,7 @@ def main():
         tvm_opt_level       = args.tvm_opt_level,
         tensorrt_fp16       = args.fp16,
         save_bugs           = not args.no_save,
+        save_all            = args.save_all,
         verbose             = not args.quiet,
         bug_score_threshold = args.bug_threshold,
     )

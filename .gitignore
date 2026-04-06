@@ -10,3 +10,4 @@ trion_results*/
 *.onnx
 !bugs/*.onnx
 !trion_bugs_v4/*.onnx
+bugs/bug_0110.onnx

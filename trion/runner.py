@@ -180,7 +180,13 @@ class TrionRunner:
         )
 
         # 6. Log / save bugs
-        if score >= cfg.bug_score_threshold:
+        if cfg.save_all and cfg.save_bugs:
+            # Save every model regardless of score
+            self._save_bug(gen_model, best_report, model_id)
+            if score >= cfg.bug_score_threshold:
+                self._n_bugs += 1
+
+        elif score >= cfg.bug_score_threshold:
             self._n_bugs += 1
             if cfg.verbose:
                 logger.info(
