@@ -1,0 +1,73 @@
+{
+  "bug_id": "bug_0000",
+  "sig": "76b1a23fb3c1",
+  "compiler_class": "tflite",
+  "affected_compilers": [
+    "tensorflow",
+    "tflite",
+    "torch_compile",
+    "tvm",
+    "xla"
+  ],
+  "total_score": 6.0,
+  "input_shape": [
+    1,
+    3,
+    32,
+    32
+  ],
+  "pattern_sequence": [
+    [
+      "layout",
+      "dilated_max_pool"
+    ],
+    [
+      "branch",
+      "concat_conv"
+    ],
+    [
+      "broadcast",
+      "hard_clamp_norm"
+    ],
+    [
+      "fusion",
+      "depthwise_conv_bn_relu"
+    ],
+    [
+      "layout",
+      "reshape_batched_matmul"
+    ],
+    [
+      "layout",
+      "gather_reshape"
+    ]
+  ],
+  "delta_opt": {
+    "torch_compile": 1.0,
+    "xla": 0.0,
+    "tvm": 0.0,
+    "tensorflow": 0.0,
+    "tflite": 0.0
+  },
+  "crashes": [
+    "torch_compile+opt",
+    "xla+opt",
+    "xla-opt",
+    "tvm+opt",
+    "tvm-opt",
+    "tensorflow+opt",
+    "tensorflow-opt",
+    "tflite+opt",
+    "tflite-opt"
+  ],
+  "errors": {
+    "xla+opt": "Cannot concatenate arrays with shapes that differ in dimensions other than the one being concatenated: concatenating along dimension 1 for shapes (1, 3, 32, 32), (1, 64, 30, 30).",
+    "xla-opt": "Cannot concatenate arrays with shapes that differ in dimensions other than the one being concatenated: concatenating along dimension 1 for shapes (1, 3, 32, 32), (1, 64, 30, 30).",
+    "tvm+opt": "Cannot concatenate arrays with shapes that differ in dimensions other than the one being concatenated: concatenating along dimension 1 for shapes (1, 3, 32, 32), (1, 64, 30, 30).",
+    "tvm-opt": "Cannot concatenate arrays with shapes that differ in dimensions other than the one being concatenated: concatenating along dimension 1 for shapes (1, 3, 32, 32), (1, 64, 30, 30).",
+    "tensorflow+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 242, in dispatch_op  *\n        return [F.concatenate(tensors, axis=axis)]\n\n    ValueError: Dimension 0 in both shapes must be equal, but are 32 and 30. Shapes are [32,32] and [30,30]. for '{{node concat}} = ConcatV2[N=2, T=DT_FLOAT, Tidx=DT_INT32](Identity, Identity_1, concat/axis)' with input shapes: [1,3,32,32], [1,64,30,30], [] and with computed input tensors: input[2] = <1>.\n",
+    "tensorflow-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 242, in dispatch_op  *\n        return [F.concatenate(tensors, axis=axis)]\n\n    ValueError: Dimension 0 in both shapes must be equal, but are 32 and 30. Shapes are [32,32] and [30,30]. for '{{node concat}} = ConcatV2[N=2, T=DT_FLOAT, Tidx=DT_INT32](Identity, Identity_1, concat/axis)' with input shapes: [1,3,32,32], [1,64,30,30], [] and with computed input tensors: input[2] = <1>.\n",
+    "tflite+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 242, in dispatch_op  *\n        return [F.concatenate(tensors, axis=axis)]\n\n    ValueError: Dimension 0 in both shapes must be equal, but are 32 and 30. Shapes are [32,32] and [30,30]. for '{{node concat}} = ConcatV2[N=2, T=DT_FLOAT, Tidx=DT_INT32](Identity, Identity_1, concat/axis)' with input shapes: [1,3,32,32], [1,64,30,30], [] and with computed input tensors: input[2] = <1>.\n",
+    "tflite-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 242, in dispatch_op  *\n        return [F.concatenate(tensors, axis=axis)]\n\n    ValueError: Dimension 0 in both shapes must be equal, but are 32 and 30. Shapes are [32,32] and [30,30]. for '{{node concat}} = ConcatV2[N=2, T=DT_FLOAT, Tidx=DT_INT32](Identity, Identity_1, concat/axis)' with input shapes: [1,3,32,32], [1,64,30,30], [] and with computed input tensors: input[2] = <1>.\n"
+  }
+}

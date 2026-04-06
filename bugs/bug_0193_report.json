@@ -1,0 +1,46 @@
+{
+  "compiler_class": "tflite",
+  "affected_compilers": [
+    "tflite"
+  ],
+  "total_score": 0.33858761191368103,
+  "input_shape": [
+    1,
+    16,
+    128
+  ],
+  "pattern_sequence": [
+    [
+      "layout",
+      "squeeze_unsqueeze"
+    ],
+    [
+      "constant",
+      "learned_temperature_scale"
+    ],
+    [
+      "attention",
+      "gated_mlp_block"
+    ],
+    [
+      "broadcast",
+      "reciprocal_mul"
+    ],
+    [
+      "attention",
+      "rotary_embedding_attention"
+    ],
+    [
+      "attention",
+      "multi_head_self_attention"
+    ]
+  ],
+  "delta_opt": {
+    "tflite": 0.33858761191368103
+  },
+  "crashes": [],
+  "errors": {
+    "tflite+opt": "discrepancy rel_diff=0.3386"
+  },
+  "bug_id": "bug_0193"
+}

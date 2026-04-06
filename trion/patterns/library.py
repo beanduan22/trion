@@ -11,6 +11,7 @@ from .broadcast_patterns import ALL_BROADCAST_PATTERNS
 from .normalization_patterns import ALL_NORMALIZATION_PATTERNS
 from .branch_patterns import ALL_BRANCH_PATTERNS
 from .constant_patterns import ALL_CONSTANT_PATTERNS
+from .attention_patterns import ALL_ATTENTION_PATTERNS
 
 
 class OTPLibrary:
@@ -26,6 +27,7 @@ class OTPLibrary:
         "normalization": ALL_NORMALIZATION_PATTERNS,
         "branch":        ALL_BRANCH_PATTERNS,
         "constant":      ALL_CONSTANT_PATTERNS,
+        "attention":     ALL_ATTENTION_PATTERNS,
     }
 
     def __init__(self) -> None:

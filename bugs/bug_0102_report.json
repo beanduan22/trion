@@ -1,0 +1,46 @@
+{
+  "bug_id": "bug_0102",
+  "sig": "eb844e985db7",
+  "compiler_class": "torch_compile",
+  "affected_compilers": [
+    "torch_compile"
+  ],
+  "total_score": 0.12040486510065858,
+  "input_shape": [
+    1,
+    3,
+    32,
+    32
+  ],
+  "pattern_sequence": [
+    [
+      "broadcast",
+      "mul_add_relu"
+    ],
+    [
+      "constant",
+      "constant_add_mul"
+    ],
+    [
+      "layout",
+      "ceil_mode_avg_pool_conv"
+    ],
+    [
+      "broadcast",
+      "cumsum"
+    ],
+    [
+      "fusion",
+      "conv_bn_relu6"
+    ],
+    [
+      "fusion",
+      "dilated_conv_bn_relu"
+    ]
+  ],
+  "delta_opt": {
+    "torch_compile": 0.0585069215446839
+  },
+  "crashes": [],
+  "errors": {}
+}

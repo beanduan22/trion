@@ -1,0 +1,57 @@
+{
+  "bug_id": "bug_0043",
+  "sig": "4d7e3cd62274",
+  "compiler_class": "torchscript",
+  "affected_compilers": [
+    "torch_compile",
+    "torchscript"
+  ],
+  "total_score": 2.0001119328272994,
+  "input_shape": [
+    1,
+    32,
+    16,
+    16
+  ],
+  "pattern_sequence": [
+    [
+      "constant",
+      "div_by_constant"
+    ],
+    [
+      "broadcast",
+      "clipped_affine"
+    ],
+    [
+      "layout",
+      "dilated_max_pool"
+    ],
+    [
+      "normalization",
+      "groupnorm_relu"
+    ],
+    [
+      "branch",
+      "spatial_attention_cbam"
+    ],
+    [
+      "broadcast",
+      "expand_add_mul"
+    ]
+  ],
+  "delta_opt": {
+    "torchscript": 0.0,
+    "torch_compile": 0.0
+  },
+  "crashes": [
+    "torchscript+opt",
+    "torchscript-opt",
+    "torch_compile+opt",
+    "torch_compile-opt"
+  ],
+  "errors": {
+    "torchscript+opt": "pad should be smaller than or equal to half of kernel size, but got padW = 2, padH = 2, kW = 3, kH = 3",
+    "torchscript-opt": "pad should be smaller than or equal to half of kernel size, but got padW = 2, padH = 2, kW = 3, kH = 3",
+    "torch_compile-opt": "pad should be smaller than or equal to half of kernel size, but got padW = 2, padH = 2, kW = 3, kH = 3"
+  }
+}

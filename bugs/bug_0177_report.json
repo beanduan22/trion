@@ -1,0 +1,48 @@
+{
+  "compiler_class": "tensorflow",
+  "affected_compilers": [
+    "tensorflow"
+  ],
+  "total_score": 0.28444337844848633,
+  "input_shape": [
+    1,
+    128,
+    16,
+    16
+  ],
+  "pattern_sequence": [
+    [
+      "normalization",
+      "batchnorm_relu6"
+    ],
+    [
+      "normalization",
+      "ada_layer_norm"
+    ],
+    [
+      "layout",
+      "reflect_pad_conv"
+    ],
+    [
+      "fusion",
+      "conv_bn_relu6"
+    ],
+    [
+      "branch",
+      "channel_gating_branch"
+    ],
+    [
+      "broadcast",
+      "where_mask"
+    ]
+  ],
+  "delta_opt": {
+    "tensorflow": 0.28444337844848633
+  },
+  "crashes": [],
+  "errors": {
+    "tensorflow+opt": "discrepancy rel_diff=0.2844",
+    "tensorflow+noopt": "discrepancy rel_diff=0.2844"
+  },
+  "bug_id": "bug_0177"
+}

@@ -1,0 +1,46 @@
+{
+  "bug_id": "bug_0038",
+  "sig": "c40061bbb95f",
+  "compiler_class": "torch_compile",
+  "affected_compilers": [
+    "torch_compile"
+  ],
+  "total_score": 0.05799800449236624,
+  "input_shape": [
+    1,
+    3,
+    32,
+    32
+  ],
+  "pattern_sequence": [
+    [
+      "normalization",
+      "layernorm_residual_add"
+    ],
+    [
+      "broadcast",
+      "hard_clamp_norm"
+    ],
+    [
+      "normalization",
+      "layernorm_relu"
+    ],
+    [
+      "branch",
+      "add_layernorm"
+    ],
+    [
+      "fusion",
+      "pointwise_dw_block"
+    ],
+    [
+      "normalization",
+      "batchnorm_eval"
+    ]
+  ],
+  "delta_opt": {
+    "torch_compile": 0.05759904139360137
+  },
+  "crashes": [],
+  "errors": {}
+}

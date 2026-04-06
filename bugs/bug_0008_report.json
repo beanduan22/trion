@@ -1,0 +1,46 @@
+{
+  "bug_id": "bug_0008",
+  "sig": "c8167e75177a",
+  "compiler_class": "tflite",
+  "affected_compilers": [
+    "openvino",
+    "tflite"
+  ],
+  "total_score": 4.003687101264125,
+  "input_shape": [
+    1,
+    128
+  ],
+  "pattern_sequence": [
+    [
+      "constant",
+      "where_const_cond"
+    ],
+    [
+      "constant",
+      "identity_chain"
+    ],
+    [
+      "normalization",
+      "layernorm_relu"
+    ],
+    [
+      "fusion",
+      "matmul_bias_tanh"
+    ],
+    [
+      "fusion",
+      "linear_layernorm_gelu"
+    ],
+    [
+      "normalization",
+      "variance_whitening"
+    ]
+  ],
+  "delta_opt": {
+    "tflite": 1.0,
+    "openvino": 1.0
+  },
+  "crashes": [],
+  "errors": {}
+}

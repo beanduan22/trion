@@ -1,0 +1,62 @@
+{
+  "model_id": 7,
+  "total_score": 2.0003813296018835,
+  "s_diff": {
+    "onnxruntime": 3.0412004482197866e-05,
+    "torchscript": 0.0,
+    "torch_compile": 1.0,
+    "xla": 3.8589006420819516e-05,
+    "tvm": 3.8589006420819516e-05,
+    "tensorflow": 3.0412004482197866e-05,
+    "tflite": 3.0412004482197866e-05,
+    "openvino": 3.0412004482197866e-05
+  },
+  "delta_opt": {
+    "onnxruntime": 0.0,
+    "torchscript": 0.0,
+    "torch_compile": 1.0,
+    "xla": 9.12517855562358e-05,
+    "tvm": 9.12517855562358e-05,
+    "tensorflow": 0.0,
+    "tflite": 0.0,
+    "openvino": 0.0
+  },
+  "crashes": [
+    "torch_compile+opt"
+  ],
+  "errors": {
+    "torch_compile+opt": "TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')\n\nfrom user code:\n   File \"/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/reshape.py\", line 23, in torch_dynamo_resume_in__do_reshape_at_20\n    return torch.reshape(input_tensor, torch.Size(shape))\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n"
+  },
+  "pattern_sequence": [
+    [
+      "fusion",
+      "gap_linear"
+    ],
+    [
+      "fusion",
+      "matmul_bias_relu"
+    ],
+    [
+      "constant",
+      "learned_temperature_scale"
+    ],
+    [
+      "layout",
+      "gather_reshape"
+    ],
+    [
+      "layout",
+      "gather_reshape"
+    ],
+    [
+      "normalization",
+      "manual_layernorm"
+    ]
+  ],
+  "input_shape": [
+    1,
+    128,
+    16,
+    16
+  ]
+}

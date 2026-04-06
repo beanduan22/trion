@@ -1,0 +1,58 @@
+{
+  "bug_id": "bug_0047",
+  "sig": "4163498dfb42",
+  "compiler_class": "torchscript",
+  "affected_compilers": [
+    "torch_compile",
+    "torchscript"
+  ],
+  "total_score": 2.0013084953821565,
+  "input_shape": [
+    1,
+    3,
+    32,
+    32
+  ],
+  "pattern_sequence": [
+    [
+      "branch",
+      "multi_scale_conv_branch"
+    ],
+    [
+      "constant",
+      "transpose_inverse_cancel"
+    ],
+    [
+      "fusion",
+      "conv_transpose_bn_relu"
+    ],
+    [
+      "normalization",
+      "batchnorm_relu6"
+    ],
+    [
+      "layout",
+      "depth_to_space_block"
+    ],
+    [
+      "branch",
+      "se_residual"
+    ]
+  ],
+  "delta_opt": {
+    "torchscript": 0.0,
+    "torch_compile": 0.0
+  },
+  "crashes": [
+    "torchscript+opt",
+    "torchscript-opt",
+    "torch_compile+opt",
+    "torch_compile-opt"
+  ],
+  "errors": {
+    "torchscript+opt": "DepthToSpace for mode other than CRD is not implemented",
+    "torchscript-opt": "DepthToSpace for mode other than CRD is not implemented",
+    "torch_compile+opt": "DepthToSpace for mode other than CRD is not implemented",
+    "torch_compile-opt": "DepthToSpace for mode other than CRD is not implemented"
+  }
+}

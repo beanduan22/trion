@@ -1,0 +1,46 @@
+{
+  "compiler_class": "openvino",
+  "affected_compilers": [
+    "openvino"
+  ],
+  "total_score": 0.13260915875434875,
+  "input_shape": [
+    1,
+    32,
+    128
+  ],
+  "pattern_sequence": [
+    [
+      "attention",
+      "multi_query_attention"
+    ],
+    [
+      "constant",
+      "where_const_cond"
+    ],
+    [
+      "constant",
+      "learned_temperature_scale"
+    ],
+    [
+      "broadcast",
+      "floor_ceil_round"
+    ],
+    [
+      "branch",
+      "add_layernorm"
+    ],
+    [
+      "broadcast",
+      "softmax_mul"
+    ]
+  ],
+  "delta_opt": {
+    "openvino": 0.13260915875434875
+  },
+  "crashes": [],
+  "errors": {
+    "openvino+opt": "discrepancy rel_diff=0.1326"
+  },
+  "bug_id": "bug_0196"
+}

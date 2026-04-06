@@ -1,0 +1,47 @@
+{
+  "bug_id": "bug_0135",
+  "sig": "ffefc0a36e41",
+  "compiler_class": "xla",
+  "affected_compilers": [
+    "tvm",
+    "xla"
+  ],
+  "total_score": 5.0,
+  "input_shape": [
+    1,
+    16,
+    128
+  ],
+  "pattern_sequence": [
+    [
+      "broadcast",
+      "mul_add_relu"
+    ],
+    [
+      "layout",
+      "squeeze_unsqueeze"
+    ],
+    [
+      "attention",
+      "multi_head_self_attention"
+    ],
+    [
+      "branch",
+      "glu"
+    ],
+    [
+      "broadcast",
+      "where_mask"
+    ],
+    [
+      "layout",
+      "squeeze_unsqueeze"
+    ]
+  ],
+  "delta_opt": {
+    "xla": 1.0,
+    "tvm": 1.0
+  },
+  "crashes": [],
+  "errors": {}
+}

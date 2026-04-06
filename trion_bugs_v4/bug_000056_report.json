@@ -1,0 +1,58 @@
+{
+  "model_id": 56,
+  "total_score": 4.887202038764911,
+  "s_diff": {
+    "onnxruntime": 0.0005187093008407925,
+    "torchscript": 0.00043905325609604906,
+    "torch_compile": 0.4764093472126107,
+    "xla": 0.0004789579362470389,
+    "tvm": 0.0004789579362470389,
+    "tensorflow": 0.0005011449437209146,
+    "tflite": 1.0,
+    "openvino": 1.0
+  },
+  "delta_opt": {
+    "onnxruntime": 0.000488761303762853,
+    "torchscript": 0.00043905325609604906,
+    "torch_compile": 0.4062415573314987,
+    "xla": 0.00035822819641380193,
+    "tvm": 0.00035822819641380193,
+    "tensorflow": 0.0004900398949632536,
+    "tflite": 1.0,
+    "openvino": 1.0
+  },
+  "crashes": [],
+  "errors": {},
+  "pattern_sequence": [
+    [
+      "broadcast",
+      "hard_clamp_norm"
+    ],
+    [
+      "branch",
+      "aspp_dilated_branch"
+    ],
+    [
+      "branch",
+      "concat_conv"
+    ],
+    [
+      "branch",
+      "channel_gating_branch"
+    ],
+    [
+      "branch",
+      "spatial_attention_cbam"
+    ],
+    [
+      "fusion",
+      "conv_add_relu"
+    ]
+  ],
+  "input_shape": [
+    1,
+    64,
+    16,
+    16
+  ]
+}

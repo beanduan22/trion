@@ -1,0 +1,56 @@
+{
+  "model_id": 18,
+  "total_score": 4.003687101264125,
+  "s_diff": {
+    "onnxruntime": 0.0003980173603849975,
+    "torchscript": 0.0,
+    "torch_compile": 0.0004359033151755598,
+    "xla": 0.00043527866223533747,
+    "tvm": 0.00043527866223533747,
+    "tensorflow": 0.00043527866223533747,
+    "tflite": 1.0,
+    "openvino": 1.0
+  },
+  "delta_opt": {
+    "onnxruntime": 4.550311120880019e-05,
+    "torchscript": 0.0,
+    "torch_compile": 0.00018935493985993023,
+    "xla": 0.00041583543857357457,
+    "tvm": 0.00041583543857357457,
+    "tensorflow": 0.0004808156736423735,
+    "tflite": 1.0,
+    "openvino": 1.0
+  },
+  "crashes": [],
+  "errors": {},
+  "pattern_sequence": [
+    [
+      "constant",
+      "where_const_cond"
+    ],
+    [
+      "constant",
+      "identity_chain"
+    ],
+    [
+      "normalization",
+      "layernorm_relu"
+    ],
+    [
+      "fusion",
+      "matmul_bias_tanh"
+    ],
+    [
+      "fusion",
+      "linear_layernorm_gelu"
+    ],
+    [
+      "normalization",
+      "variance_whitening"
+    ]
+  ],
+  "input_shape": [
+    1,
+    128
+  ]
+}

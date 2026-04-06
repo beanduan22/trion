@@ -1,0 +1,70 @@
+{
+  "model_id": 3,
+  "total_score": 6.005873939993902,
+  "s_diff": {
+    "onnxruntime": 0.001753345631629212,
+    "torchscript": 0.00033968997144222804,
+    "torch_compile": 1.0,
+    "xla": 0.0005774289625929922,
+    "tvm": 0.0005774289625929922,
+    "tensorflow": 1.0,
+    "tflite": 1.0,
+    "openvino": 1.0
+  },
+  "delta_opt": {
+    "onnxruntime": 0.0021718695773808457,
+    "torchscript": 0.00033968997144222804,
+    "torch_compile": 1.0,
+    "xla": 5.724345841058539e-05,
+    "tvm": 5.724345841058539e-05,
+    "tensorflow": 0.0,
+    "tflite": 0.0,
+    "openvino": 1.0
+  },
+  "crashes": [
+    "torch_compile+opt",
+    "tensorflow+opt",
+    "tensorflow-opt",
+    "tflite+opt",
+    "tflite-opt"
+  ],
+  "errors": {
+    "torch_compile+opt": "TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')\n\nfrom user code:\n   File \"<eval_with_key>.141\", line 16, in torch_dynamo_resume_in_forward_at_10\n    tile = self.Tile(relu, initializers_onnx_initializer_3);  relu = initializers_onnx_initializer_3 = None\n  File \"/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/tile.py\", line 26, in forward\n    return _forward()\n  File \"/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/tile.py\", line 21, in _forward\n    return input_tensor.repeat(torch.Size(repeats))\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
+    "tensorflow+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 289, in dispatch_op  *\n        return [jnp.pad(x, pad_width, mode=mode if mode != \"constant\" else \"constant\")]\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py\", line 4363, in pad  *\n        array = util.ensure_arraylike(\"pad\", array)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 149, in ensure_arraylike  *\n        check_arraylike(fun_name, *args)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 175, in check_arraylike  *\n        raise TypeError(msg.format(fun_name, type(arg), pos))\n\n    TypeError: pad requires ndarray or scalar arguments, got <class 'tensorflow.python.framework.ops.SymbolicTensor'> at position 0.\n",
+    "tensorflow-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 289, in dispatch_op  *\n        return [jnp.pad(x, pad_width, mode=mode if mode != \"constant\" else \"constant\")]\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py\", line 4363, in pad  *\n        array = util.ensure_arraylike(\"pad\", array)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 149, in ensure_arraylike  *\n        check_arraylike(fun_name, *args)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 175, in check_arraylike  *\n        raise TypeError(msg.format(fun_name, type(arg), pos))\n\n    TypeError: pad requires ndarray or scalar arguments, got <class 'tensorflow.python.framework.ops.SymbolicTensor'> at position 0.\n",
+    "tflite+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 289, in dispatch_op  *\n        return [jnp.pad(x, pad_width, mode=mode if mode != \"constant\" else \"constant\")]\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py\", line 4363, in pad  *\n        array = util.ensure_arraylike(\"pad\", array)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 149, in ensure_arraylike  *\n        check_arraylike(fun_name, *args)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 175, in check_arraylike  *\n        raise TypeError(msg.format(fun_name, type(arg), pos))\n\n    TypeError: pad requires ndarray or scalar arguments, got <class 'tensorflow.python.framework.ops.SymbolicTensor'> at position 0.\n",
+    "tflite-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 289, in dispatch_op  *\n        return [jnp.pad(x, pad_width, mode=mode if mode != \"constant\" else \"constant\")]\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py\", line 4363, in pad  *\n        array = util.ensure_arraylike(\"pad\", array)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 149, in ensure_arraylike  *\n        check_arraylike(fun_name, *args)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 175, in check_arraylike  *\n        raise TypeError(msg.format(fun_name, type(arg), pos))\n\n    TypeError: pad requires ndarray or scalar arguments, got <class 'tensorflow.python.framework.ops.SymbolicTensor'> at position 0.\n"
+  },
+  "pattern_sequence": [
+    [
+      "broadcast",
+      "cumsum"
+    ],
+    [
+      "layout",
+      "reflect_pad_conv"
+    ],
+    [
+      "fusion",
+      "dilated_conv_bn_relu"
+    ],
+    [
+      "layout",
+      "tile_conv"
+    ],
+    [
+      "branch",
+      "channel_gating_branch"
+    ],
+    [
+      "constant",
+      "log_exp_cancel"
+    ]
+  ],
+  "input_shape": [
+    1,
+    64,
+    32,
+    32
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "compiler_class": "tensorflow",
+  "affected_compilers": [
+    "tensorflow"
+  ],
+  "total_score": 0.1118645891547203,
+  "input_shape": [
+    1,
+    64,
+    32,
+    32
+  ],
+  "pattern_sequence": [
+    [
+      "layout",
+      "reflect_pad_conv"
+    ],
+    [
+      "constant",
+      "log_exp_cancel"
+    ],
+    [
+      "layout",
+      "space_to_depth_block"
+    ],
+    [
+      "branch",
+      "glu"
+    ],
+    [
+      "broadcast",
+      "hard_clamp_norm"
+    ],
+    [
+      "fusion",
+      "conv_bn_relu6"
+    ]
+  ],
+  "delta_opt": {
+    "tensorflow": 0.1118645891547203
+  },
+  "crashes": [],
+  "errors": {
+    "tensorflow+opt": "discrepancy rel_diff=0.1119",
+    "tensorflow+noopt": "discrepancy rel_diff=0.1119"
+  },
+  "bug_id": "bug_0176"
+}

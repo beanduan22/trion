@@ -236,6 +236,246 @@ class WhereConstCond(OTP):
                                                  ctx.dtype, ctx.layout))
 
 
+# ── 9. Sqrt → Reciprocal → Mul (RSqrt pattern) ───────────────────────────
+class SqrtReciprocalMul(OTP):
+    """Sqrt → Reciprocal → Mul: should simplify to RSqrt+Mul or fused norm."""
+    name = "sqrt_reciprocal_mul"
+    category = CAT_CONSTANT
+    target_optimization = "rsqrt_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "srm")
+        eps  = np.array([1e-6], dtype=np.float32)
+        scale = rng.normal(1.0, 0.1, ctx.shape).astype(np.float32)
+
+        sq2_o = f"{p}_sq2"; add_o = f"{p}_add"; sq_o = f"{p}_sq"
+        rc_o  = f"{p}_rc";  out   = f"{p}_out"
+        nodes = [
+            # x^2 + eps is always positive, so Sqrt and Reciprocal are safe
+            helper.make_node("Mul",        [input_name, input_name], [sq2_o]),
+            helper.make_node("Add",        [sq2_o, f"{p}_eps"], [add_o]),
+            helper.make_node("Sqrt",       [add_o], [sq_o]),
+            helper.make_node("Reciprocal", [sq_o], [rc_o]),
+            helper.make_node("Mul",        [input_name, rc_o], [f"{p}_norm"]),
+            helper.make_node("Mul",        [f"{p}_norm", f"{p}_scale"], [out]),
+        ]
+        inits = [numpy_helper.from_array(eps,   f"{p}_eps"),
+                 numpy_helper.from_array(scale, f"{p}_scale")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape),
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 10. Transpose → Transpose (identity pair) ─────────────────────────────
+class TransposeInverseCancel(OTP):
+    """T(perm) → T(perm^-1): should reduce to identity by compiler."""
+    name = "transpose_inverse_cancel"
+    category = CAT_CONSTANT
+    target_optimization = "transpose_elimination"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "tic")
+        perm     = [0, 2, 3, 1]   # NCHW → NHWC
+        inv_perm = [0, 3, 1, 2]   # NHWC → NCHW
+
+        tr1_o = f"{p}_tr1"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Transpose", [input_name], [tr1_o], perm=perm),
+            helper.make_node("Transpose", [tr1_o], [out], perm=inv_perm),
+        ]
+        return PatternInstance(self.name, self.category, nodes, [],
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape),
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 11. Reshape → Reshape cancel pair ─────────────────────────────────────
+class ReshapeReshapeCancel(OTP):
+    """x → flatten → reshape back: compiler should fold to identity."""
+    name = "reshape_reshape_cancel"
+    category = CAT_CONSTANT
+    target_optimization = "reshape_elimination"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        p = self._p(node_id, "rrc")
+        flat = np.array([N, C * H * W], dtype=np.int64)
+        back = np.array([N, C, H, W],   dtype=np.int64)
+
+        r1_o = f"{p}_r1"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Reshape", [input_name, f"{p}_flat"], [r1_o]),
+            helper.make_node("Reshape", [r1_o, f"{p}_back"], [out]),
+        ]
+        inits = [numpy_helper.from_array(flat, f"{p}_flat"),
+                 numpy_helper.from_array(back, f"{p}_back")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, C, H, W], ctx.dtype, ctx.layout))
+
+
+# ── 12. Slice full range (identity slice) ────────────────────────────────
+class SliceFullRange(OTP):
+    """Slice that covers entire tensor: should be removed as no-op."""
+    name = "slice_full_range"
+    category = CAT_CONSTANT
+    target_optimization = "slice_noop_elimination"
+
+    def is_compatible(self, ctx):
+        return ctx.rank >= 2 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "sfr")
+        starts = np.zeros(ctx.rank, dtype=np.int64)
+        ends   = np.array([s + 1000000 for s in ctx.shape], dtype=np.int64)
+        scale  = rng.normal(1.0, 0.1, ctx.shape).astype(np.float32)
+
+        sl_o = f"{p}_sl"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Slice", [input_name, f"{p}_start", f"{p}_end"], [sl_o]),
+            helper.make_node("Mul",   [sl_o, f"{p}_scale"], [out]),
+        ]
+        inits = [numpy_helper.from_array(starts, f"{p}_start"),
+                 numpy_helper.from_array(ends,   f"{p}_end"),
+                 numpy_helper.from_array(scale,  f"{p}_scale")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape),
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 13. Zero Pad + Slice back (no-op round trip) ─────────────────────────
+class PadSliceNoop(OTP):
+    """Pad(zeros) then Slice back: identical to identity, tests round-trip opt."""
+    name = "pad_slice_noop"
+    category = CAT_CONSTANT
+    target_optimization = "pad_slice_roundtrip_elimination"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        p = self._p(node_id, "psn")
+        pad_size = 2
+        pads_t = np.array([0,0,pad_size,pad_size, 0,0,pad_size,pad_size],
+                          dtype=np.int64)
+        starts = np.array([0, 0, pad_size, pad_size], dtype=np.int64)
+        ends   = np.array([N, C, H + pad_size, W + pad_size], dtype=np.int64)
+
+        pd_o = f"{p}_pd"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Pad",   [input_name, f"{p}_pads"], [pd_o], mode="constant"),
+            helper.make_node("Slice", [pd_o, f"{p}_start", f"{p}_end"], [out]),
+        ]
+        inits = [numpy_helper.from_array(pads_t, f"{p}_pads"),
+                 numpy_helper.from_array(starts, f"{p}_start"),
+                 numpy_helper.from_array(ends,   f"{p}_end")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, C, H, W], ctx.dtype, ctx.layout))
+
+
+# ── 14. Mul by Reciprocal of constant ─────────────────────────────────────
+class MulByReciprocal(OTP):
+    """x * (1/c): should fold to x / c. Tests const reciprocal folding."""
+    name = "mul_by_reciprocal"
+    category = CAT_CONSTANT
+    target_optimization = "reciprocal_constant_folding"
+
+    def is_compatible(self, ctx):
+        return ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "mbr")
+        c = np.array([float(rng.uniform(0.1, 10.0))], dtype=np.float32)
+        rc = 1.0 / c
+
+        mul_o = f"{p}_mul"; out = f"{p}_out"
+        bias = rng.normal(0, 0.1, ctx.shape).astype(np.float32)
+        nodes = [
+            helper.make_node("Mul", [input_name, f"{p}_rc"], [mul_o]),
+            helper.make_node("Add", [mul_o, f"{p}_bias"], [out]),
+        ]
+        inits = [numpy_helper.from_array(rc,   f"{p}_rc"),
+                 numpy_helper.from_array(bias, f"{p}_bias")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape),
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 15. Log(Exp(x)) cancel pair ───────────────────────────────────────────
+class LogExpCancel(OTP):
+    """Log(Exp(x)) = x (assuming no overflow). Tests exp/log cancellation."""
+    name = "log_exp_cancel"
+    category = CAT_CONSTANT
+    target_optimization = "log_exp_elimination"
+
+    def is_compatible(self, ctx):
+        return ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "lec")
+        # Clip input to avoid overflow in Exp
+        lo = np.array([-10.0], dtype=np.float32)
+        hi = np.array([10.0],  dtype=np.float32)
+        scale = rng.normal(1.0, 0.1, ctx.shape).astype(np.float32)
+
+        cl_o = f"{p}_cl"; ex_o = f"{p}_ex"; lg_o = f"{p}_lg"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Clip", [input_name, f"{p}_lo", f"{p}_hi"], [cl_o]),
+            helper.make_node("Exp",  [cl_o], [ex_o]),
+            helper.make_node("Log",  [ex_o], [lg_o]),
+            helper.make_node("Mul",  [lg_o, f"{p}_scale"], [out]),
+        ]
+        inits = [numpy_helper.from_array(lo,    f"{p}_lo"),
+                 numpy_helper.from_array(hi,    f"{p}_hi"),
+                 numpy_helper.from_array(scale, f"{p}_scale")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape),
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 16. Learned temperature scalar ───────────────────────────────────────
+class LearnedTemperatureScale(OTP):
+    """x / temperature: logit scaling used in contrastive learning (CLIP-style)."""
+    name = "learned_temperature_scale"
+    category = CAT_CONSTANT
+    target_optimization = "scalar_const_fold"
+
+    def is_compatible(self, ctx):
+        return ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "lts")
+        temp = np.array([float(rng.uniform(0.01, 1.0))], dtype=np.float32)
+        bias = rng.normal(0, 0.01, ctx.shape).astype(np.float32)
+
+        div_o = f"{p}_div"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Div", [input_name, f"{p}_temp"], [div_o]),
+            helper.make_node("Add", [div_o, f"{p}_bias"], [out]),
+        ]
+        inits = [numpy_helper.from_array(temp, f"{p}_temp"),
+                 numpy_helper.from_array(bias, f"{p}_bias")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape),
+                                                 ctx.dtype, ctx.layout))
+
+
 ALL_CONSTANT_PATTERNS = [
     ConstantAddMul(),
     IdentityChain(),
@@ -245,4 +485,13 @@ ALL_CONSTANT_PATTERNS = [
     PowCanonical(),
     CastRoundTrip(),
     WhereConstCond(),
+    # New patterns
+    SqrtReciprocalMul(),
+    TransposeInverseCancel(),
+    ReshapeReshapeCancel(),
+    SliceFullRange(),
+    PadSliceNoop(),
+    MulByReciprocal(),
+    LogExpCancel(),
+    LearnedTemperatureScale(),
 ]

@@ -482,6 +482,523 @@ class MatMulBiasSigmoid(OTP):
                                StructuralContext(2, [N, K], ctx.dtype, ctx.layout))
 
 
+# ── 13. ConvTranspose → BN → ReLU (deconvolution) ────────────────────────
+class ConvTransposeBNReLU(OTP):
+    """Deconvolution + BN + ReLU. Known shape-inference bugs in TVM/TRT."""
+    name = "conv_transpose_bn_relu"
+    category = CAT_FUSION
+    target_optimization = "deconv_bn_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        out_c = self._rand_channels(rng)
+        k = int(rng.choice([2, 4]))
+        stride = k   # standard upsample factor
+        p = self._p(node_id, "ctbnr")
+
+        # ConvTranspose weight: [C_in, C_out, k, k]
+        w = rng.normal(0, np.sqrt(2.0 / (C * k * k)),
+                       (C, out_c, k, k)).astype(np.float32)
+        b = np.zeros(out_c, dtype=np.float32)
+        bn_names, bn_inits = _bn_params(rng, out_c, p)
+
+        ct_o = f"{p}_ct"; bn_o = f"{p}_bn"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("ConvTranspose",
+                             [input_name, f"{p}_w", f"{p}_b"], [ct_o],
+                             kernel_shape=[k, k], strides=[stride, stride]),
+            helper.make_node("BatchNormalization",
+                             [ct_o] + bn_names, [bn_o], epsilon=1e-5),
+            helper.make_node("Relu", [bn_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(w, f"{p}_w"),
+                 numpy_helper.from_array(b, f"{p}_b")] + bn_inits
+        H2 = (H - 1) * stride + k
+        W2 = (W - 1) * stride + k
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, out_c, H2, W2],
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 14. Dilated Conv → BN → ReLU ─────────────────────────────────────────
+class DilatedConvBNReLU(OTP):
+    """Atrous/dilated convolution. dilation > 1 triggers TVM shape bugs."""
+    name = "dilated_conv_bn_relu"
+    category = CAT_FUSION
+    target_optimization = "dilated_conv_fusion"
+
+    def is_compatible(self, ctx):
+        if ctx.rank != 4 or ctx.dtype != "float32":
+            return False
+        _, _, H, W = ctx.shape
+        return H >= 8 and W >= 8   # need room for dilation
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        out_c = self._rand_channels(rng)
+        dilation = int(rng.choice([2, 3, 4]))
+        k = 3
+        pad = dilation   # same-output padding for dilated conv
+        p = self._p(node_id, "dcbnr")
+
+        w = self._make_conv_weight(rng, out_c, C, k)
+        b = np.zeros(out_c, dtype=np.float32)
+        bn_names, bn_inits = _bn_params(rng, out_c, p)
+
+        cv_o = f"{p}_cv"; bn_o = f"{p}_bn"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Conv",
+                             [input_name, f"{p}_w", f"{p}_b"], [cv_o],
+                             kernel_shape=[k, k],
+                             pads=[pad]*4,
+                             strides=[1, 1],
+                             dilations=[dilation, dilation]),
+            helper.make_node("BatchNormalization",
+                             [cv_o] + bn_names, [bn_o], epsilon=1e-5),
+            helper.make_node("Relu", [bn_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(w, f"{p}_w"),
+                 numpy_helper.from_array(b, f"{p}_b")] + bn_inits
+        # effective kernel = k + (k-1)*(dilation-1); with pad=dilation: H_out=H
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, out_c, H, W],
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 15. Conv → BN → SiLU (Swish) ─────────────────────────────────────────
+class ConvBNSiLU(OTP):
+    """Conv+BN+SiLU: EfficientNet backbone pattern. Tests Swish fusion."""
+    name = "conv_bn_silu"
+    category = CAT_FUSION
+    target_optimization = "conv_bn_swish_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        out_c = self._rand_channels(rng)
+        k = int(rng.choice([1, 3]))
+        pad = k // 2
+        p = self._p(node_id, "cbsilu")
+
+        w = self._make_conv_weight(rng, out_c, C, k)
+        b = np.zeros(out_c, dtype=np.float32)
+        bn_names, bn_inits = _bn_params(rng, out_c, p)
+
+        cv_o = f"{p}_cv"; bn_o = f"{p}_bn"
+        sig_o = f"{p}_sig"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Conv", [input_name, f"{p}_w", f"{p}_b"], [cv_o],
+                             kernel_shape=[k, k], pads=[pad]*4, strides=[1, 1]),
+            helper.make_node("BatchNormalization",
+                             [cv_o] + bn_names, [bn_o], epsilon=1e-5),
+            helper.make_node("Sigmoid", [bn_o], [sig_o]),
+            helper.make_node("Mul",     [bn_o, sig_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(w, f"{p}_w"),
+                 numpy_helper.from_array(b, f"{p}_b")] + bn_inits
+        H2 = H + 2*pad - k + 1; W2 = W + 2*pad - k + 1
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, out_c, H2, W2],
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 16. Conv → BN → Hardswish ────────────────────────────────────────────
+class ConvBNHardswish(OTP):
+    """MobileNetV3 head pattern. TRT often has Hardswish precision bugs."""
+    name = "conv_bn_hardswish"
+    category = CAT_FUSION
+    target_optimization = "conv_bn_hardswish_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        out_c = self._rand_channels(rng)
+        k = int(rng.choice([1, 3]))
+        pad = k // 2
+        p = self._p(node_id, "cbhs")
+
+        w = self._make_conv_weight(rng, out_c, C, k)
+        b = np.zeros(out_c, dtype=np.float32)
+        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        three  = np.array([3.0], dtype=np.float32)
+        six    = np.array([6.0], dtype=np.float32)
+        zero   = np.array([0.0], dtype=np.float32)
+
+        cv_o = f"{p}_cv"; bn_o = f"{p}_bn"
+        add3 = f"{p}_a3"; clip_o = f"{p}_cl"; div6 = f"{p}_d6"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Conv", [input_name, f"{p}_w", f"{p}_b"], [cv_o],
+                             kernel_shape=[k, k], pads=[pad]*4, strides=[1, 1]),
+            helper.make_node("BatchNormalization",
+                             [cv_o] + bn_names, [bn_o], epsilon=1e-5),
+            # hardswish(x) = x * clip(x+3, 0, 6) / 6
+            helper.make_node("Add",  [bn_o, f"{p}_three"], [add3]),
+            helper.make_node("Clip", [add3, f"{p}_zero", f"{p}_six"], [clip_o]),
+            helper.make_node("Mul",  [bn_o, clip_o], [div6]),
+            helper.make_node("Div",  [div6, f"{p}_six"], [out]),
+        ]
+        inits = ([numpy_helper.from_array(w, f"{p}_w"),
+                  numpy_helper.from_array(b, f"{p}_b")]
+                 + bn_inits
+                 + [numpy_helper.from_array(three, f"{p}_three"),
+                    numpy_helper.from_array(six,   f"{p}_six"),
+                    numpy_helper.from_array(zero,  f"{p}_zero")])
+        H2 = H + 2*pad - k + 1; W2 = W + 2*pad - k + 1
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, out_c, H2, W2],
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 17. Conv → BN → ReLU6 (Clip) ─────────────────────────────────────────
+class ConvBNReLU6(OTP):
+    """MobileNet-v1/v2 activation (Clip 0→6). Tests Clip-fusion pass."""
+    name = "conv_bn_relu6"
+    category = CAT_FUSION
+    target_optimization = "conv_bn_clip_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        out_c = self._rand_channels(rng)
+        k = int(rng.choice([1, 3]))
+        pad = k // 2
+        p = self._p(node_id, "cbrelu6")
+
+        w = self._make_conv_weight(rng, out_c, C, k)
+        b = np.zeros(out_c, dtype=np.float32)
+        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        zero = np.array([0.0], dtype=np.float32)
+        six  = np.array([6.0], dtype=np.float32)
+
+        cv_o = f"{p}_cv"; bn_o = f"{p}_bn"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Conv", [input_name, f"{p}_w", f"{p}_b"], [cv_o],
+                             kernel_shape=[k, k], pads=[pad]*4, strides=[1, 1]),
+            helper.make_node("BatchNormalization",
+                             [cv_o] + bn_names, [bn_o], epsilon=1e-5),
+            helper.make_node("Clip", [bn_o, f"{p}_zero", f"{p}_six"], [out]),
+        ]
+        inits = ([numpy_helper.from_array(w, f"{p}_w"),
+                  numpy_helper.from_array(b, f"{p}_b")]
+                 + bn_inits
+                 + [numpy_helper.from_array(zero, f"{p}_zero"),
+                    numpy_helper.from_array(six,  f"{p}_six")])
+        H2 = H + 2*pad - k + 1; W2 = W + 2*pad - k + 1
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, out_c, H2, W2],
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 18. Grouped Conv → BN → ReLU ─────────────────────────────────────────
+class GroupedConvBNReLU(OTP):
+    """Group convolution (group > 1). Group handling bugs in TVM + TRT."""
+    name = "grouped_conv_bn_relu"
+    category = CAT_FUSION
+    target_optimization = "grouped_conv_fusion"
+
+    def is_compatible(self, ctx):
+        if ctx.rank != 4 or ctx.dtype != "float32":
+            return False
+        return ctx.shape[1] >= 8 and ctx.shape[1] % 4 == 0
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        groups = 4
+        out_c = C   # grouped conv preserving channels is common
+        k = 3; pad = 1
+        p = self._p(node_id, "gcbnr")
+
+        # weight shape: [out_c, in_c/groups, k, k]
+        w = rng.normal(0, np.sqrt(2.0 / (C // groups * k * k)),
+                       (out_c, C // groups, k, k)).astype(np.float32)
+        b = np.zeros(out_c, dtype=np.float32)
+        bn_names, bn_inits = _bn_params(rng, out_c, p)
+
+        cv_o = f"{p}_cv"; bn_o = f"{p}_bn"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Conv",
+                             [input_name, f"{p}_w", f"{p}_b"], [cv_o],
+                             kernel_shape=[k, k], pads=[pad]*4,
+                             strides=[1, 1], group=groups),
+            helper.make_node("BatchNormalization",
+                             [cv_o] + bn_names, [bn_o], epsilon=1e-5),
+            helper.make_node("Relu", [bn_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(w, f"{p}_w"),
+                 numpy_helper.from_array(b, f"{p}_b")] + bn_inits
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, out_c, H, W],
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 19. Conv + Asymmetric Padding → BN ───────────────────────────────────
+class ConvAsymPadBN(OTP):
+    """
+    Asymmetric spatial padding (top≠bottom, left≠right) before 3×3 Conv + BN.
+    Exercises pad-canonicalization in compilers.
+
+    Uses Pad node with [0,0,1,0,0,0,0,1] (pad H_start=1, W_end=1), then 3×3
+    Conv with no additional padding so total per-dimension pad is asymmetric.
+    This is legal ONNX and legal PyTorch (external Pad then Conv with pads=0).
+    """
+    name = "conv_asym_pad_bn"
+    category = CAT_FUSION
+    target_optimization = "asymmetric_pad_fusion"
+
+    def is_compatible(self, ctx):
+        if ctx.rank != 4 or ctx.dtype != "float32":
+            return False
+        _, _, H, W = ctx.shape
+        return H >= 4 and W >= 4
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        out_c = self._rand_channels(rng)
+        p = self._p(node_id, "capbn")
+
+        w = self._make_conv_weight(rng, out_c, C, 3)
+        b = np.zeros(out_c, dtype=np.float32)
+        bn_names, bn_inits = _bn_params(rng, out_c, p)
+
+        # Pad 1 on H_start and 1 on W_end only (asymmetric).
+        # ONNX pads layout for 4-D: [n_b,c_b,h_b,w_b, n_e,c_e,h_e,w_e]
+        # → H_start=1, W_end=1, all others=0
+        pads_t = np.array([0, 0, 1, 0, 0, 0, 0, 1], dtype=np.int64)
+
+        pad_o = f"{p}_pad"; cv_o = f"{p}_cv"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Pad", [input_name, f"{p}_pads"], [pad_o],
+                             mode="constant"),
+            helper.make_node("Conv", [pad_o, f"{p}_w", f"{p}_b"], [cv_o],
+                             kernel_shape=[3, 3], pads=[0]*4, strides=[1, 1]),
+            helper.make_node("BatchNormalization",
+                             [cv_o] + bn_names, [out], epsilon=1e-5),
+        ]
+        inits = ([numpy_helper.from_array(pads_t, f"{p}_pads"),
+                  numpy_helper.from_array(w,      f"{p}_w"),
+                  numpy_helper.from_array(b,      f"{p}_b")]
+                 + bn_inits)
+        # Output: H+1(pad_h_start) - 2(kernel) = H-1
+        #         W+1(pad_w_end)   - 2(kernel) = W-1
+        H2 = max(H - 1, 1)
+        W2 = max(W - 1, 1)
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, out_c, H2, W2],
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 20. Conv → BN → ELU ──────────────────────────────────────────────────
+class ConvBNELU(OTP):
+    """ELU activation (exp-based). Known precision divergence across backends."""
+    name = "conv_bn_elu"
+    category = CAT_FUSION
+    target_optimization = "conv_bn_elu_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        out_c = self._rand_channels(rng)
+        k = int(rng.choice([1, 3]))
+        pad = k // 2
+        alpha = float(rng.uniform(0.5, 2.0))
+        p = self._p(node_id, "cbelu")
+
+        w = self._make_conv_weight(rng, out_c, C, k)
+        b = np.zeros(out_c, dtype=np.float32)
+        bn_names, bn_inits = _bn_params(rng, out_c, p)
+
+        cv_o = f"{p}_cv"; bn_o = f"{p}_bn"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Conv", [input_name, f"{p}_w", f"{p}_b"], [cv_o],
+                             kernel_shape=[k, k], pads=[pad]*4, strides=[1, 1]),
+            helper.make_node("BatchNormalization",
+                             [cv_o] + bn_names, [bn_o], epsilon=1e-5),
+            helper.make_node("Elu", [bn_o], [out], alpha=alpha),
+        ]
+        inits = [numpy_helper.from_array(w, f"{p}_w"),
+                 numpy_helper.from_array(b, f"{p}_b")] + bn_inits
+        H2 = H + 2*pad - k + 1; W2 = W + 2*pad - k + 1
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, out_c, H2, W2],
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 21. Pointwise + Depthwise block (MobileNet inverted residual core) ────
+class PointwiseDWBlock(OTP):
+    """1×1 expand → DW 3×3 → 1×1 project. Core MobileNet-v2 block."""
+    name = "pointwise_dw_block"
+    category = CAT_FUSION
+    target_optimization = "mobilenet_block_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        expand = max(C * 2, 32)
+        p = self._p(node_id, "pwdw")
+
+        w_pw  = self._make_conv_weight(rng, expand, C, 1)
+        b_pw  = np.zeros(expand, dtype=np.float32)
+        w_dw  = rng.normal(0, 0.1, (expand, 1, 3, 3)).astype(np.float32)
+        b_dw  = np.zeros(expand, dtype=np.float32)
+        w_proj = self._make_conv_weight(rng, C, expand, 1)
+        b_proj = np.zeros(C, dtype=np.float32)
+        bn1_names, bn1_inits = _bn_params(rng, expand, f"{p}_bn1")
+        bn2_names, bn2_inits = _bn_params(rng, expand, f"{p}_bn2")
+
+        pw_o = f"{p}_pw"; bn1_o = f"{p}_bn1o"; relu1 = f"{p}_relu1"
+        dw_o = f"{p}_dw"; bn2_o = f"{p}_bn2o"; relu2 = f"{p}_relu2"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Conv", [input_name, f"{p}_wpw", f"{p}_bpw"], [pw_o],
+                             kernel_shape=[1, 1], pads=[0]*4, strides=[1, 1]),
+            helper.make_node("BatchNormalization", [pw_o] + bn1_names, [bn1_o], epsilon=1e-5),
+            helper.make_node("Relu", [bn1_o], [relu1]),
+            helper.make_node("Conv", [relu1, f"{p}_wdw", f"{p}_bdw"], [dw_o],
+                             kernel_shape=[3, 3], pads=[1]*4, strides=[1, 1], group=expand),
+            helper.make_node("BatchNormalization", [dw_o] + bn2_names, [bn2_o], epsilon=1e-5),
+            helper.make_node("Relu", [bn2_o], [relu2]),
+            helper.make_node("Conv", [relu2, f"{p}_wproj", f"{p}_bproj"], [out],
+                             kernel_shape=[1, 1], pads=[0]*4, strides=[1, 1]),
+        ]
+        inits = ([numpy_helper.from_array(w_pw,   f"{p}_wpw"),
+                  numpy_helper.from_array(b_pw,   f"{p}_bpw"),
+                  numpy_helper.from_array(w_dw,   f"{p}_wdw"),
+                  numpy_helper.from_array(b_dw,   f"{p}_bdw"),
+                  numpy_helper.from_array(w_proj, f"{p}_wproj"),
+                  numpy_helper.from_array(b_proj, f"{p}_bproj")]
+                 + bn1_inits + bn2_inits)
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, C, H, W], ctx.dtype, ctx.layout))
+
+
+# ── 22. Conv → GELU (without BN) ─────────────────────────────────────────
+class ConvGELU(OTP):
+    """Direct Conv → GELU. Tests Conv-activation fusion path without BN."""
+    name = "conv_gelu"
+    category = CAT_FUSION
+    target_optimization = "conv_gelu_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        out_c = self._rand_channels(rng)
+        k = int(rng.choice([1, 3]))
+        pad = k // 2
+        p = self._p(node_id, "cvgelu")
+
+        w = self._make_conv_weight(rng, out_c, C, k)
+        b = np.zeros(out_c, dtype=np.float32)
+        sqrt2 = np.array([np.sqrt(2.0)], dtype=np.float32)
+        half  = np.array([0.5],          dtype=np.float32)
+        one   = np.array([1.0],          dtype=np.float32)
+
+        cv_o = f"{p}_cv"; div_o = f"{p}_div"; erf_o = f"{p}_erf"
+        erf1 = f"{p}_erf1"; m1 = f"{p}_m1"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Conv", [input_name, f"{p}_w", f"{p}_b"], [cv_o],
+                             kernel_shape=[k, k], pads=[pad]*4, strides=[1, 1]),
+            helper.make_node("Div",  [cv_o, f"{p}_sqrt2"], [div_o]),
+            helper.make_node("Erf",  [div_o], [erf_o]),
+            helper.make_node("Add",  [erf_o, f"{p}_one"], [erf1]),
+            helper.make_node("Mul",  [cv_o, f"{p}_half"], [m1]),
+            helper.make_node("Mul",  [m1, erf1], [out]),
+        ]
+        inits = [numpy_helper.from_array(w,     f"{p}_w"),
+                 numpy_helper.from_array(b,     f"{p}_b"),
+                 numpy_helper.from_array(sqrt2, f"{p}_sqrt2"),
+                 numpy_helper.from_array(half,  f"{p}_half"),
+                 numpy_helper.from_array(one,   f"{p}_one")]
+        H2 = H + 2*pad - k + 1; W2 = W + 2*pad - k + 1
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, out_c, H2, W2],
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 23. MatMul → BiasAdd → Tanh ──────────────────────────────────────────
+class MatMulBiasTanh(OTP):
+    """Dense layer with Tanh. Tests GEMM+Tanh fusion path."""
+    name = "matmul_bias_tanh"
+    category = CAT_FUSION
+    target_optimization = "gemm_tanh_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 2 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, M = ctx.shape
+        K = int(rng.choice([64, 128, 256]))
+        p = self._p(node_id, "mmbtanh")
+
+        w = rng.normal(0, np.sqrt(2.0 / M), (M, K)).astype(np.float32)
+        b = np.zeros(K, dtype=np.float32)
+
+        mm_o = f"{p}_mm"; add_o = f"{p}_add"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("MatMul", [input_name, f"{p}_w"], [mm_o]),
+            helper.make_node("Add",    [mm_o, f"{p}_b"], [add_o]),
+            helper.make_node("Tanh",   [add_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(w, f"{p}_w"),
+                 numpy_helper.from_array(b, f"{p}_b")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(2, [N, K], ctx.dtype, ctx.layout))
+
+
+# ── 24. AveragePool → Scale → Bias (lightweight BN substitute) ───────────
+class AvgPoolScaleBias(OTP):
+    """GlobalAvgPool + per-channel scale+bias. Tests pooling-normalization fusion."""
+    name = "avgpool_scale_bias"
+    category = CAT_FUSION
+    target_optimization = "pool_norm_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        p = self._p(node_id, "apsb")
+        scale = rng.normal(1.0, 0.1, (1, C, 1, 1)).astype(np.float32)
+        bias  = rng.normal(0.0, 0.1, (1, C, 1, 1)).astype(np.float32)
+
+        pool_o = f"{p}_pool"; sc_o = f"{p}_sc"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("AveragePool", [input_name], [pool_o],
+                             kernel_shape=[H, W], strides=[1, 1], pads=[0]*4),
+            helper.make_node("Mul", [pool_o, f"{p}_scale"], [sc_o]),
+            helper.make_node("Add", [sc_o,   f"{p}_bias"],  [out]),
+        ]
+        inits = [numpy_helper.from_array(scale, f"{p}_scale"),
+                 numpy_helper.from_array(bias,  f"{p}_bias")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, C, 1, 1], ctx.dtype, ctx.layout))
+
+
 ALL_FUSION_PATTERNS = [
     ConvBNReLU(),
     ConvBNLeakyReLU(),
@@ -495,4 +1012,17 @@ ALL_FUSION_PATTERNS = [
     GlobalAvgPoolLinear(),
     ConvBNReLUMaxPool(),
     MatMulBiasSigmoid(),
+    # New high-value patterns
+    ConvTransposeBNReLU(),
+    DilatedConvBNReLU(),
+    ConvBNSiLU(),
+    ConvBNHardswish(),
+    ConvBNReLU6(),
+    GroupedConvBNReLU(),
+    ConvAsymPadBN(),
+    ConvBNELU(),
+    PointwiseDWBlock(),
+    ConvGELU(),
+    MatMulBiasTanh(),
+    AvgPoolScaleBias(),
 ]

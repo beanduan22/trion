@@ -1,0 +1,3307 @@
+[
+  {
+    "bug_id": "bug_0000",
+    "class": "tflite",
+    "compilers": [
+      "tensorflow",
+      "tflite",
+      "torch_compile",
+      "tvm",
+      "xla"
+    ],
+    "score": 6.0,
+    "patterns": [
+      "dilated_max_pool",
+      "concat_conv",
+      "hard_clamp_norm",
+      "depthwise_conv_bn_relu",
+      "reshape_batched_matmul",
+      "gather_reshape"
+    ]
+  },
+  {
+    "bug_id": "bug_0001",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.0012,
+    "patterns": [
+      "residual_add_relu",
+      "self_attention_residual",
+      "variance_whitening",
+      "squeeze_unsqueeze",
+      "squeeze_unsqueeze",
+      "add_layernorm"
+    ]
+  },
+  {
+    "bug_id": "bug_0002",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.0013,
+    "patterns": [
+      "pow_canonical",
+      "swish",
+      "log_clamp",
+      "log_exp_cancel",
+      "transpose_inverse_cancel",
+      "conv_bn_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0003",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.0025,
+    "patterns": [
+      "add_layernorm",
+      "kv_cache_attention",
+      "glu",
+      "layernorm_relu",
+      "kv_cache_attention",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0004",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 1.9555,
+    "patterns": [
+      "slice_full_range",
+      "swish",
+      "matmul_bias_sigmoid",
+      "residual_add_relu",
+      "exp_div_softplus",
+      "div_by_constant"
+    ]
+  },
+  {
+    "bug_id": "bug_0005",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.007,
+    "patterns": [
+      "squeeze_unsqueeze",
+      "l2_normalize",
+      "squeeze_unsqueeze",
+      "self_attention_residual",
+      "sqrt_reciprocal_mul",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0006",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 3.3215,
+    "patterns": [
+      "l2_norm",
+      "conv_bn_leakyrelu",
+      "batchnorm_eval",
+      "cumsum",
+      "transpose_inverse_cancel",
+      "div_by_constant"
+    ]
+  },
+  {
+    "bug_id": "bug_0007",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 5.049,
+    "patterns": [
+      "dilated_conv_bn_relu",
+      "conv_bn_silu",
+      "layernorm_relu",
+      "conv_bn_silu",
+      "batchnorm_relu6",
+      "log_clamp"
+    ]
+  },
+  {
+    "bug_id": "bug_0008",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.0037,
+    "patterns": [
+      "where_const_cond",
+      "identity_chain",
+      "layernorm_relu",
+      "matmul_bias_tanh",
+      "linear_layernorm_gelu",
+      "variance_whitening"
+    ]
+  },
+  {
+    "bug_id": "bug_0009",
+    "class": "tflite",
+    "compilers": [
+      "tflite",
+      "tvm",
+      "xla"
+    ],
+    "score": 5.0,
+    "patterns": [
+      "conv_transpose_bn_relu",
+      "swish",
+      "abs_neg_relu",
+      "conv_relu_conv_bn",
+      "clipped_affine",
+      "variance_whitening"
+    ]
+  },
+  {
+    "bug_id": "bug_0010",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite",
+      "torch_compile"
+    ],
+    "score": 4.552,
+    "patterns": [
+      "layernorm_temperature",
+      "conv_relu_conv_bn",
+      "conv_bn_relu6",
+      "stable_softmax",
+      "transpose_conv_nhwc",
+      "learned_temperature_scale"
+    ]
+  },
+  {
+    "bug_id": "bug_0011",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.0026,
+    "patterns": [
+      "squeeze_unsqueeze",
+      "clipped_affine",
+      "rotary_embedding_attention",
+      "log_exp_cancel",
+      "residual_add_relu",
+      "sub_mul_add"
+    ]
+  },
+  {
+    "bug_id": "bug_0012",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.0037,
+    "patterns": [
+      "cumsum",
+      "variance_whitening",
+      "l2_normalize",
+      "kv_cache_attention",
+      "add_layernorm",
+      "transformer_encoder_layer"
+    ]
+  },
+  {
+    "bug_id": "bug_0013",
+    "class": "tflite",
+    "compilers": [
+      "onnxruntime",
+      "openvino",
+      "pytorch_eager",
+      "tensorflow",
+      "tflite",
+      "torch_compile",
+      "torchscript"
+    ],
+    "score": 2.0007,
+    "patterns": [
+      "learned_temperature_scale",
+      "cast_roundtrip",
+      "ceil_mode_avg_pool_conv",
+      "conv_asym_pad_bn",
+      "conv_bn_relu",
+      "rmsnorm"
+    ]
+  },
+  {
+    "bug_id": "bug_0014",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.0017,
+    "patterns": [
+      "causal_masked_attention",
+      "squeeze_unsqueeze",
+      "clipped_affine",
+      "reciprocal_mul",
+      "squeeze_unsqueeze",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0015",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.004,
+    "patterns": [
+      "sqrt_reciprocal_mul",
+      "linear_layernorm_gelu",
+      "softmax_mul",
+      "variance_whitening",
+      "linear_layernorm_gelu",
+      "softmax_mul"
+    ]
+  },
+  {
+    "bug_id": "bug_0016",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite",
+      "torch_compile"
+    ],
+    "score": 5.2978,
+    "patterns": [
+      "squeeze_unsqueeze",
+      "causal_masked_attention",
+      "scaled_dot_product_attention",
+      "cast_roundtrip",
+      "layernorm_relu",
+      "add_layernorm"
+    ]
+  },
+  {
+    "bug_id": "bug_0017",
+    "class": "tflite",
+    "compilers": [
+      "onnxruntime",
+      "tensorflow",
+      "tflite",
+      "torch_compile",
+      "tvm",
+      "xla"
+    ],
+    "score": 12.0,
+    "patterns": [
+      "residual_add_relu",
+      "div_by_constant",
+      "rmsnorm",
+      "variance_whitening",
+      "spatial_reduce_mean",
+      "dilated_max_pool"
+    ]
+  },
+  {
+    "bug_id": "bug_0018",
+    "class": "tflite",
+    "compilers": [
+      "tflite",
+      "torch_compile"
+    ],
+    "score": 7.0115,
+    "patterns": [
+      "ada_layer_norm",
+      "gated_mlp_block",
+      "cast_roundtrip",
+      "manual_layernorm",
+      "where_mask",
+      "identity_chain"
+    ]
+  },
+  {
+    "bug_id": "bug_0019",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.367,
+    "patterns": [
+      "log_exp_cancel",
+      "manual_layernorm",
+      "multi_scale_conv_branch",
+      "spatial_reduce_mean",
+      "dilated_conv_bn_relu",
+      "slice_full_range"
+    ]
+  },
+  {
+    "bug_id": "bug_0020",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.002,
+    "patterns": [
+      "matmul_bias_relu",
+      "l2_normalize",
+      "sqrt_reciprocal_mul",
+      "matmul_bias_sigmoid",
+      "matmul_bias_relu",
+      "log_exp_cancel"
+    ]
+  },
+  {
+    "bug_id": "bug_0021",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 2.8146,
+    "patterns": [
+      "sqrt_div_rms",
+      "self_attention_residual",
+      "residual_add_relu",
+      "cumsum",
+      "residual_add_relu",
+      "log_exp_cancel"
+    ]
+  },
+  {
+    "bug_id": "bug_0022",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite",
+      "torch_compile"
+    ],
+    "score": 4.8872,
+    "patterns": [
+      "hard_clamp_norm",
+      "aspp_dilated_branch",
+      "concat_conv",
+      "channel_gating_branch",
+      "spatial_attention_cbam",
+      "conv_add_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0023",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tensorflow",
+      "tflite",
+      "tvm",
+      "xla"
+    ],
+    "score": 6.0021,
+    "patterns": [
+      "dilated_max_pool",
+      "conv_bn_sigmoid",
+      "log_clamp",
+      "identity_chain",
+      "sqrt_div_rms",
+      "mul_add_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0024",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 5.0108,
+    "patterns": [
+      "double_transpose",
+      "concat_conv",
+      "floor_ceil_round",
+      "euclidean_norm_broadcast",
+      "div_by_constant",
+      "layernorm_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0025",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.0089,
+    "patterns": [
+      "add_layernorm",
+      "ada_layer_norm",
+      "variance_whitening",
+      "scaled_dot_product_attention",
+      "squeeze_unsqueeze",
+      "slice_full_range"
+    ]
+  },
+  {
+    "bug_id": "bug_0026",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.0007,
+    "patterns": [
+      "residual_add_relu",
+      "l2_norm",
+      "scaled_dot_product_attention",
+      "add_layernorm",
+      "squeeze_unsqueeze",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0027",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.3261,
+    "patterns": [
+      "conv_bn_elu",
+      "l2_norm",
+      "hard_clamp_norm",
+      "floor_ceil_round",
+      "fpn_branch",
+      "cumsum"
+    ]
+  },
+  {
+    "bug_id": "bug_0028",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.0018,
+    "patterns": [
+      "scaled_dot_product_attention",
+      "squeeze_unsqueeze",
+      "squeeze_unsqueeze",
+      "residual_add_relu",
+      "where_const_cond",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0029",
+    "class": "openvino",
+    "compilers": [
+      "openvino",
+      "torch_compile",
+      "torchscript"
+    ],
+    "score": 3.4599,
+    "patterns": [
+      "constant_add_mul",
+      "euclidean_norm_broadcast",
+      "sub_mul_add",
+      "variance_whitening",
+      "conv_add_relu",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0030",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tensorflow",
+      "tflite",
+      "tvm",
+      "xla"
+    ],
+    "score": 6.0003,
+    "patterns": [
+      "dilated_max_pool",
+      "conv_bn_leakyrelu",
+      "cumsum",
+      "floor_ceil_round",
+      "gap_linear",
+      "glu"
+    ]
+  },
+  {
+    "bug_id": "bug_0031",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite",
+      "torch_compile"
+    ],
+    "score": 6.0739,
+    "patterns": [
+      "aspp_dilated_branch",
+      "sqrt_reciprocal_mul",
+      "double_transpose",
+      "stable_softmax",
+      "variance_whitening",
+      "conv_relu_conv_bn"
+    ]
+  },
+  {
+    "bug_id": "bug_0032",
+    "class": "tflite",
+    "compilers": [
+      "onnxruntime",
+      "openvino",
+      "pytorch_eager",
+      "tensorflow",
+      "tflite",
+      "torch_compile",
+      "torchscript"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "cast_roundtrip",
+      "abs_neg_relu",
+      "pad_conv",
+      "ceil_mode_avg_pool_conv",
+      "layernorm_residual_add",
+      "conv_bn_relu6"
+    ]
+  },
+  {
+    "bug_id": "bug_0033",
+    "class": "tensorflow",
+    "compilers": [
+      "tensorflow",
+      "tvm",
+      "xla"
+    ],
+    "score": 6.0003,
+    "patterns": [
+      "conv_gelu",
+      "transpose_inverse_cancel",
+      "l2_norm",
+      "swish",
+      "slice_full_range",
+      "constant_add_mul"
+    ]
+  },
+  {
+    "bug_id": "bug_0034",
+    "class": "tflite",
+    "compilers": [
+      "openvino",
+      "tflite"
+    ],
+    "score": 4.0064,
+    "patterns": [
+      "transformer_encoder_layer",
+      "squeeze_unsqueeze",
+      "squeeze_unsqueeze",
+      "mul_add_relu",
+      "transformer_ffn",
+      "identity_chain"
+    ]
+  },
+  {
+    "bug_id": "bug_0035",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime"
+    ],
+    "score": 1.0045,
+    "patterns": [
+      "add_layernorm",
+      "add_layernorm",
+      "add_layernorm",
+      "squeeze_unsqueeze",
+      "rotary_embedding_attention",
+      "rmsnorm"
+    ]
+  },
+  {
+    "bug_id": "bug_0036",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.8486,
+    "patterns": [
+      "conv_asym_pad_bn",
+      "transpose_inverse_cancel",
+      "depthwise_conv_bn_relu",
+      "constant_add_mul",
+      "where_mask",
+      "conv_bn_leakyrelu"
+    ]
+  },
+  {
+    "bug_id": "bug_0037",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 2.0082,
+    "patterns": [
+      "hard_clamp_norm",
+      "dense_residual_block",
+      "dense_residual_block",
+      "conv_branch_add",
+      "transpose_conv_nhwc",
+      "layernorm_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0038",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.058,
+    "patterns": [
+      "layernorm_residual_add",
+      "hard_clamp_norm",
+      "layernorm_relu",
+      "add_layernorm",
+      "pointwise_dw_block",
+      "batchnorm_eval"
+    ]
+  },
+  {
+    "bug_id": "bug_0039",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.429,
+    "patterns": [
+      "layernorm_temperature",
+      "gated_mlp_block",
+      "where_const_cond",
+      "manual_layernorm",
+      "cast_roundtrip",
+      "add_layernorm"
+    ]
+  },
+  {
+    "bug_id": "bug_0040",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.5545,
+    "patterns": [
+      "conv_bn_hardswish",
+      "self_sub_zero",
+      "double_transpose",
+      "residual_add_relu",
+      "conv_add_relu",
+      "dense_residual_block"
+    ]
+  },
+  {
+    "bug_id": "bug_0041",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.9758,
+    "patterns": [
+      "dilated_conv_bn_relu",
+      "max_avg_pool_fusion",
+      "pad_conv",
+      "conv_bn_relu",
+      "dilated_conv_bn_relu",
+      "conv_gelu"
+    ]
+  },
+  {
+    "bug_id": "bug_0042",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.6482,
+    "patterns": [
+      "conv_gelu",
+      "cast_roundtrip",
+      "conv_bn_silu",
+      "cast_roundtrip",
+      "identity_chain",
+      "pad_conv"
+    ]
+  },
+  {
+    "bug_id": "bug_0043",
+    "class": "torchscript",
+    "compilers": [
+      "torch_compile",
+      "torchscript"
+    ],
+    "score": 2.0001,
+    "patterns": [
+      "div_by_constant",
+      "clipped_affine",
+      "dilated_max_pool",
+      "groupnorm_relu",
+      "spatial_attention_cbam",
+      "expand_add_mul"
+    ]
+  },
+  {
+    "bug_id": "bug_0044",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 3.0003,
+    "patterns": [
+      "manual_layernorm",
+      "spatial_reduce_mean",
+      "reflect_pad_conv",
+      "dual_pool_add",
+      "l2_normalize",
+      "flatten_unsqueeze_concat"
+    ]
+  },
+  {
+    "bug_id": "bug_0045",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.6378,
+    "patterns": [
+      "ada_layer_norm",
+      "reciprocal_mul",
+      "manual_layernorm",
+      "ceil_mode_avg_pool_conv",
+      "l2_normalize",
+      "depthwise_conv_bn_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0046",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.7253,
+    "patterns": [
+      "instancenorm_relu",
+      "squeeze_unsqueeze",
+      "conv_relu_conv_bn",
+      "reflect_pad_conv",
+      "double_transpose",
+      "layernorm_temperature"
+    ]
+  },
+  {
+    "bug_id": "bug_0047",
+    "class": "torchscript",
+    "compilers": [
+      "torch_compile",
+      "torchscript"
+    ],
+    "score": 2.0013,
+    "patterns": [
+      "multi_scale_conv_branch",
+      "transpose_inverse_cancel",
+      "conv_transpose_bn_relu",
+      "batchnorm_relu6",
+      "depth_to_space_block",
+      "se_residual"
+    ]
+  },
+  {
+    "bug_id": "bug_0048",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4287,
+    "patterns": [
+      "slice_full_range",
+      "residual_add_relu",
+      "residual_add_relu",
+      "cast_roundtrip",
+      "squeeze_unsqueeze",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0049",
+    "class": "torchscript",
+    "compilers": [
+      "torchscript"
+    ],
+    "score": 4.0,
+    "patterns": [
+      "abs_neg_relu",
+      "channel_gating_branch",
+      "reciprocal_mul",
+      "log_clamp",
+      "conv_bn_relu",
+      "variance_whitening"
+    ]
+  },
+  {
+    "bug_id": "bug_0050",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.9135,
+    "patterns": [
+      "power_norm",
+      "dilated_conv_bn_relu",
+      "cast_roundtrip",
+      "pointwise_dw_block",
+      "reshape_reshape_cancel",
+      "multi_scale_conv_branch"
+    ]
+  },
+  {
+    "bug_id": "bug_0051",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.2287,
+    "patterns": [
+      "constant_add_mul",
+      "where_const_cond",
+      "batchnorm_eval",
+      "rmsnorm",
+      "ceil_mode_avg_pool_conv",
+      "hard_clamp_norm"
+    ]
+  },
+  {
+    "bug_id": "bug_0052",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.2689,
+    "patterns": [
+      "mul_add_relu",
+      "reshape_reshape_cancel",
+      "conv_relu_conv_bn",
+      "conv_bn_relu",
+      "conv_asym_pad_bn",
+      "conv_bn_relu6"
+    ]
+  },
+  {
+    "bug_id": "bug_0053",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.1293,
+    "patterns": [
+      "cast_roundtrip",
+      "reshape_layernorm_reshape",
+      "conv_add_relu",
+      "reshape_softmax_reshape",
+      "log_exp_cancel",
+      "log_clamp"
+    ]
+  },
+  {
+    "bug_id": "bug_0054",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.3826,
+    "patterns": [
+      "hard_clamp_norm",
+      "layernorm_relu",
+      "layernorm_temperature",
+      "residual_add_relu",
+      "add_layernorm",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0055",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.5169,
+    "patterns": [
+      "instance_norm_1d",
+      "matmul_bias_gelu",
+      "matmul_bias_gelu",
+      "linear_layernorm_gelu",
+      "ada_layer_norm",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0056",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.2687,
+    "patterns": [
+      "log_clamp",
+      "conv_bn_elu",
+      "transpose_conv_nhwc",
+      "spatial_reduce_mean",
+      "dual_pool_add",
+      "where_mask"
+    ]
+  },
+  {
+    "bug_id": "bug_0057",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 2.0003,
+    "patterns": [
+      "split_transform_concat",
+      "floor_ceil_round",
+      "redundant_reshape",
+      "l2_normalize",
+      "batchnorm_eval",
+      "spatial_attention_cbam"
+    ]
+  },
+  {
+    "bug_id": "bug_0058",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.8641,
+    "patterns": [
+      "identity_chain",
+      "layernorm_temperature",
+      "squeeze_unsqueeze",
+      "ceil_mode_avg_pool_conv",
+      "swish",
+      "conv_bn_elu"
+    ]
+  },
+  {
+    "bug_id": "bug_0059",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.3392,
+    "patterns": [
+      "transpose_inverse_cancel",
+      "spatial_attention_cbam",
+      "batchnorm_eval",
+      "pad_conv",
+      "gap_linear",
+      "layernorm_residual_add"
+    ]
+  },
+  {
+    "bug_id": "bug_0060",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime",
+      "torch_compile",
+      "torchscript"
+    ],
+    "score": 6.0,
+    "patterns": [
+      "floor_ceil_round",
+      "spatial_attention_cbam",
+      "manual_layernorm",
+      "gap_linear",
+      "matmul_bias_tanh",
+      "glu"
+    ]
+  },
+  {
+    "bug_id": "bug_0061",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.7644,
+    "patterns": [
+      "power_norm",
+      "pow_canonical",
+      "conv_bn_hardswish",
+      "ceil_mode_avg_pool_conv",
+      "variance_whitening",
+      "div_by_constant"
+    ]
+  },
+  {
+    "bug_id": "bug_0062",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 2.0648,
+    "patterns": [
+      "spatial_reduce_mean",
+      "conv_relu_conv_bn",
+      "pointwise_dw_block",
+      "conv_bn_relu6",
+      "layernorm_dropout_identity",
+      "mul_add_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0063",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4173,
+    "patterns": [
+      "floor_ceil_round",
+      "dilated_max_pool",
+      "depthwise_conv_bn_relu",
+      "conv_bn_relu6",
+      "rmsnorm",
+      "aspp_dilated_branch"
+    ]
+  },
+  {
+    "bug_id": "bug_0064",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.587,
+    "patterns": [
+      "constant_add_mul",
+      "manual_layernorm",
+      "l2_normalize",
+      "aspp_dilated_branch",
+      "spatial_attention_cbam",
+      "learned_temperature_scale"
+    ]
+  },
+  {
+    "bug_id": "bug_0065",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4107,
+    "patterns": [
+      "gated_mlp_block",
+      "swish",
+      "div_by_constant",
+      "gated_mlp_block",
+      "cast_roundtrip",
+      "sub_mul_add"
+    ]
+  },
+  {
+    "bug_id": "bug_0066",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4377,
+    "patterns": [
+      "residual_add_relu",
+      "ada_layer_norm",
+      "layernorm_residual_add",
+      "div_by_constant",
+      "residual_add_relu",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0067",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.8182,
+    "patterns": [
+      "reciprocal_mul",
+      "spatial_attention_cbam",
+      "slice_full_range",
+      "euclidean_norm_broadcast",
+      "conv_gelu",
+      "depth_to_space_block"
+    ]
+  },
+  {
+    "bug_id": "bug_0068",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.504,
+    "patterns": [
+      "residual_add_relu",
+      "cast_roundtrip",
+      "linear_layernorm_gelu",
+      "linear_layernorm_gelu",
+      "linear_layernorm_gelu",
+      "pow_canonical"
+    ]
+  },
+  {
+    "bug_id": "bug_0069",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.1118,
+    "patterns": [
+      "slice_pad_concat",
+      "slice_full_range",
+      "residual_add_relu",
+      "self_sub_zero",
+      "cast_roundtrip",
+      "conv_bn_sigmoid"
+    ]
+  },
+  {
+    "bug_id": "bug_0070",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.3573,
+    "patterns": [
+      "conv_bn_sigmoid",
+      "cast_roundtrip",
+      "batchnorm_relu6",
+      "flatten_unsqueeze_concat",
+      "div_by_constant",
+      "slice_full_range"
+    ]
+  },
+  {
+    "bug_id": "bug_0071",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.6123,
+    "patterns": [
+      "reciprocal_mul",
+      "ada_layer_norm",
+      "mul_add_relu",
+      "slice_pad_concat",
+      "reshape_reshape_cancel",
+      "aspp_dilated_branch"
+    ]
+  },
+  {
+    "bug_id": "bug_0072",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.588,
+    "patterns": [
+      "euclidean_norm_broadcast",
+      "self_sub_zero",
+      "cast_roundtrip",
+      "layernorm_residual_add",
+      "gated_mlp_block",
+      "residual_add_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0073",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4483,
+    "patterns": [
+      "log_exp_cancel",
+      "residual_add_relu",
+      "log_clamp",
+      "reciprocal_mul",
+      "sqrt_reciprocal_mul",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0074",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.7368,
+    "patterns": [
+      "depthwise_conv_bn_relu",
+      "reshape_reshape_cancel",
+      "multi_scale_conv_branch",
+      "conv_relu_conv_bn",
+      "groupnorm_relu",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0075",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4614,
+    "patterns": [
+      "spatial_reduce_mean",
+      "max_avg_pool_fusion",
+      "dilated_conv_bn_relu",
+      "cast_roundtrip",
+      "transpose_inverse_cancel",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0076",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.2887,
+    "patterns": [
+      "transpose_conv_nhwc",
+      "conv_relu_conv_bn",
+      "layernorm_residual_add",
+      "spatial_attention_cbam",
+      "manual_group_norm",
+      "conv_gelu"
+    ]
+  },
+  {
+    "bug_id": "bug_0077",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.7157,
+    "patterns": [
+      "pad_conv",
+      "transpose_conv_nhwc",
+      "concat_conv",
+      "space_to_depth_block",
+      "grouped_conv_bn_relu",
+      "reshape_reshape_cancel"
+    ]
+  },
+  {
+    "bug_id": "bug_0078",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4739,
+    "patterns": [
+      "layernorm_relu",
+      "power_norm",
+      "redundant_reshape",
+      "cast_roundtrip",
+      "conv_add_relu",
+      "multi_scale_conv_branch"
+    ]
+  },
+  {
+    "bug_id": "bug_0079",
+    "class": "xla",
+    "compilers": [
+      "torch_compile",
+      "torchscript",
+      "tvm",
+      "xla"
+    ],
+    "score": 4.0003,
+    "patterns": [
+      "glu",
+      "dual_pool_add",
+      "conv_bn_relu",
+      "concat_conv",
+      "dilated_max_pool",
+      "log_exp_cancel"
+    ]
+  },
+  {
+    "bug_id": "bug_0080",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.723,
+    "patterns": [
+      "conv_bn_relu_maxpool",
+      "sub_mul_add",
+      "conv_add_relu",
+      "reflect_pad_conv",
+      "conv_bn_elu",
+      "euclidean_norm_broadcast"
+    ]
+  },
+  {
+    "bug_id": "bug_0081",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.2052,
+    "patterns": [
+      "dilated_conv_bn_relu",
+      "sqrt_reciprocal_mul",
+      "pad_slice_noop",
+      "conv_asym_pad_bn",
+      "batchnorm_relu6",
+      "aspp_dilated_branch"
+    ]
+  },
+  {
+    "bug_id": "bug_0082",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.3546,
+    "patterns": [
+      "conv_asym_pad_bn",
+      "hard_clamp_norm",
+      "multi_scale_conv_branch",
+      "grouped_conv_bn_relu",
+      "concat_conv",
+      "manual_layernorm"
+    ]
+  },
+  {
+    "bug_id": "bug_0083",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.6187,
+    "patterns": [
+      "se_residual",
+      "sqrt_div_rms",
+      "aspp_dilated_branch",
+      "self_sub_zero",
+      "dense_residual_block",
+      "where_const_cond"
+    ]
+  },
+  {
+    "bug_id": "bug_0084",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime",
+      "torch_compile"
+    ],
+    "score": 1.7688,
+    "patterns": [
+      "reflect_pad_conv",
+      "dilated_conv_bn_relu",
+      "clipped_affine",
+      "layernorm_residual_add",
+      "conv_bn_relu6",
+      "instancenorm_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0085",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.7732,
+    "patterns": [
+      "dense_residual_block",
+      "dense_residual_block",
+      "identity_chain",
+      "variance_whitening",
+      "constant_add_mul",
+      "swish"
+    ]
+  },
+  {
+    "bug_id": "bug_0086",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime"
+    ],
+    "score": 2.0001,
+    "patterns": [
+      "squeeze_unsqueeze",
+      "transformer_encoder_layer",
+      "kv_cache_attention",
+      "floor_ceil_round",
+      "residual_add_relu",
+      "sqrt_div_rms"
+    ]
+  },
+  {
+    "bug_id": "bug_0087",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.3504,
+    "patterns": [
+      "stable_softmax",
+      "sub_mul_add",
+      "where_mask",
+      "mul_by_reciprocal",
+      "cast_roundtrip",
+      "residual_add_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0088",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4432,
+    "patterns": [
+      "squeeze_unsqueeze",
+      "kv_cache_attention",
+      "rmsnorm",
+      "squeeze_unsqueeze",
+      "cast_roundtrip",
+      "l2_norm"
+    ]
+  },
+  {
+    "bug_id": "bug_0089",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.4324,
+    "patterns": [
+      "log_clamp",
+      "aspp_dilated_branch",
+      "constant_add_mul",
+      "aspp_dilated_branch",
+      "pointwise_dw_block",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0090",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 2.0004,
+    "patterns": [
+      "cast_roundtrip",
+      "log_clamp",
+      "add_layernorm",
+      "sqrt_reciprocal_mul",
+      "matmul_bias_tanh",
+      "add_layernorm"
+    ]
+  },
+  {
+    "bug_id": "bug_0091",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.5294,
+    "patterns": [
+      "sub_mul_add",
+      "conv_bn_elu",
+      "self_sub_zero",
+      "conv_bn_relu",
+      "transpose_conv_nhwc",
+      "variance_whitening"
+    ]
+  },
+  {
+    "bug_id": "bug_0092",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4816,
+    "patterns": [
+      "add_layernorm",
+      "residual_add_relu",
+      "cast_roundtrip",
+      "add_layernorm",
+      "squeeze_unsqueeze",
+      "where_const_cond"
+    ]
+  },
+  {
+    "bug_id": "bug_0093",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.6178,
+    "patterns": [
+      "conv_bn_relu6",
+      "depthwise_conv_bn_relu",
+      "floor_ceil_round",
+      "variance_whitening",
+      "reflect_pad_conv",
+      "sqrt_div_rms"
+    ]
+  },
+  {
+    "bug_id": "bug_0094",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime",
+      "torch_compile",
+      "torchscript"
+    ],
+    "score": 6.0,
+    "patterns": [
+      "pointwise_dw_block",
+      "variance_whitening",
+      "pow_canonical",
+      "div_by_constant",
+      "variance_whitening",
+      "spatial_reduce_mean"
+    ]
+  },
+  {
+    "bug_id": "bug_0095",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.1168,
+    "patterns": [
+      "conv_add_relu",
+      "ceil_mode_avg_pool_conv",
+      "conv_add_relu",
+      "squeeze_unsqueeze",
+      "max_avg_pool_fusion",
+      "euclidean_norm_broadcast"
+    ]
+  },
+  {
+    "bug_id": "bug_0096",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 3.5501,
+    "patterns": [
+      "depth_to_space_block",
+      "max_avg_pool_fusion",
+      "variance_whitening",
+      "ceil_mode_avg_pool_conv",
+      "log_clamp",
+      "floor_ceil_round"
+    ]
+  },
+  {
+    "bug_id": "bug_0097",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.2804,
+    "patterns": [
+      "instancenorm_relu",
+      "self_sub_zero",
+      "dilated_max_pool",
+      "fpn_branch",
+      "cast_roundtrip",
+      "add_layernorm"
+    ]
+  },
+  {
+    "bug_id": "bug_0098",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "ceil_mode_avg_pool_conv",
+      "l2_norm",
+      "conv_bn_relu",
+      "dense_residual_block",
+      "conv_bn_relu",
+      "floor_ceil_round"
+    ]
+  },
+  {
+    "bug_id": "bug_0099",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.1496,
+    "patterns": [
+      "se_block",
+      "ceil_mode_avg_pool_conv",
+      "dilated_conv_bn_relu",
+      "l2_norm",
+      "l2_norm",
+      "conv_add_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0100",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.1814,
+    "patterns": [
+      "fpn_branch",
+      "cumsum",
+      "multi_scale_conv_branch",
+      "groupnorm_relu",
+      "max_avg_pool_fusion",
+      "manual_layernorm"
+    ]
+  },
+  {
+    "bug_id": "bug_0101",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.2143,
+    "patterns": [
+      "transpose_conv_nhwc",
+      "conv_bn_elu",
+      "cast_roundtrip",
+      "grouped_conv_bn_relu",
+      "ada_layer_norm",
+      "layernorm_temperature"
+    ]
+  },
+  {
+    "bug_id": "bug_0102",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.1204,
+    "patterns": [
+      "mul_add_relu",
+      "constant_add_mul",
+      "ceil_mode_avg_pool_conv",
+      "cumsum",
+      "conv_bn_relu6",
+      "dilated_conv_bn_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0103",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.1093,
+    "patterns": [
+      "conv_bn_silu",
+      "residual_add_relu",
+      "pad_conv",
+      "grouped_conv_bn_relu",
+      "batchnorm_relu6",
+      "conv_transpose_bn_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0104",
+    "class": "xla",
+    "compilers": [
+      "onnxruntime",
+      "torchscript",
+      "tvm",
+      "xla"
+    ],
+    "score": 1.7839,
+    "patterns": [
+      "add_layernorm",
+      "conv_bn_leakyrelu",
+      "ada_layer_norm",
+      "double_transpose",
+      "where_mask",
+      "grouped_conv_bn_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0105",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "conv_asym_pad_bn",
+      "div_by_constant",
+      "conv_bn_relu",
+      "swish",
+      "batchnorm_eval",
+      "floor_ceil_round"
+    ]
+  },
+  {
+    "bug_id": "bug_0106",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.1986,
+    "patterns": [
+      "conv_bn_relu_maxpool",
+      "conv_bn_elu",
+      "aspp_dilated_branch",
+      "conv_bn_relu",
+      "layernorm_residual_add",
+      "conv_bn_sigmoid"
+    ]
+  },
+  {
+    "bug_id": "bug_0107",
+    "class": "xla",
+    "compilers": [
+      "onnxruntime",
+      "torch_compile",
+      "tvm",
+      "xla"
+    ],
+    "score": 1.8448,
+    "patterns": [
+      "layernorm_temperature",
+      "conv_bn_leakyrelu",
+      "fpn_branch",
+      "log_clamp",
+      "floor_ceil_round",
+      "se_residual"
+    ]
+  },
+  {
+    "bug_id": "bug_0108",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.1281,
+    "patterns": [
+      "conv_transpose_bn_relu",
+      "manual_group_norm",
+      "pad_conv",
+      "multi_scale_conv_branch",
+      "manual_layernorm",
+      "conv_bn_silu"
+    ]
+  },
+  {
+    "bug_id": "bug_0109",
+    "class": "xla",
+    "compilers": [
+      "torch_compile",
+      "tvm",
+      "xla"
+    ],
+    "score": 7.0,
+    "patterns": [
+      "manual_layernorm",
+      "spatial_reduce_mean",
+      "layernorm_dropout_identity",
+      "groupnorm_relu",
+      "reshape_layernorm_reshape",
+      "layernorm_temperature"
+    ]
+  },
+  {
+    "bug_id": "bug_0110",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 4.0,
+    "patterns": [
+      "where_mask",
+      "groupnorm_relu",
+      "reshape_batched_matmul",
+      "cast_roundtrip",
+      "floor_ceil_round",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0111",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.218,
+    "patterns": [
+      "ceil_mode_avg_pool_conv",
+      "conv_bn_hardswish",
+      "cast_roundtrip",
+      "double_transpose",
+      "layernorm_dropout_identity",
+      "sqrt_reciprocal_mul"
+    ]
+  },
+  {
+    "bug_id": "bug_0112",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.0789,
+    "patterns": [
+      "sub_mul_add",
+      "unsqueeze_expand_mul",
+      "conv_branch_add",
+      "log_clamp",
+      "concat_conv",
+      "self_sub_zero"
+    ]
+  },
+  {
+    "bug_id": "bug_0113",
+    "class": "xla",
+    "compilers": [
+      "tvm",
+      "xla"
+    ],
+    "score": 0.6377,
+    "patterns": [
+      "sqrt_div_rms",
+      "sqrt_reciprocal_mul",
+      "pad_slice_noop",
+      "expand_add_mul",
+      "variance_whitening",
+      "sqrt_reciprocal_mul"
+    ]
+  },
+  {
+    "bug_id": "bug_0114",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.3645,
+    "patterns": [
+      "cast_roundtrip",
+      "spatial_attention_cbam",
+      "batchnorm_relu6",
+      "rmsnorm",
+      "reshape_softmax_reshape",
+      "conv_bn_relu_maxpool"
+    ]
+  },
+  {
+    "bug_id": "bug_0115",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime"
+    ],
+    "score": 0.2991,
+    "patterns": [
+      "pow_canonical",
+      "multi_scale_conv_branch",
+      "transpose_inverse_cancel",
+      "floor_ceil_round",
+      "conv_bn_relu_maxpool",
+      "reshape_transpose_reshape"
+    ]
+  },
+  {
+    "bug_id": "bug_0116",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.2215,
+    "patterns": [
+      "cast_roundtrip",
+      "self_sub_zero",
+      "aspp_dilated_branch",
+      "conv_gelu",
+      "cast_roundtrip",
+      "clipped_affine"
+    ]
+  },
+  {
+    "bug_id": "bug_0117",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.1565,
+    "patterns": [
+      "where_const_cond",
+      "aspp_dilated_branch",
+      "multi_scale_conv_branch",
+      "max_avg_pool_fusion",
+      "sqrt_reciprocal_mul",
+      "batchnorm_relu6"
+    ]
+  },
+  {
+    "bug_id": "bug_0118",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.2156,
+    "patterns": [
+      "layernorm_dropout_identity",
+      "sub_mul_add",
+      "aspp_dilated_branch",
+      "spatial_reduce_mean",
+      "variance_whitening",
+      "aspp_dilated_branch"
+    ]
+  },
+  {
+    "bug_id": "bug_0119",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.2886,
+    "patterns": [
+      "pointwise_dw_block",
+      "concat_conv",
+      "sqrt_reciprocal_mul",
+      "dilated_conv_bn_relu",
+      "self_sub_zero",
+      "conv_asym_pad_bn"
+    ]
+  },
+  {
+    "bug_id": "bug_0120",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.0859,
+    "patterns": [
+      "clipped_affine",
+      "redundant_reshape",
+      "concat_conv",
+      "spatial_reduce_mean",
+      "conv_bn_relu_maxpool",
+      "aspp_dilated_branch"
+    ]
+  },
+  {
+    "bug_id": "bug_0121",
+    "class": "xla",
+    "compilers": [
+      "onnxruntime",
+      "tvm",
+      "xla"
+    ],
+    "score": 2.2698,
+    "patterns": [
+      "reflect_pad_conv",
+      "conv_add_relu",
+      "channel_gating_branch",
+      "batchnorm_relu6",
+      "redundant_reshape",
+      "floor_ceil_round"
+    ]
+  },
+  {
+    "bug_id": "bug_0122",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.2331,
+    "patterns": [
+      "cast_roundtrip",
+      "multi_head_self_attention",
+      "glu",
+      "reciprocal_mul",
+      "glu",
+      "swish"
+    ]
+  },
+  {
+    "bug_id": "bug_0123",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4928,
+    "patterns": [
+      "matmul_bias_sigmoid",
+      "cast_roundtrip",
+      "div_by_constant",
+      "layernorm_dropout_identity",
+      "power_norm",
+      "constant_add_mul"
+    ]
+  },
+  {
+    "bug_id": "bug_0124",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.1098,
+    "patterns": [
+      "ceil_mode_avg_pool_conv",
+      "conv_relu_conv_bn",
+      "tile_conv",
+      "transpose_inverse_cancel",
+      "conv_bn_leakyrelu",
+      "split_transform_concat"
+    ]
+  },
+  {
+    "bug_id": "bug_0125",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.111,
+    "patterns": [
+      "manual_group_norm",
+      "batchnorm_eval",
+      "euclidean_norm_broadcast",
+      "tile_conv",
+      "ceil_mode_avg_pool_conv",
+      "layernorm_residual_add"
+    ]
+  },
+  {
+    "bug_id": "bug_0126",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.1337,
+    "patterns": [
+      "tile_conv",
+      "conv_bn_leakyrelu",
+      "conv_bn_relu6",
+      "reciprocal_mul",
+      "manual_layernorm",
+      "conv_transpose_bn_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0127",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.2595,
+    "patterns": [
+      "grouped_conv_bn_relu",
+      "dual_pool_add",
+      "cast_roundtrip",
+      "dense_residual_block",
+      "power_norm",
+      "sqrt_reciprocal_mul"
+    ]
+  },
+  {
+    "bug_id": "bug_0128",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 2.0181,
+    "patterns": [
+      "aspp_dilated_branch",
+      "multi_scale_conv_branch",
+      "sqrt_reciprocal_mul",
+      "sqrt_div_rms",
+      "swish",
+      "dilated_conv_bn_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0129",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "ceil_mode_avg_pool_conv",
+      "abs_neg_relu",
+      "sub_mul_add",
+      "div_by_constant",
+      "conv_bn_elu",
+      "floor_ceil_round"
+    ]
+  },
+  {
+    "bug_id": "bug_0130",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4418,
+    "patterns": [
+      "cast_roundtrip",
+      "squeeze_unsqueeze",
+      "attention_with_bias",
+      "squeeze_unsqueeze",
+      "attention_with_bias",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0131",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 2.0002,
+    "patterns": [
+      "aspp_dilated_branch",
+      "batchnorm_relu6",
+      "layernorm_temperature",
+      "max_avg_pool_fusion",
+      "log_clamp",
+      "sub_mul_add"
+    ]
+  },
+  {
+    "bug_id": "bug_0132",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 2.0184,
+    "patterns": [
+      "conv_transpose_bn_relu",
+      "floor_ceil_round",
+      "layernorm_dropout_identity",
+      "variance_whitening",
+      "sqrt_div_rms",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0133",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 4.0001,
+    "patterns": [
+      "cast_roundtrip",
+      "residual_add_relu",
+      "mul_add_relu",
+      "conv_transpose_bn_relu",
+      "conv_asym_pad_bn",
+      "where_mask"
+    ]
+  },
+  {
+    "bug_id": "bug_0134",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.1335,
+    "patterns": [
+      "stable_softmax",
+      "conv_transpose_bn_relu",
+      "pointwise_dw_block",
+      "dense_residual_block",
+      "fpn_branch",
+      "swish"
+    ]
+  },
+  {
+    "bug_id": "bug_0135",
+    "class": "xla",
+    "compilers": [
+      "tvm",
+      "xla"
+    ],
+    "score": 5.0,
+    "patterns": [
+      "mul_add_relu",
+      "squeeze_unsqueeze",
+      "multi_head_self_attention",
+      "glu",
+      "where_mask",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0136",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.464,
+    "patterns": [
+      "conv_gelu",
+      "cumsum",
+      "reciprocal_mul",
+      "identity_chain",
+      "reflect_pad_conv",
+      "depth_to_space_block"
+    ]
+  },
+  {
+    "bug_id": "bug_0137",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 4.0,
+    "patterns": [
+      "conv_gelu",
+      "conv_bn_leakyrelu",
+      "conv_bn_relu",
+      "rmsnorm",
+      "pow_canonical",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0138",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.8527,
+    "patterns": [
+      "euclidean_norm_broadcast",
+      "power_norm",
+      "rotary_embedding_attention",
+      "cast_roundtrip",
+      "mul_add_relu",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0139",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4604,
+    "patterns": [
+      "slice_pad_concat",
+      "pow_canonical",
+      "log_clamp",
+      "conv_bn_sigmoid",
+      "dilated_conv_bn_relu",
+      "conv_add_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0140",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.8769,
+    "patterns": [
+      "transpose_conv_nhwc",
+      "conv_bn_silu",
+      "squeeze_unsqueeze",
+      "transpose_inverse_cancel",
+      "conv_branch_add",
+      "pad_conv"
+    ]
+  },
+  {
+    "bug_id": "bug_0141",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "depthwise_conv_bn_relu",
+      "mul_add_relu",
+      "conv_bn_relu_maxpool",
+      "conv_branch_add"
+    ]
+  },
+  {
+    "bug_id": "bug_0142",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "dual_pool_add",
+      "pow_canonical",
+      "layernorm_residual_add",
+      "swish"
+    ]
+  },
+  {
+    "bug_id": "bug_0143",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "div_by_constant",
+      "matmul_bias_gelu",
+      "pow_canonical",
+      "layernorm_residual_add"
+    ]
+  },
+  {
+    "bug_id": "bug_0144",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "cast_roundtrip",
+      "glu",
+      "swish",
+      "exp_div_softplus"
+    ]
+  },
+  {
+    "bug_id": "bug_0145",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "exp_div_softplus",
+      "dual_pool_add",
+      "gap_linear",
+      "matmul_bias_gelu"
+    ]
+  },
+  {
+    "bug_id": "bug_0146",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "mul_add_relu",
+      "add_layernorm",
+      "flatten_unsqueeze_concat",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0147",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "instancenorm_relu",
+      "depthwise_conv_bn_relu",
+      "channel_shuffle",
+      "conv_bn_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0148",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "pad_conv",
+      "conv_branch_add",
+      "instancenorm_relu",
+      "sqrt_div_rms"
+    ]
+  },
+  {
+    "bug_id": "bug_0149",
+    "class": "onnxruntime",
+    "compilers": [
+      "onnxruntime"
+    ],
+    "score": 2.0,
+    "patterns": [
+      "reciprocal_mul",
+      "depthwise_conv_bn_relu",
+      "instancenorm_relu",
+      "self_sub_zero"
+    ]
+  },
+  {
+    "bug_id": "bug_0150",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.6252,
+    "patterns": [
+      "batchnorm_eval",
+      "aspp_dilated_branch",
+      "div_by_constant",
+      "spatial_attention_cbam",
+      "dilated_conv_bn_relu",
+      "conv_gelu"
+    ]
+  },
+  {
+    "bug_id": "bug_0151",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4334,
+    "patterns": [
+      "where_mask",
+      "dual_pool_add",
+      "spatial_attention_cbam",
+      "conv_transpose_bn_relu",
+      "multi_scale_conv_branch",
+      "learned_temperature_scale"
+    ]
+  },
+  {
+    "bug_id": "bug_0152",
+    "class": "xla",
+    "compilers": [
+      "torch_compile",
+      "torchscript",
+      "tvm",
+      "xla"
+    ],
+    "score": 4.0002,
+    "patterns": [
+      "sub_mul_add",
+      "channel_gating_branch",
+      "rmsnorm",
+      "reshape_transpose_reshape",
+      "pow_canonical",
+      "depth_to_space_block"
+    ]
+  },
+  {
+    "bug_id": "bug_0153",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.8431,
+    "patterns": [
+      "reflect_pad_conv",
+      "mul_add_relu",
+      "depthwise_conv_bn_relu",
+      "conv_bn_elu",
+      "slice_full_range",
+      "constant_add_mul"
+    ]
+  },
+  {
+    "bug_id": "bug_0154",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 2.0007,
+    "patterns": [
+      "mul_by_reciprocal",
+      "conv_bn_relu6",
+      "learned_temperature_scale",
+      "pad_conv",
+      "glu",
+      "sub_mul_add"
+    ]
+  },
+  {
+    "bug_id": "bug_0155",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.2427,
+    "patterns": [
+      "conv_gelu",
+      "pad_slice_noop",
+      "hard_clamp_norm",
+      "power_norm",
+      "conv_bn_leakyrelu",
+      "conv_bn_relu_maxpool"
+    ]
+  },
+  {
+    "bug_id": "bug_0156",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.2951,
+    "patterns": [
+      "conv_asym_pad_bn",
+      "conv_bn_leakyrelu",
+      "sqrt_div_rms",
+      "redundant_reshape",
+      "conv_relu_conv_bn",
+      "clipped_affine"
+    ]
+  },
+  {
+    "bug_id": "bug_0157",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.283,
+    "patterns": [
+      "reciprocal_mul",
+      "residual_add_relu",
+      "gather_reshape",
+      "reciprocal_mul",
+      "cast_roundtrip",
+      "matmul_bias_gelu"
+    ]
+  },
+  {
+    "bug_id": "bug_0158",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 1.8273,
+    "patterns": [
+      "slice_pad_concat",
+      "depthwise_conv_bn_relu",
+      "depthwise_conv_bn_relu",
+      "exp_div_softplus",
+      "batchnorm_eval",
+      "instancenorm_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0159",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.6435,
+    "patterns": [
+      "conv_bn_leakyrelu",
+      "dense_residual_block",
+      "cast_roundtrip",
+      "channel_gating_branch",
+      "batchnorm_relu6",
+      "spatial_attention_cbam"
+    ]
+  },
+  {
+    "bug_id": "bug_0160",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.2046,
+    "patterns": [
+      "cast_roundtrip",
+      "add_layernorm",
+      "mul_add_relu",
+      "kv_cache_attention",
+      "causal_masked_attention",
+      "log_exp_cancel"
+    ]
+  },
+  {
+    "bug_id": "bug_0161",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.4813,
+    "patterns": [
+      "gather_reshape",
+      "self_sub_zero",
+      "where_const_cond",
+      "gather_reshape",
+      "matmul_bias_gelu",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0162",
+    "class": "torch_compile",
+    "compilers": [
+      "torch_compile"
+    ],
+    "score": 0.7454,
+    "patterns": [
+      "redundant_reshape",
+      "depthwise_conv_bn_relu",
+      "conv_bn_elu",
+      "redundant_reshape",
+      "concat_conv",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0163",
+    "class": "xla",
+    "compilers": [
+      "xla"
+    ],
+    "score": 0.1255,
+    "patterns": [
+      "log_clamp",
+      "logsumexp_step",
+      "channel_shuffle",
+      "spatial_reduce_mean",
+      "conv_bn_silu",
+      "l2_normalize"
+    ]
+  },
+  {
+    "bug_id": "bug_0164",
+    "class": "tvm",
+    "compilers": [
+      "tvm"
+    ],
+    "score": 0.1255,
+    "patterns": [
+      "log_clamp",
+      "logsumexp_step",
+      "channel_shuffle",
+      "spatial_reduce_mean",
+      "conv_bn_silu",
+      "l2_normalize"
+    ]
+  },
+  {
+    "bug_id": "bug_0165",
+    "class": "tflite",
+    "compilers": [
+      "tensorflow",
+      "tflite"
+    ],
+    "score": 0.1456,
+    "patterns": [
+      "log_clamp",
+      "logsumexp_step",
+      "channel_shuffle",
+      "spatial_reduce_mean",
+      "conv_bn_silu",
+      "l2_normalize"
+    ]
+  },
+  {
+    "bug_id": "bug_0166",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 1.0,
+    "patterns": [
+      "spatial_attention_cbam",
+      "dilated_max_pool",
+      "reshape_batched_matmul",
+      "abs_neg_relu",
+      "glu",
+      "matmul_bias_sigmoid"
+    ]
+  },
+  {
+    "bug_id": "bug_0167",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.1357,
+    "patterns": [
+      "gated_mlp_block",
+      "add_layernorm",
+      "sqrt_reciprocal_mul",
+      "rmsnorm",
+      "squeeze_unsqueeze",
+      "multi_head_self_attention"
+    ]
+  },
+  {
+    "bug_id": "bug_0168",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.1965,
+    "patterns": [
+      "transformer_ffn",
+      "kv_cache_attention",
+      "squeeze_unsqueeze",
+      "sqrt_reciprocal_mul",
+      "euclidean_norm_broadcast",
+      "rmsnorm"
+    ]
+  },
+  {
+    "bug_id": "bug_0169",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.0563,
+    "patterns": [
+      "squeeze_unsqueeze",
+      "learned_temperature_scale",
+      "multi_query_attention",
+      "where_mask",
+      "self_attention_residual",
+      "self_attention_residual"
+    ]
+  },
+  {
+    "bug_id": "bug_0170",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.1116,
+    "patterns": [
+      "gated_mlp_block",
+      "sqrt_reciprocal_mul",
+      "squeeze_unsqueeze",
+      "squeeze_unsqueeze",
+      "sqrt_div_rms",
+      "residual_add_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0171",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.0951,
+    "patterns": [
+      "expand_add_mul",
+      "log_exp_cancel",
+      "conv_bn_relu",
+      "residual_add_relu",
+      "variance_whitening",
+      "sqrt_reciprocal_mul"
+    ]
+  },
+  {
+    "bug_id": "bug_0172",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.1153,
+    "patterns": [
+      "cast_roundtrip",
+      "multi_scale_conv_branch",
+      "floor_ceil_round",
+      "slice_pad_concat",
+      "cast_roundtrip",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0173",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.0505,
+    "patterns": [
+      "add_layernorm",
+      "cumsum",
+      "multi_head_self_attention",
+      "squeeze_unsqueeze",
+      "layernorm_temperature",
+      "attention_with_bias"
+    ]
+  },
+  {
+    "bug_id": "bug_0174",
+    "class": "openvino",
+    "compilers": [
+      "openvino"
+    ],
+    "score": 0.1313,
+    "patterns": [
+      "log_clamp",
+      "logsumexp_step",
+      "channel_shuffle",
+      "spatial_reduce_mean",
+      "conv_bn_silu",
+      "l2_normalize"
+    ]
+  },
+  {
+    "bug_id": "bug_0175",
+    "class": "tensorflow",
+    "compilers": [
+      "tensorflow"
+    ],
+    "score": 1.0,
+    "patterns": [
+      "dense_residual_block",
+      "avgpool_scale_bias",
+      "manual_group_norm",
+      "layernorm_relu",
+      "layernorm_residual_add",
+      "conv_bn_hardswish"
+    ]
+  },
+  {
+    "bug_id": "bug_0176",
+    "class": "tensorflow",
+    "compilers": [
+      "tensorflow"
+    ],
+    "score": 0.1119,
+    "patterns": [
+      "reflect_pad_conv",
+      "log_exp_cancel",
+      "space_to_depth_block",
+      "glu",
+      "hard_clamp_norm",
+      "conv_bn_relu6"
+    ]
+  },
+  {
+    "bug_id": "bug_0177",
+    "class": "tensorflow",
+    "compilers": [
+      "tensorflow"
+    ],
+    "score": 0.2844,
+    "patterns": [
+      "batchnorm_relu6",
+      "ada_layer_norm",
+      "reflect_pad_conv",
+      "conv_bn_relu6",
+      "channel_gating_branch",
+      "where_mask"
+    ]
+  },
+  {
+    "bug_id": "bug_0178",
+    "class": "tensorflow",
+    "compilers": [
+      "tensorflow"
+    ],
+    "score": 0.2179,
+    "patterns": [
+      "div_by_constant",
+      "floor_ceil_round",
+      "clipped_affine",
+      "div_by_constant",
+      "reflect_pad_conv",
+      "split_transform_concat"
+    ]
+  },
+  {
+    "bug_id": "bug_0179",
+    "class": "tensorflow",
+    "compilers": [
+      "tensorflow"
+    ],
+    "score": 0.2078,
+    "patterns": [
+      "conv_bn_elu",
+      "reflect_pad_conv",
+      "div_by_constant",
+      "cast_roundtrip",
+      "ada_layer_norm",
+      "add_layernorm"
+    ]
+  },
+  {
+    "bug_id": "bug_0180",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 1.0,
+    "patterns": [
+      "dense_residual_block",
+      "avgpool_scale_bias",
+      "manual_group_norm",
+      "layernorm_relu",
+      "layernorm_residual_add",
+      "conv_bn_hardswish"
+    ]
+  },
+  {
+    "bug_id": "bug_0181",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 1.0,
+    "patterns": [
+      "reshape_layernorm_reshape",
+      "euclidean_norm_broadcast",
+      "spatial_attention_cbam",
+      "conv_transpose_bn_relu",
+      "learned_temperature_scale",
+      "ada_layer_norm"
+    ]
+  },
+  {
+    "bug_id": "bug_0182",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 1.0,
+    "patterns": [
+      "conv_bn_relu_maxpool",
+      "conv_bn_leakyrelu",
+      "conv_gelu",
+      "sub_mul_add",
+      "where_const_cond",
+      "batchnorm_eval"
+    ]
+  },
+  {
+    "bug_id": "bug_0183",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.1123,
+    "patterns": [
+      "reflect_pad_conv",
+      "log_exp_cancel",
+      "space_to_depth_block",
+      "glu",
+      "hard_clamp_norm",
+      "conv_bn_relu6"
+    ]
+  },
+  {
+    "bug_id": "bug_0184",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.2052,
+    "patterns": [
+      "multi_query_attention",
+      "where_const_cond",
+      "learned_temperature_scale",
+      "floor_ceil_round",
+      "add_layernorm",
+      "softmax_mul"
+    ]
+  },
+  {
+    "bug_id": "bug_0185",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.1654,
+    "patterns": [
+      "space_to_depth_block",
+      "redundant_reshape",
+      "conv_bn_relu6",
+      "logsumexp_step",
+      "conv_relu_conv_bn",
+      "l2_normalize"
+    ]
+  },
+  {
+    "bug_id": "bug_0186",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.2847,
+    "patterns": [
+      "batchnorm_relu6",
+      "ada_layer_norm",
+      "reflect_pad_conv",
+      "conv_bn_relu6",
+      "channel_gating_branch",
+      "where_mask"
+    ]
+  },
+  {
+    "bug_id": "bug_0187",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.2179,
+    "patterns": [
+      "div_by_constant",
+      "floor_ceil_round",
+      "clipped_affine",
+      "div_by_constant",
+      "reflect_pad_conv",
+      "split_transform_concat"
+    ]
+  },
+  {
+    "bug_id": "bug_0188",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.1607,
+    "patterns": [
+      "pow_canonical",
+      "swish",
+      "layernorm_dropout_identity",
+      "conv_relu_conv_bn",
+      "l2_norm",
+      "where_mask"
+    ]
+  },
+  {
+    "bug_id": "bug_0189",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.1045,
+    "patterns": [
+      "batchnorm_eval",
+      "logsumexp_step",
+      "depth_to_space_block",
+      "conv_bn_hardswish",
+      "where_mask",
+      "layernorm_dropout_identity"
+    ]
+  },
+  {
+    "bug_id": "bug_0190",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.2083,
+    "patterns": [
+      "conv_bn_elu",
+      "reflect_pad_conv",
+      "div_by_constant",
+      "cast_roundtrip",
+      "ada_layer_norm",
+      "add_layernorm"
+    ]
+  },
+  {
+    "bug_id": "bug_0191",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.109,
+    "patterns": [
+      "scaled_dot_product_attention",
+      "cumsum",
+      "gated_mlp_block",
+      "power_norm",
+      "attention_with_bias",
+      "l2_normalize"
+    ]
+  },
+  {
+    "bug_id": "bug_0192",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.0866,
+    "patterns": [
+      "squeeze_unsqueeze",
+      "group_query_attention",
+      "residual_add_relu",
+      "sqrt_reciprocal_mul",
+      "self_attention_residual",
+      "squeeze_unsqueeze"
+    ]
+  },
+  {
+    "bug_id": "bug_0193",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.3386,
+    "patterns": [
+      "squeeze_unsqueeze",
+      "learned_temperature_scale",
+      "gated_mlp_block",
+      "reciprocal_mul",
+      "rotary_embedding_attention",
+      "multi_head_self_attention"
+    ]
+  },
+  {
+    "bug_id": "bug_0194",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 0.0567,
+    "patterns": [
+      "manual_group_norm",
+      "stable_softmax",
+      "constant_add_mul",
+      "reciprocal_mul",
+      "conv_bn_relu",
+      "cast_roundtrip"
+    ]
+  },
+  {
+    "bug_id": "bug_0195",
+    "class": "tflite",
+    "compilers": [
+      "tflite"
+    ],
+    "score": 1.0,
+    "patterns": [
+      "double_transpose",
+      "conv_asym_pad_bn",
+      "dilated_max_pool",
+      "layernorm_relu",
+      "concat_conv",
+      "pad_conv"
+    ]
+  },
+  {
+    "bug_id": "bug_0196",
+    "class": "openvino",
+    "compilers": [
+      "openvino"
+    ],
+    "score": 0.1326,
+    "patterns": [
+      "multi_query_attention",
+      "where_const_cond",
+      "learned_temperature_scale",
+      "floor_ceil_round",
+      "add_layernorm",
+      "softmax_mul"
+    ]
+  },
+  {
+    "bug_id": "bug_0197",
+    "class": "openvino",
+    "compilers": [
+      "openvino"
+    ],
+    "score": 0.0764,
+    "patterns": [
+      "manual_layernorm",
+      "conv_bn_relu_maxpool",
+      "sub_mul_add",
+      "floor_ceil_round",
+      "groupnorm_relu",
+      "grouped_conv_bn_relu"
+    ]
+  },
+  {
+    "bug_id": "bug_0198",
+    "class": "openvino",
+    "compilers": [
+      "openvino"
+    ],
+    "score": 0.0625,
+    "patterns": [
+      "space_to_depth_block",
+      "redundant_reshape",
+      "conv_bn_relu6",
+      "logsumexp_step",
+      "conv_relu_conv_bn",
+      "l2_normalize"
+    ]
+  },
+  {
+    "bug_id": "bug_0199",
+    "class": "openvino",
+    "compilers": [
+      "openvino"
+    ],
+    "score": 0.0572,
+    "patterns": [
+      "batchnorm_eval",
+      "logsumexp_step",
+      "depth_to_space_block",
+      "conv_bn_hardswish",
+      "where_mask",
+      "layernorm_dropout_identity"
+    ]
+  },
+  {
+    "bug_id": "bug_0200",
+    "class": "openvino",
+    "compilers": [
+      "openvino"
+    ],
+    "score": 0.3867,
+    "patterns": [
+      "squeeze_unsqueeze",
+      "learned_temperature_scale",
+      "gated_mlp_block",
+      "reciprocal_mul",
+      "rotary_embedding_attention",
+      "multi_head_self_attention"
+    ]
+  },
+  {
+    "bug_id": "bug_0201",
+    "class": "openvino",
+    "compilers": [
+      "openvino"
+    ],
+    "score": 0.0591,
+    "patterns": [
+      "squeeze_unsqueeze",
+      "log_exp_cancel",
+      "log_clamp",
+      "l2_norm",
+      "self_attention_residual",
+      "add_layernorm"
+    ]
+  }
+]

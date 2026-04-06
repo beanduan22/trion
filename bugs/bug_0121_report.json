@@ -1,0 +1,50 @@
+{
+  "bug_id": "bug_0121",
+  "sig": "f8148f848e69",
+  "compiler_class": "xla",
+  "affected_compilers": [
+    "onnxruntime",
+    "tvm",
+    "xla"
+  ],
+  "total_score": 2.2697651994028467,
+  "input_shape": [
+    1,
+    3,
+    32,
+    32
+  ],
+  "pattern_sequence": [
+    [
+      "layout",
+      "reflect_pad_conv"
+    ],
+    [
+      "fusion",
+      "conv_add_relu"
+    ],
+    [
+      "branch",
+      "channel_gating_branch"
+    ],
+    [
+      "normalization",
+      "batchnorm_relu6"
+    ],
+    [
+      "constant",
+      "redundant_reshape"
+    ],
+    [
+      "broadcast",
+      "floor_ceil_round"
+    ]
+  ],
+  "delta_opt": {
+    "onnxruntime": 0.21162753323380779,
+    "xla": 0.21162753323380779,
+    "tvm": 0.21162753323380779
+  },
+  "crashes": [],
+  "errors": {}
+}

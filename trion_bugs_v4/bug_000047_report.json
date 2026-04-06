@@ -1,0 +1,58 @@
+{
+  "model_id": 47,
+  "total_score": 4.36704806402492,
+  "s_diff": {
+    "onnxruntime": 0.0031500572762770585,
+    "torchscript": 0.0018113558257273573,
+    "torch_compile": 0.2961365540156857,
+    "xla": 0.003552753095537107,
+    "tvm": 0.003552753095537107,
+    "tensorflow": 0.002828441522685089,
+    "tflite": 1.0,
+    "openvino": 1.0
+  },
+  "delta_opt": {
+    "onnxruntime": 0.004226077715631149,
+    "torchscript": 0.0018113558257273573,
+    "torch_compile": 0.03636000097654638,
+    "xla": 0.0048938349449786705,
+    "tvm": 0.0048938349449786705,
+    "tensorflow": 0.0038310447856084967,
+    "tflite": 1.0,
+    "openvino": 1.0
+  },
+  "crashes": [],
+  "errors": {},
+  "pattern_sequence": [
+    [
+      "constant",
+      "log_exp_cancel"
+    ],
+    [
+      "normalization",
+      "manual_layernorm"
+    ],
+    [
+      "branch",
+      "multi_scale_conv_branch"
+    ],
+    [
+      "normalization",
+      "spatial_reduce_mean"
+    ],
+    [
+      "fusion",
+      "dilated_conv_bn_relu"
+    ],
+    [
+      "constant",
+      "slice_full_range"
+    ]
+  ],
+  "input_shape": [
+    1,
+    3,
+    32,
+    32
+  ]
+}

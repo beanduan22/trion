@@ -79,10 +79,15 @@ class PatternAwareSearchSpace:
 
     # ── Sampling helpers ──────────────────────────────────────────────────────
 
-    def _softmax_sample(self, logits: dict[str, float]) -> str:
+    def _softmax_sample(self, logits: dict[str, float], temperature: float = 2.0) -> str:
+        """Sample from a softmax distribution over logits.
+
+        temperature > 1 flattens the distribution → broader pattern coverage.
+        temperature = 1 is standard softmax (concentrates on high-utility patterns).
+        """
         keys = list(logits.keys())
         vals = np.array([logits[k] for k in keys], dtype=float)
-        vals = vals - vals.max()          # numerical stability
+        vals = (vals - vals.max()) / max(temperature, 1e-6)   # stability + temperature
         probs = np.exp(vals)
         probs /= probs.sum()
         return keys[self.rng.choice(len(keys), p=probs)]
@@ -171,7 +176,7 @@ class PatternAwareSearchSpace:
 
     def _make_seed_context(self) -> StructuralContext:
         cfg = self.config
-        choice = self.rng.integers(0, 3)
+        choice = self.rng.integers(0, 4)
         if choice == 0:
             # 4-D spatial (most patterns target this)
             return StructuralContext(
@@ -192,7 +197,7 @@ class PatternAwareSearchSpace:
                 dtype="float32",
                 layout="NC",
             )
-        else:
+        elif choice == 2:
             # 4-D with larger channel count (for SE block, group norm, etc.)
             c = int(self.rng.choice([32, 64, 128]))
             sp = int(self.rng.choice([16, 32]))
@@ -201,6 +206,17 @@ class PatternAwareSearchSpace:
                 shape=[cfg.batch_size, c, sp, sp],
                 dtype="float32",
                 layout="NCHW",
+            )
+        else:
+            # 3-D sequence [B, S, D] for attention / transformer patterns
+            # D must be divisible by 8 for multi-head attention (4 or 8 heads)
+            seq_len = int(self.rng.choice([16, 32, 64]))
+            hidden  = int(self.rng.choice([64, 128, 256]))
+            return StructuralContext(
+                rank=3,
+                shape=[cfg.batch_size, seq_len, hidden],
+                dtype="float32",
+                layout="NLC",
             )
 
     # ── ONNX model builder ────────────────────────────────────────────────────

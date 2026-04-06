@@ -1,0 +1,50 @@
+{
+  "bug_id": "bug_0109",
+  "sig": "4da7853f4ec5",
+  "compiler_class": "xla",
+  "affected_compilers": [
+    "torch_compile",
+    "tvm",
+    "xla"
+  ],
+  "total_score": 7.0,
+  "input_shape": [
+    1,
+    64,
+    32,
+    32
+  ],
+  "pattern_sequence": [
+    [
+      "normalization",
+      "manual_layernorm"
+    ],
+    [
+      "normalization",
+      "spatial_reduce_mean"
+    ],
+    [
+      "normalization",
+      "layernorm_dropout_identity"
+    ],
+    [
+      "normalization",
+      "groupnorm_relu"
+    ],
+    [
+      "layout",
+      "reshape_layernorm_reshape"
+    ],
+    [
+      "normalization",
+      "layernorm_temperature"
+    ]
+  ],
+  "delta_opt": {
+    "torch_compile": 1.0,
+    "xla": 1.0,
+    "tvm": 1.0
+  },
+  "crashes": [],
+  "errors": {}
+}

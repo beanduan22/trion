@@ -1,17 +1,26 @@
 """
-XLA Target Backend.
-Converts ONNX → TensorFlow saved model, then runs with jit_compile=True (XLA).
-Requires: onnx-tf, tensorflow.
+XLA Backend — JAX-native ONNX interpreter compiled through XLA.
+
+Builds the ONNX computation as a Python function that closes over
+pre-loaded numpy initializers, then compiles it with jax.jit so the
+full model runs through XLA's optimizer.
+
+  optimized=True  → jax.jit  (XLA: constant folding, op fusion, layout)
+  optimized=False → jax.disable_jit (interpreter, no XLA)
+
+Key design: initializers are loaded as numpy arrays BEFORE jax.jit so
+they are Python-level closed-over constants. Only the model input is a
+traced JAX array. This avoids np.array() on traced values.
 """
 from __future__ import annotations
 import logging
-import os
-import tempfile
 from typing import Dict
 import numpy as np
 import onnx
+from onnx import numpy_helper, TensorProto
 
 from .base import BackendBase, BackendResult
+from ._onnx_ops import dispatch_op   # shared op dispatcher
 
 logger = logging.getLogger(__name__)
 
@@ -21,52 +30,52 @@ class XLABackend(BackendBase):
 
     def is_available(self) -> bool:
         try:
-            import tensorflow  # noqa: F401
-            import onnx_tf     # noqa: F401
+            import jax        # noqa: F401
+            import jax.numpy  # noqa: F401
             return True
         except ImportError:
             return False
 
-    def run(
-        self,
-        model: onnx.ModelProto,
-        inputs: Dict[str, np.ndarray],
-        optimized: bool = True,
-    ) -> BackendResult:
+    def run(self, model: onnx.ModelProto, inputs: Dict[str, np.ndarray],
+            optimized: bool = True) -> BackendResult:
         try:
-            import tensorflow as tf
-            from onnx_tf.backend import prepare
+            import jax
+            import jax.numpy as jnp
 
-            tf_rep = prepare(model)
-            with tempfile.TemporaryDirectory() as tmpdir:
-                export_path = os.path.join(tmpdir, "model")
-                tf_rep.export_graph(export_path)
-                loaded = tf.saved_model.load(export_path)
-                infer_fn = loaded.signatures["serving_default"]
+            inp_name = model.graph.input[0].name
+            out_name = model.graph.output[0].name
+            x_np = inputs[inp_name].astype(np.float32)
 
-            input_name = model.graph.input[0].name
-            x = tf.constant(inputs[input_name], dtype=tf.float32)
+            # Pre-load all initializers as numpy OUTSIDE jax.jit
+            init_np: Dict[str, np.ndarray] = {
+                init.name: numpy_helper.to_array(init).copy()
+                for init in model.graph.initializer
+            }
+
+            def model_fn(x_jax):
+                # Shallow-copy: numpy values stay numpy (closed-over constants),
+                # JAX traced input replaces the model's input slot.
+                values: dict = dict(init_np)
+                values[inp_name] = x_jax
+                for node in model.graph.node:
+                    results = dispatch_op(node, values, jnp)
+                    for name, val in zip(node.output, results):
+                        if name:
+                            values[name] = val
+                return jnp.asarray(values[out_name], dtype=jnp.float32)
 
             if optimized:
-                @tf.function(jit_compile=True)
-                def run_xla(inp):
-                    return infer_fn(**{input_name: inp})
-
-                result = run_xla(x)
+                jit_fn = jax.jit(model_fn)
+                out = np.array(jit_fn(jnp.array(x_np)), dtype=np.float32)
             else:
-                @tf.function(jit_compile=False)
-                def run_no_xla(inp):
-                    return infer_fn(**{input_name: inp})
+                with jax.disable_jit():
+                    out = np.array(model_fn(jnp.array(x_np)), dtype=np.float32)
 
-                result = run_no_xla(x)
+            return BackendResult(out)
 
-            # Extract the output tensor (first value in the dict)
-            if isinstance(result, dict):
-                output = list(result.values())[0].numpy()
-            else:
-                output = result.numpy()
-
-            return BackendResult(output)
+        except NotImplementedError as exc:
+            logger.debug("XLA unsupported op: %s", exc)
+            return BackendResult(None, str(exc), crashed=True)
         except Exception as exc:
-            logger.debug("XLA backend failed: %s", exc)
+            logger.debug("XLA (%s) failed: %s", "opt" if optimized else "no-opt", exc)
             return BackendResult(None, str(exc), crashed=True)

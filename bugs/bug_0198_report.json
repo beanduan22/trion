@@ -1,0 +1,47 @@
+{
+  "compiler_class": "openvino",
+  "affected_compilers": [
+    "openvino"
+  ],
+  "total_score": 0.0625,
+  "input_shape": [
+    1,
+    3,
+    32,
+    32
+  ],
+  "pattern_sequence": [
+    [
+      "layout",
+      "space_to_depth_block"
+    ],
+    [
+      "constant",
+      "redundant_reshape"
+    ],
+    [
+      "fusion",
+      "conv_bn_relu6"
+    ],
+    [
+      "broadcast",
+      "logsumexp_step"
+    ],
+    [
+      "fusion",
+      "conv_relu_conv_bn"
+    ],
+    [
+      "normalization",
+      "l2_normalize"
+    ]
+  ],
+  "delta_opt": {
+    "openvino": 0.0625
+  },
+  "crashes": [],
+  "errors": {
+    "openvino+opt": "discrepancy rel_diff=0.0625"
+  },
+  "bug_id": "bug_0198"
+}

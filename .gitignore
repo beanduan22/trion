@@ -3,4 +3,10 @@ __pycache__/
 *.pyo
 .DS_Store
 trion_results*/
+*.coverage
+.coverage
+
+# Exclude .onnx globally, but allow the bug corpus
 *.onnx
+!bugs/*.onnx
+!trion_bugs_v4/*.onnx

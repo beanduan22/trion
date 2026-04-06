@@ -6,7 +6,7 @@ from typing import List
 class TrionConfig:
     # ── Search space ──────────────────────────────────────────────────────────
     pattern_budget: int = 6          # K: patterns per model
-    num_models: int = 1000           # total test models
+    num_models: int = 1000            # total test models
     seed: int = 42
 
     # ── Feedback (UCB) ────────────────────────────────────────────────────────
@@ -14,12 +14,15 @@ class TrionConfig:
     epsilon: float = 1e-8                  # numerical stability ε
 
     # ── Oracle ────────────────────────────────────────────────────────────────
-    tolerance: float = 1e-3               # δ for discrepancy threshold
+    tolerance: float = 0.01               # δ for discrepancy threshold (1% relative diff)
 
     # ── Backends ──────────────────────────────────────────────────────────────
     reference_backend: str = "pytorch_eager"
     target_backends: List[str] = field(
-        default_factory=lambda: ["tvm", "onnxruntime", "tensorrt", "xla"]
+        default_factory=lambda: [
+            "onnxruntime", "torchscript", "torch_compile",
+            "xla", "tvm",
+        ]
     )
 
     # ── TVM ───────────────────────────────────────────────────────────────────
@@ -42,4 +45,4 @@ class TrionConfig:
     output_dir: str = "trion_results"
     save_bugs: bool = True
     verbose: bool = True
-    bug_score_threshold: float = 0.05  # score above which we log a "bug"
+    bug_score_threshold: float = 0.1   # score above which we log a "bug"

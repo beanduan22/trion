@@ -1,0 +1,82 @@
+{
+  "campaign": "v6",
+  "total_bugs": 202,
+  "score_stats": {
+    "min": 0.0505,
+    "max": 12.0,
+    "mean": 1.6395
+  },
+  "bugs_by_compiler": {
+    "torch_compile": 121,
+    "tflite": 58,
+    "openvino": 37,
+    "onnxruntime": 21,
+    "tvm": 15,
+    "xla": 15,
+    "tensorflow": 13,
+    "torchscript": 11,
+    "pytorch_eager": 2
+  },
+  "bugs_by_class": {
+    "torch_compile": 102,
+    "tflite": 58,
+    "onnxruntime": 15,
+    "xla": 9,
+    "openvino": 8,
+    "tensorflow": 6,
+    "torchscript": 3,
+    "tvm": 1
+  },
+  "top_patterns": {
+    "cast_roundtrip": 55,
+    "squeeze_unsqueeze": 50,
+    "residual_add_relu": 27,
+    "add_layernorm": 27,
+    "floor_ceil_round": 23,
+    "variance_whitening": 21,
+    "div_by_constant": 21,
+    "log_clamp": 19,
+    "sqrt_reciprocal_mul": 19,
+    "aspp_dilated_branch": 18,
+    "conv_bn_relu6": 16,
+    "reflect_pad_conv": 16,
+    "conv_bn_relu": 15,
+    "ceil_mode_avg_pool_conv": 15,
+    "reciprocal_mul": 15,
+    "where_mask": 15,
+    "swish": 14,
+    "l2_normalize": 14,
+    "dilated_conv_bn_relu": 14,
+    "sub_mul_add": 14
+  },
+  "pattern_library": {
+    "total_patterns": 124,
+    "categories": {
+      "fusion": 24,
+      "layout": 20,
+      "broadcast": 18,
+      "normalization": 18,
+      "branch": 16,
+      "constant": 16,
+      "attention": 12
+    }
+  },
+  "fuzzing_config": {
+    "num_models_generated": 1000,
+    "pattern_budget_per_model": 6,
+    "tolerance_threshold": 0.01,
+    "bug_score_threshold": 0.1,
+    "num_input_mutations": 3,
+    "reference_backend": "pytorch_eager",
+    "target_backends": [
+      "onnxruntime",
+      "torchscript",
+      "torch_compile",
+      "xla",
+      "tvm",
+      "tensorflow",
+      "tflite",
+      "openvino"
+    ]
+  }
+}

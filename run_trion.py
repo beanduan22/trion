@@ -27,8 +27,10 @@ def parse_args():
     p.add_argument("--num-models",     type=int,   default=1000)
     p.add_argument("--pattern-budget", type=int,   default=6)
     p.add_argument("--backends",       nargs="+",
-                   default=["tvm", "onnxruntime", "tensorrt", "xla"],
-                   choices=["tvm", "onnxruntime", "tensorrt", "xla"])
+                   default=["onnxruntime", "torchscript", "torch_compile"],
+                   choices=["tvm", "onnxruntime", "tensorrt", "xla",
+                            "torchscript", "torch_compile",
+                            "tensorflow", "tflite", "openvino"])
     p.add_argument("--output-dir",     type=str,   default="trion_results")
     p.add_argument("--seed",           type=int,   default=42)
     p.add_argument("--tolerance",      type=float, default=1e-3)

@@ -66,6 +66,36 @@ class CreditAssignment:
                 self._pat_N[cat].get(pat_name, 0) + 1
             )
 
+    def update_crash(
+        self,
+        pattern_sequence: List[Tuple[str, str]],
+        crash_type: str,
+    ) -> None:
+        """
+        Update credit accounting for a model that only produced crashes.
+
+        Frontend crashes (onnx2torch/tracing failures): no update at all —
+        the crash is not the compiler's fault and should not influence pattern selection.
+
+        Backend crashes: apply a small negative reward so that patterns repeatedly
+        causing real backend failures are gently deprioritized.
+        """
+        if crash_type == "frontend":
+            return
+        K = len(pattern_sequence)
+        if K == 0:
+            return
+        penalty = -0.05 / K
+        for cat, pat_name in pattern_sequence:
+            self._cat_R[cat] += penalty
+            self._cat_N[cat] += 1
+            self._pat_R[cat][pat_name] = (
+                self._pat_R[cat].get(pat_name, 0.0) + penalty
+            )
+            self._pat_N[cat][pat_name] = (
+                self._pat_N[cat].get(pat_name, 0) + 1
+            )
+
     # ── Utility computation ───────────────────────────────────────────────────
 
     def _ucb(self, total_reward: float, count: int) -> float:
@@ -88,6 +118,17 @@ class CreditAssignment:
         return result
 
     # ── Stats summary ─────────────────────────────────────────────────────────
+
+    def all_pattern_usage(self) -> List[Tuple[str, str, float, int]]:
+        """Return every registered pattern with (cat, name, avg_reward, count),
+        sorted by category then name. Used for full-coverage reporting."""
+        rows = []
+        for cat in sorted(self._pat_R):
+            for pn in sorted(self._pat_R[cat]):
+                cnt = self._pat_N[cat][pn]
+                avg = self._pat_R[cat][pn] / (cnt + self.eps)
+                rows.append((cat, pn, avg, cnt))
+        return rows
 
     def top_patterns(self, n: int = 10) -> List[Tuple[str, str, float, int]]:
         """Return top-n patterns by average reward."""

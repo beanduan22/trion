@@ -1,0 +1,46 @@
+{
+  "bug_id": "bug_0049",
+  "sig": "c8323cb061e1",
+  "compiler_class": "torchscript",
+  "affected_compilers": [
+    "torchscript"
+  ],
+  "total_score": 4.0,
+  "input_shape": [
+    1,
+    64,
+    16,
+    16
+  ],
+  "pattern_sequence": [
+    [
+      "broadcast",
+      "abs_neg_relu"
+    ],
+    [
+      "branch",
+      "channel_gating_branch"
+    ],
+    [
+      "broadcast",
+      "reciprocal_mul"
+    ],
+    [
+      "broadcast",
+      "log_clamp"
+    ],
+    [
+      "fusion",
+      "conv_bn_relu"
+    ],
+    [
+      "normalization",
+      "variance_whitening"
+    ]
+  ],
+  "delta_opt": {
+    "torchscript": 1.0
+  },
+  "crashes": [],
+  "errors": {}
+}

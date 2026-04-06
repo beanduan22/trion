@@ -98,6 +98,7 @@ CAT_BROADCAST = "broadcast"
 CAT_NORMALIZATION = "normalization"
 CAT_BRANCH = "branch"
 CAT_CONSTANT = "constant"
+CAT_ATTENTION = "attention"
 
 ALL_CATEGORIES = [
     CAT_FUSION,
@@ -106,4 +107,5 @@ ALL_CATEGORIES = [
     CAT_NORMALIZATION,
     CAT_BRANCH,
     CAT_CONSTANT,
+    CAT_ATTENTION,
 ]

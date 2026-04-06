@@ -1,0 +1,38 @@
+{
+  "bug_id": "bug_0145",
+  "sig": "6abd918e9f66",
+  "compiler_class": "onnxruntime",
+  "affected_compilers": [
+    "onnxruntime"
+  ],
+  "total_score": 2.0,
+  "input_shape": [
+    1,
+    3,
+    32,
+    32
+  ],
+  "pattern_sequence": [
+    [
+      "broadcast",
+      "exp_div_softplus"
+    ],
+    [
+      "branch",
+      "dual_pool_add"
+    ],
+    [
+      "fusion",
+      "gap_linear"
+    ],
+    [
+      "fusion",
+      "matmul_bias_gelu"
+    ]
+  ],
+  "delta_opt": {
+    "onnxruntime": 1.0
+  },
+  "crashes": [],
+  "errors": {}
+}
