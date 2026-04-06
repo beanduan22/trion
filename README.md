@@ -40,15 +40,15 @@ Trion is a **coverage-guided fuzzer for deep learning compilers**. It automatica
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Key Design Decisions
+### Key Components
 
 | Component | What it does |
 |---|---|
 | **Pattern Library** | 124 hand-crafted ONNX subgraph patterns across 7 semantic categories (fusion, layout, broadcast, normalization, branch, constant, attention). Each pattern is a composable building block. |
 | **PatternAwareSearchSpace** | Selects K patterns per model using a UCB (Upper Confidence Bound) bandit. High-reward patterns are sampled more often over time. |
 | **InputMutator** | Generates a base random input plus N mutations (shape/value perturbations) to increase oracle sensitivity. |
-| **DiscrepancyOracle** | Runs the same ONNX model on all backends, compares every output to PyTorch eager. Reports relative L2 difference and whether a backend crashed. |
-| **CreditAssignment** | Maintains per-pattern reward estimates. After each model, reward is distributed to the patterns that composed it. Crash types (frontend tracing vs. real compiler crash) are treated differently to avoid penalizing patterns unfairly. |
+| **DiscrepancyOracle** | Runs the same ONNX model on all backends, compares every output to PyTorch eager reference. Reports relative L2 difference and whether a backend crashed. |
+| **CreditAssignment** | Maintains per-pattern reward estimates. After each model, reward is distributed to the patterns that composed it. Frontend tracing failures (onnx2torch artefacts) are distinguished from real compiler crashes and handled separately to avoid unfair penalization. |
 
 ---
 
@@ -57,14 +57,16 @@ Trion is a **coverage-guided fuzzer for deep learning compilers**. It automatica
 A **discrepancy bug** is flagged when:
 
 ```
-rel_diff(backend_output, reference_output) > tolerance (default 1%)
+rel_diff(backend_output, reference_output) > tolerance
 ```
 
-A **crash bug** is flagged when:
-- The backend raises an exception or returns no output
-- The crash type is classified as `"backend"` (real compiler failure, not a tracing artefact)
+The default tolerance via CLI is `1e-3` (0.1%). The `TrionConfig` dataclass default is `0.01` (1%) — always pass `--tolerance` explicitly to control this.
 
-Both types produce a `.onnx` model and a `_report.json`.
+A **crash bug** is flagged when:
+- The backend raises an exception or produces no output
+- The crash is classified as `"backend"` type (real compiler failure, not a frontend tracing artefact from onnx2torch/dynamo)
+
+Both types produce a `.onnx` model and a `_report.json`. Frontend-only failures (FakeTensor errors, dynamo graph breaks, onnx2torch conversion issues) are logged but **not** saved as bugs.
 
 ---
 
@@ -102,14 +104,16 @@ Transformer attention variants that stress compiler fusion and tiling:
 
 ## Campaign Results — v6 (Verified)
 
-**1000 models generated**, **8 backends tested**, **195 verified bugs** (7 duplicate crash bugs removed, 0 false positives).
+**1000 models generated** | **8 backends tested** | **195 verified unique bugs**
+
+Verification: 202 initial bugs → 7 duplicate crash bugs removed (same error signature already represented by a higher-scoring bug) → 0 false positives → **195 confirmed**.
 
 ### Bug Types
 
 | Type | Count | Description |
 |---|---|---|
 | Discrepancy-only | 184 | Numerical output diverges from PyTorch eager reference |
-| Crash-only | 7 | Backend crashes with no numerical output |
+| Crash-only | 7 | Backend crashes, no numerical output produced |
 | Crash + Discrepancy | 4 | Both crash and numerical divergence observed |
 
 ### Bugs by Compiler
@@ -125,9 +129,11 @@ Transformer attention variants that stress compiler fusion and tiling:
 | TensorFlow | 12 | 11 | 7 |
 | TorchScript | 9 | 8 | 5 |
 
-### Unique Crash Categories
+> Note: A single bug may affect multiple compilers; counts above reflect bugs where that compiler is the **primary** affected backend.
 
-| Category | Backends | Example Bug |
+### Unique Crash Categories (13 types)
+
+| Crash Category | Affected Backends | Representative Bug |
 |---|---|---|
 | `padding_size_error` | torch_compile, torchscript, tvm, xla | bug_0079 |
 | `depth_to_space_unimplemented` | torch_compile, torchscript, tvm, xla | bug_0152 |
@@ -141,32 +147,35 @@ Transformer attention variants that stress compiler fusion and tiling:
 | `tflite_conv_transpose_not_supported` | tflite | bug_0009 |
 | `tflite_extract_patches_not_supported` | tflite | bug_0166 |
 | `tensorflow_padding_type_error` | tensorflow, tflite | bug_0013 |
-| `xla_unsupported_op` | tensorflow/xla | bug_0017 |
+| `xla_unsupported_op` | xla (via tensorflow) | bug_0017 |
 
 ### Score Distribution
 
 | Metric | Value |
 |---|---|
-| Min score | 0.0505 |
-| Max score | 12.0000 |
-| Mean score | 1.6522 |
+| Min | 0.0505 |
+| Max | 12.0000 |
+| Mean | 1.6522 |
 
-Score = sum of relative L2 discrepancies across all backends + optimization-induced divergence (Δ_opt). Crashes are tracked separately and do not inflate scores.
+**Score formula:** `S(m) = S_diff(m) + Δ_opt(m)`
+- `S_diff`: relative L2 distance between backend output and PyTorch eager reference, capped at 1.0 per backend
+- `Δ_opt`: relative L2 distance between optimized and non-optimized run of the same backend, capped at 1.0
+- Crashes are tracked separately and **do not inflate the score**
 
 ### Top Bug-Triggering Patterns
 
-| Pattern | Appearances in bugs |
-|---|---|
-| cast_roundtrip | 55 |
-| squeeze_unsqueeze | 50 |
-| residual_add_relu | 27 |
-| add_layernorm | 27 |
-| floor_ceil_round | 23 |
-| variance_whitening | 21 |
-| div_by_constant | 20 |
-| log_clamp | 19 |
-| sqrt_reciprocal_mul | 19 |
-| aspp_dilated_branch | 18 |
+| Pattern | Category | Appearances in bugs |
+|---|---|---|
+| cast_roundtrip | constant | 55 |
+| squeeze_unsqueeze | layout | 50 |
+| residual_add_relu | branch | 27 |
+| add_layernorm | branch | 27 |
+| floor_ceil_round | broadcast | 23 |
+| variance_whitening | normalization | 21 |
+| div_by_constant | constant | 20 |
+| log_clamp | broadcast | 19 |
+| sqrt_reciprocal_mul | constant | 19 |
+| aspp_dilated_branch | branch | 18 |
 
 ---
 
@@ -177,9 +186,9 @@ Score = sum of relative L2 discrepancies across all backends + optimization-indu
 pip install -r requirements.txt
 
 # Optional backends (install only what you need)
-pip install tensorflow>=2.13 onnx-tf>=1.10   # TensorFlow / XLA
+pip install tensorflow>=2.13 onnx-tf>=1.10   # TensorFlow + TFLite + XLA
 pip install openvino>=2023.0                  # OpenVINO
-# TVM: build from source https://tvm.apache.org/docs/install/
+# TVM: build from source — https://tvm.apache.org/docs/install/
 # TensorRT: requires CUDA + TensorRT SDK
 ```
 
@@ -190,14 +199,20 @@ pip install openvino>=2023.0                  # OpenVINO
 ### Run the fuzzer
 
 ```bash
-# Default: 1000 models, onnxruntime + torchscript + torch_compile + xla + tvm
+# Default: 1000 models, backends: onnxruntime + torchscript + torch_compile + xla + tvm
 python run_trion.py
 
-# All 8 backends, 500 models
-python run_trion.py --num-models 500 --backends onnxruntime torchscript torch_compile tvm xla tensorflow tflite openvino
+# All 8 backends, 1000 models, 0.1% tolerance
+python run_trion.py \
+  --num-models 1000 \
+  --backends onnxruntime torchscript torch_compile tvm xla tensorflow tflite openvino \
+  --tolerance 0.001
 
-# Custom output directory and tolerance
-python run_trion.py --output-dir my_results --tolerance 0.005
+# Save every generated model (not just bugs) — useful for building a test corpus
+python run_trion.py --save-all --output-dir my_corpus
+
+# Custom output directory and score threshold
+python run_trion.py --output-dir my_results --tolerance 0.001 --bug-threshold 0.05
 
 # Quiet mode (suppress per-bug logs)
 python run_trion.py --quiet
@@ -215,6 +230,7 @@ python reproduce_bugs.py
 # Reproduce bugs for a specific compiler
 python reproduce_bugs.py --class torch_compile
 python reproduce_bugs.py --class tflite
+python reproduce_bugs.py --class openvino
 
 # Reproduce a single bug by ID
 python reproduce_bugs.py --bug bug_0071
@@ -227,7 +243,7 @@ python reproduce_bugs.py --verbose
 
 ## Bug Report Format
 
-Each bug produces two files:
+Each confirmed bug produces two files:
 
 **`bugs/bug_NNNN.onnx`** — minimal ONNX model that triggers the bug
 
@@ -235,6 +251,7 @@ Each bug produces two files:
 ```json
 {
   "bug_id": "bug_0071",
+  "sig": "12c0bd5f709b",
   "compiler_class": "torch_compile",
   "affected_compilers": ["torch_compile"],
   "total_score": 0.6123,
@@ -253,7 +270,9 @@ Each bug produces two files:
 }
 ```
 
-**`bugs/campaign_summary.json`** — full statistics for the campaign.
+**`bugs/campaign_summary.json`** — full statistics including crash taxonomy, pattern usage, and per-compiler breakdown.
+
+**`bugs/index.json`** — searchable index of all 195 verified bugs with `bug_id`, `class`, `compilers`, `score`, `patterns`, `has_crash`, and `crash_backends` fields.
 
 ---
 
@@ -262,18 +281,19 @@ Each bug produces two files:
 ```
 trion/
 ├── run_trion.py              # CLI entry point
-├── reproduce_bugs.py         # Bug reproduction script
+├── reproduce_bugs.py         # Bug reproduction and verification script
 ├── requirements.txt
-├── bugs/                     # v6 campaign bug corpus (202 bugs)
-│   ├── index.json            # searchable bug index
-│   ├── campaign_summary.json # full campaign statistics
-│   ├── bug_NNNN.onnx         # minimal ONNX reproducer
-│   └── bug_NNNN_report.json  # bug metadata
-├── trion_bugs_v4/            # v4 campaign raw results (100 models)
+├── bugs/                     # v6 campaign — 195 verified bugs
+│   ├── index.json            # searchable index (195 entries)
+│   ├── campaign_summary.json # full verified statistics + crash taxonomy
+│   ├── bug_NNNN.onnx         # minimal ONNX reproducer (one per bug)
+│   ├── bug_NNNN_report.json  # bug metadata (score, patterns, errors)
+│   └── removed_duplicates/   # 7 duplicate crash bugs (kept for reference)
+├── trion_bugs_v4/            # v4 corpus — all generated models (target: 1000)
 └── trion/                    # core library
     ├── config.py             # TrionConfig dataclass
     ├── runner.py             # TrionRunner — main orchestration loop
-    ├── patterns/             # Pattern library
+    ├── patterns/             # Pattern library (124 patterns, 7 categories)
     │   ├── base.py           # OTP base class
     │   ├── library.py        # OTPLibrary — registry + UCB integration
     │   ├── attention_patterns.py
@@ -307,19 +327,22 @@ trion/
 
 ## Configuration Reference
 
-All options are in `TrionConfig` (`trion/config.py`) and exposed as CLI flags:
+All options live in `TrionConfig` (`trion/config.py`) and are exposed as CLI flags in `run_trion.py`.
 
-| Parameter | Default | Description |
-|---|---|---|
-| `num_models` | 1000 | Total ONNX models to generate and test |
-| `pattern_budget` | 6 | Number of patterns composed per model |
-| `tolerance` | 0.01 | Relative L2 threshold for discrepancy (1%) |
-| `bug_score_threshold` | 0.1 | Minimum score to classify as a bug |
-| `num_mutations_per_model` | 3 | Input mutations per model |
-| `exploration_coefficient` | 1.0 | UCB λ — controls exploration vs exploitation |
-| `seed` | 42 | RNG seed for reproducibility |
-| `reference_backend` | pytorch_eager | Oracle reference |
-| `target_backends` | ort, ts, tc, xla, tvm | Backends under test |
+| Parameter | CLI flag | CLI default | Config default | Description |
+|---|---|---|---|---|
+| `num_models` | `--num-models` | 1000 | 1000 | Total ONNX models to generate and test |
+| `pattern_budget` | `--pattern-budget` | 6 | 6 | Patterns composed per model |
+| `tolerance` | `--tolerance` | **1e-3 (0.1%)** | 0.01 (1%) | Relative L2 threshold for discrepancy detection |
+| `bug_score_threshold` | `--bug-threshold` | 0.05 | 0.1 | Minimum score to save as a bug |
+| `num_mutations_per_model` | _(not exposed)_ | — | 3 | Input mutations per model |
+| `exploration_coefficient` | _(not exposed)_ | — | 1.0 | UCB λ — exploration vs exploitation |
+| `seed` | `--seed` | 42 | 42 | RNG seed for reproducibility |
+| `reference_backend` | _(not exposed)_ | — | pytorch_eager | Oracle reference backend |
+| `target_backends` | `--backends` | onnxruntime, torchscript, torch_compile, xla, tvm | same | Backends under test |
+| `save_all` | `--save-all` | False | False | Save every generated model, not just bugs |
+
+> **Note:** The CLI `--tolerance` default (`1e-3`) differs from the `TrionConfig` default (`0.01`). The v6 campaign used `--tolerance 0.01`.
 
 ---
 
