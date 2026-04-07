@@ -14,3 +14,6 @@ bugs/bug_0110.onnx
 trion_bugs_v4/bug_000087.onnx
 trion_bugs_v4/bug_000390.onnx
 trion_bugs_v4/bug_000458.onnx
+trion_bugs_v4/bug_000107.onnx
+trion_bugs_v4/bug_000119.onnx
+trion_bugs_v4/bug_000132.onnx
