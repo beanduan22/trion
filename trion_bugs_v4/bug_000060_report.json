@@ -1,52 +1,46 @@
 {
   "model_id": 60,
-  "total_score": 5.010808286999626,
+  "total_score": 9.507103152463881e-05,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.005331872919882278,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 0.0008268816568404377,
-    "tvm": 0.0008268816568404377,
-    "tensorflow": 0.0008453593669623887,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 9.425033810399894e-05,
+    "torchscript": 0.0
   },
   "delta_opt": {
-    "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 0.000597327590993127,
-    "xla": 0.0007837709330986138,
-    "tvm": 0.0007837709330986138,
-    "tensorflow": 0.0008124219419097595,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 8.206934206398743e-07,
+    "torchscript": 0.0
   },
   "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
+  },
   "errors": {},
   "pattern_sequence": [
     [
-      "layout",
-      "double_transpose"
+      "normalization",
+      "batchnorm_relu6"
     ],
     [
       "branch",
-      "concat_conv"
-    ],
-    [
-      "broadcast",
-      "floor_ceil_round"
-    ],
-    [
-      "broadcast",
-      "euclidean_norm_broadcast"
-    ],
-    [
-      "constant",
-      "div_by_constant"
+      "fpn_branch"
     ],
     [
       "normalization",
-      "layernorm_relu"
+      "layernorm_residual_add"
+    ],
+    [
+      "fusion",
+      "avgpool_scale_bias"
+    ],
+    [
+      "constant",
+      "slice_full_range"
+    ],
+    [
+      "branch",
+      "channel_gating_branch"
     ]
   ],
   "input_shape": [

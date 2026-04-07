@@ -1,67 +1,51 @@
 {
   "model_id": 22,
-  "total_score": 4.98187177204064,
+  "total_score": 0.00017538769616089027,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.0005003235190747645,
-    "torchscript": 0.0005019180389317454,
-    "torch_compile": 0.5046006876984013,
-    "xla": 0.0005684489001516253,
-    "tvm": 0.0005684489001516253,
-    "tensorflow": 1.0,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 4.752347730456085e-05,
+    "torchscript": 4.2364656883813175e-05
   },
   "delta_opt": {
-    "onnxruntime": 0.0006463950338774941,
-    "torchscript": 0.0005019180389317454,
-    "torch_compile": 0.473772917742606,
-    "xla": 0.00010535708425699491,
-    "tvm": 0.00010535708425699491,
-    "tensorflow": 0.0,
-    "tflite": 0.0,
-    "openvino": 1.0
+    "onnxruntime": 4.3134905088703065e-05,
+    "torchscript": 4.2364656883813175e-05
   },
-  "crashes": [
-    "tensorflow+opt",
-    "tensorflow-opt",
-    "tflite+opt",
-    "tflite-opt"
-  ],
-  "errors": {
-    "tensorflow+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 317, in dispatch_op  *\n        return _conv(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 504, in _conv  *\n        y_nhwc = tf.nn.depthwise_conv2d(\n\n    ValueError: Dimensions must be equal, but are 128 and 32 for '{{node depthwise}} = DepthwiseConv2dNative[T=DT_FLOAT, data_format=\"NHWC\", dilations=[1, 1, 1, 1], explicit_paddings=[0, 0, 1, 1, 1, 1, 0, 0], padding=\"EXPLICIT\", strides=[1, 1, 1, 1]](transpose_15, transpose_17)' with input shapes: [1,8,8,128], [3,3,32,128].\n",
-    "tensorflow-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 317, in dispatch_op  *\n        return _conv(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 504, in _conv  *\n        y_nhwc = tf.nn.depthwise_conv2d(\n\n    ValueError: Dimensions must be equal, but are 128 and 32 for '{{node depthwise}} = DepthwiseConv2dNative[T=DT_FLOAT, data_format=\"NHWC\", dilations=[1, 1, 1, 1], explicit_paddings=[0, 0, 1, 1, 1, 1, 0, 0], padding=\"EXPLICIT\", strides=[1, 1, 1, 1]](transpose_15, transpose_17)' with input shapes: [1,8,8,128], [3,3,32,128].\n",
-    "tflite+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 317, in dispatch_op  *\n        return _conv(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 504, in _conv  *\n        y_nhwc = tf.nn.depthwise_conv2d(\n\n    ValueError: Dimensions must be equal, but are 128 and 32 for '{{node depthwise}} = DepthwiseConv2dNative[T=DT_FLOAT, data_format=\"NHWC\", dilations=[1, 1, 1, 1], explicit_paddings=[0, 0, 1, 1, 1, 1, 0, 0], padding=\"EXPLICIT\", strides=[1, 1, 1, 1]](transpose_15, transpose_17)' with input shapes: [1,8,8,128], [3,3,32,128].\n",
-    "tflite-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 317, in dispatch_op  *\n        return _conv(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 504, in _conv  *\n        y_nhwc = tf.nn.depthwise_conv2d(\n\n    ValueError: Dimensions must be equal, but are 128 and 32 for '{{node depthwise}} = DepthwiseConv2dNative[T=DT_FLOAT, data_format=\"NHWC\", dilations=[1, 1, 1, 1], explicit_paddings=[0, 0, 1, 1, 1, 1, 0, 0], padding=\"EXPLICIT\", strides=[1, 1, 1, 1]](transpose_15, transpose_17)' with input shapes: [1,8,8,128], [3,3,32,128].\n"
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
   },
+  "errors": {},
   "pattern_sequence": [
     [
       "constant",
-      "transpose_inverse_cancel"
+      "mul_by_reciprocal"
+    ],
+    [
+      "broadcast",
+      "hard_clamp_norm"
     ],
     [
       "fusion",
-      "conv_bn_relu_maxpool"
+      "pointwise_dw_block"
     ],
     [
-      "fusion",
-      "conv_bn_elu"
+      "normalization",
+      "layernorm_dropout_identity"
     ],
     [
-      "fusion",
-      "conv_bn_relu_maxpool"
+      "broadcast",
+      "euclidean_norm_broadcast"
     ],
     [
-      "constant",
-      "div_by_constant"
-    ],
-    [
-      "fusion",
-      "grouped_conv_bn_relu"
+      "normalization",
+      "layernorm_relu"
     ]
   ],
   "input_shape": [
     1,
-    32,
+    3,
     32,
     32
   ]

@@ -1,68 +1,50 @@
 {
   "model_id": 86,
-  "total_score": 2.0,
+  "total_score": 0.0,
+  "n_valid_comparisons": 2,
   "s_diff": {
     "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 0.0,
-    "xla": 0.0,
-    "tvm": 0.0,
-    "tensorflow": 1.0,
-    "tflite": 1.0,
-    "openvino": 0.0
+    "torchscript": 0.0
   },
   "delta_opt": {
     "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 0.0,
-    "xla": 0.0,
-    "tvm": 0.0,
-    "tensorflow": 0.0,
-    "tflite": 0.0,
-    "openvino": 0.0
+    "torchscript": 0.0
   },
-  "crashes": [
-    "tensorflow+opt",
-    "tensorflow-opt",
-    "tflite+opt",
-    "tflite-opt"
-  ],
-  "errors": {
-    "tensorflow+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 358, in dispatch_op  *\n        return _pool(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 598, in _pool  *\n        y_nhwc = tf.nn.avg_pool2d(x_nhwc, ksize, str_tf, padding=paddings_tf)\n\n    TypeError: Expected string for argument 'padding' not [[0, 0], [0, 0], [0, 0], [0, 0]].\n",
-    "tensorflow-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 358, in dispatch_op  *\n        return _pool(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 598, in _pool  *\n        y_nhwc = tf.nn.avg_pool2d(x_nhwc, ksize, str_tf, padding=paddings_tf)\n\n    TypeError: Expected string for argument 'padding' not [[0, 0], [0, 0], [0, 0], [0, 0]].\n",
-    "tflite+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 358, in dispatch_op  *\n        return _pool(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 598, in _pool  *\n        y_nhwc = tf.nn.avg_pool2d(x_nhwc, ksize, str_tf, padding=paddings_tf)\n\n    TypeError: Expected string for argument 'padding' not [[0, 0], [0, 0], [0, 0], [0, 0]].\n",
-    "tflite-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 358, in dispatch_op  *\n        return _pool(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 598, in _pool  *\n        y_nhwc = tf.nn.avg_pool2d(x_nhwc, ksize, str_tf, padding=paddings_tf)\n\n    TypeError: Expected string for argument 'padding' not [[0, 0], [0, 0], [0, 0], [0, 0]].\n"
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
   },
+  "errors": {},
   "pattern_sequence": [
     [
-      "fusion",
-      "conv_bn_relu"
+      "broadcast",
+      "sub_mul_add"
     ],
     [
-      "normalization",
-      "manual_layernorm"
+      "broadcast",
+      "mul_add_relu"
     ],
     [
-      "normalization",
-      "batchnorm_relu6"
+      "broadcast",
+      "cumsum"
     ],
     [
       "branch",
-      "multi_scale_conv_branch"
+      "residual_add_relu"
     ],
     [
       "fusion",
-      "avgpool_scale_bias"
+      "matmul_bias_tanh"
     ],
     [
-      "normalization",
-      "layernorm_dropout_identity"
+      "layout",
+      "gather_reshape"
     ]
   ],
   "input_shape": [
     1,
-    64,
-    32,
-    32
+    256
   ]
 }

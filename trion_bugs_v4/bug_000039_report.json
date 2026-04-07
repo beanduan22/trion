@@ -1,57 +1,52 @@
 {
   "model_id": 39,
-  "total_score": 5.297761427237164,
+  "total_score": 0.0001529348304374801,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.04376014813490232,
-    "torchscript": 0.0,
-    "torch_compile": 0.25056959197710577,
-    "xla": 0.2505885942607404,
-    "tvm": 0.2505885942607404,
-    "tensorflow": 0.2505885942607404,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 3.7222987720081794e-05,
+    "torchscript": 3.653263467040819e-05
   },
   "delta_opt": {
-    "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 0.25050313663861956,
-    "xla": 0.0,
-    "tvm": 0.0,
-    "tensorflow": 0.0011627677043148004,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 4.2646573376581936e-05,
+    "torchscript": 3.653263467040819e-05
   },
   "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
+  },
   "errors": {},
   "pattern_sequence": [
     [
+      "constant",
+      "mul_by_reciprocal"
+    ],
+    [
+      "broadcast",
+      "sub_mul_add"
+    ],
+    [
+      "broadcast",
+      "euclidean_norm_broadcast"
+    ],
+    [
+      "fusion",
+      "conv_asym_pad_bn"
+    ],
+    [
+      "fusion",
+      "conv_bn_elu"
+    ],
+    [
       "layout",
       "squeeze_unsqueeze"
-    ],
-    [
-      "attention",
-      "causal_masked_attention"
-    ],
-    [
-      "attention",
-      "scaled_dot_product_attention"
-    ],
-    [
-      "constant",
-      "cast_roundtrip"
-    ],
-    [
-      "normalization",
-      "layernorm_relu"
-    ],
-    [
-      "branch",
-      "add_layernorm"
     ]
   ],
   "input_shape": [
     1,
     32,
-    256
+    16,
+    16
   ]
 }

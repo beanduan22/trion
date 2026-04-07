@@ -1,60 +1,52 @@
 {
   "model_id": 89,
-  "total_score": 2.0,
+  "total_score": 2.5783950767572362e-05,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 0.0,
-    "tvm": 0.0,
-    "tensorflow": 0.0,
-    "tflite": 0.0,
-    "openvino": 0.0
+    "onnxruntime": 9.597915738956259e-06,
+    "torchscript": 0.0
   },
   "delta_opt": {
-    "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 0.0,
-    "tvm": 0.0,
-    "tensorflow": 0.0,
-    "tflite": 0.0,
-    "openvino": 0.0
+    "onnxruntime": 1.6186035028616103e-05,
+    "torchscript": 0.0
   },
-  "crashes": [
-    "torch_compile+opt"
-  ],
-  "errors": {
-    "torch_compile+opt": "TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')\n\nfrom user code:\n   File \"/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/reshape.py\", line 23, in torch_dynamo_resume_in__do_reshape_at_20\n    return torch.reshape(input_tensor, torch.Size(shape))\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n"
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
   },
+  "errors": {},
   "pattern_sequence": [
     [
       "normalization",
-      "layernorm_temperature"
+      "batchnorm_eval"
+    ],
+    [
+      "fusion",
+      "conv_transpose_bn_relu"
+    ],
+    [
+      "layout",
+      "space_to_depth_block"
     ],
     [
       "broadcast",
-      "log_clamp"
+      "euclidean_norm_broadcast"
     ],
     [
-      "fusion",
-      "matmul_bias_sigmoid"
+      "branch",
+      "max_avg_pool_fusion"
     ],
     [
-      "fusion",
-      "matmul_bias_tanh"
-    ],
-    [
-      "layout",
-      "gather_reshape"
-    ],
-    [
-      "layout",
-      "gather_reshape"
+      "constant",
+      "mul_by_reciprocal"
     ]
   ],
   "input_shape": [
     1,
-    64
+    3,
+    32,
+    32
   ]
 }

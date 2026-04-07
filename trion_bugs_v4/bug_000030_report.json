@@ -1,86 +1,51 @@
 {
   "model_id": 30,
-  "total_score": 2.0006776934355206,
+  "total_score": 0.0,
+  "n_valid_comparisons": 2,
   "s_diff": {
     "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 0.0,
-    "xla": 1.0,
-    "tvm": 1.0,
-    "tensorflow": 0.0,
-    "tflite": 0.0,
-    "openvino": 0.0
+    "torchscript": 0.0
   },
   "delta_opt": {
     "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 0.0,
-    "xla": 0.0003388467177602617,
-    "tvm": 0.0003388467177602617,
-    "tensorflow": 0.0,
-    "tflite": 0.0,
-    "openvino": 0.0
+    "torchscript": 0.0
   },
-  "crashes": [
-    "pytorch_eager",
-    "onnxruntime+opt",
-    "onnxruntime-opt",
-    "torchscript+opt",
-    "torchscript-opt",
-    "torch_compile+opt",
-    "torch_compile-opt",
-    "tensorflow+opt",
-    "tensorflow-opt",
-    "tflite+opt",
-    "tflite-opt",
-    "openvino+opt",
-    "openvino-opt"
-  ],
-  "errors": {
-    "pytorch_eager": "[ONNXRuntimeError] : 1 : FAIL : Node () Op (Mul) [ShapeInferenceError] Incompatible dimensions",
-    "onnxruntime+opt": "[ONNXRuntimeError] : 1 : FAIL : Node () Op (Mul) [ShapeInferenceError] Incompatible dimensions",
-    "onnxruntime-opt": "[ONNXRuntimeError] : 1 : FAIL : Node () Op (Mul) [ShapeInferenceError] Incompatible dimensions",
-    "torchscript+opt": "The size of tensor a (16) must match the size of tensor b (15) at non-singleton dimension 3",
-    "torchscript-opt": "The size of tensor a (16) must match the size of tensor b (15) at non-singleton dimension 3",
-    "torch_compile+opt": "Dynamo failed to run FX node with fake tensors: call_function <built-in method mul of type object at 0x7dfc33bdcaa0>(*(FakeTensor(..., device='cuda:0', size=(1, 256, 16, 16)), FakeTensor(..., device='cuda:0', size=(15,))), **{}): got RuntimeError('Attempting to broadcast a dimension of length 15 at -1! Mismatching argument at index 1 had torch.Size([15]); but expected shape should be broadcastable to [1, 256, 16, 16]')\n\nfrom user code:\n   File \"<eval_with_key>.1547\", line 28, in torch_dynamo_resume_in_forward_at_14\n    mul = self.Mul(div_1, initializers_onnx_initializer_5);  div_1 = initializers_onnx_initializer_5 = None\n  File \"/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/binary_math_operations.py\", line 50, in forward\n    return self.math_op_function(first, second)\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
-    "torch_compile-opt": "The size of tensor a (16) must match the size of tensor b (15) at non-singleton dimension 3",
-    "tensorflow+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 358, in dispatch_op  *\n        return _pool(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 598, in _pool  *\n        y_nhwc = tf.nn.avg_pool2d(x_nhwc, ksize, str_tf, padding=paddings_tf)\n\n    TypeError: Expected string for argument 'padding' not [[0, 0], [1, 1], [1, 1], [0, 0]].\n",
-    "tensorflow-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 358, in dispatch_op  *\n        return _pool(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 598, in _pool  *\n        y_nhwc = tf.nn.avg_pool2d(x_nhwc, ksize, str_tf, padding=paddings_tf)\n\n    TypeError: Expected string for argument 'padding' not [[0, 0], [1, 1], [1, 1], [0, 0]].\n",
-    "tflite+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 358, in dispatch_op  *\n        return _pool(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 598, in _pool  *\n        y_nhwc = tf.nn.avg_pool2d(x_nhwc, ksize, str_tf, padding=paddings_tf)\n\n    TypeError: Expected string for argument 'padding' not [[0, 0], [1, 1], [1, 1], [0, 0]].\n",
-    "tflite-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 358, in dispatch_op  *\n        return _pool(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 598, in _pool  *\n        y_nhwc = tf.nn.avg_pool2d(x_nhwc, ksize, str_tf, padding=paddings_tf)\n\n    TypeError: Expected string for argument 'padding' not [[0, 0], [1, 1], [1, 1], [0, 0]].\n",
-    "openvino+opt": "Check 'false' failed at src/frontends/onnx/frontend/src/frontend.cpp:387:\nFrontEnd API failed with GeneralFailure:\nErrors during ONNX translation:\n[ONNX Frontend] Conversion failed for Mul-17\nWhile validating ONNX node '<Node(Mul): n500_rms_out>': Check 'TRShape::broadcast_merge_into(output_shape, input_shapes[1], autob)' failed at src/core/shape_inference/include/eltwise_shape_inference.hpp:26:\nWhile validating node 'opset1::Multiply Multiply_4834657 (opset1::Divide n500_rms_sc[0]:f32[1,256,16,16], opset1::Constant n500_rms_g[0]:f32[15]) -> (dynamic[...])' with friendly_name 'Multiply_4834657':\nArgument shapes are inconsistent.\n",
-    "openvino-opt": "Check 'false' failed at src/frontends/onnx/frontend/src/frontend.cpp:387:\nFrontEnd API failed with GeneralFailure:\nErrors during ONNX translation:\n[ONNX Frontend] Conversion failed for Mul-17\nWhile validating ONNX node '<Node(Mul): n500_rms_out>': Check 'TRShape::broadcast_merge_into(output_shape, input_shapes[1], autob)' failed at src/core/shape_inference/include/eltwise_shape_inference.hpp:26:\nWhile validating node 'opset1::Multiply Multiply_4834738 (opset1::Divide n500_rms_sc[0]:f32[1,256,16,16], opset1::Constant n500_rms_g[0]:f32[15]) -> (dynamic[...])' with friendly_name 'Multiply_4834738':\nArgument shapes are inconsistent.\n"
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
   },
+  "errors": {},
   "pattern_sequence": [
     [
-      "constant",
-      "learned_temperature_scale"
-    ],
-    [
-      "constant",
-      "cast_roundtrip"
-    ],
-    [
-      "layout",
-      "ceil_mode_avg_pool_conv"
-    ],
-    [
-      "fusion",
-      "conv_asym_pad_bn"
-    ],
-    [
-      "fusion",
-      "conv_bn_relu"
-    ],
-    [
       "normalization",
-      "rmsnorm"
+      "layernorm_residual_add"
+    ],
+    [
+      "attention",
+      "multi_query_attention"
+    ],
+    [
+      "attention",
+      "transformer_encoder_layer"
+    ],
+    [
+      "broadcast",
+      "sqrt_div_rms"
+    ],
+    [
+      "broadcast",
+      "hard_clamp_norm"
+    ],
+    [
+      "broadcast",
+      "floor_ceil_round"
     ]
   ],
   "input_shape": [
     1,
-    3,
     32,
-    32
+    128
   ]
 }

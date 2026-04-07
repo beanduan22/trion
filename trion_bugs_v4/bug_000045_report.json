@@ -1,61 +1,51 @@
 {
   "model_id": 45,
-  "total_score": 2.0037352874985572,
+  "total_score": 7.708455693389835e-05,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.00040953705456911536,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 0.0005751382320090187,
-    "tvm": 0.0005751382320090187,
-    "tensorflow": 0.0005751382320090187,
-    "tflite": 0.00041663259705417536,
-    "openvino": 0.00040980133104883434
+    "onnxruntime": 2.2505556543468407e-05,
+    "torchscript": 6.041668657672252e-06
   },
   "delta_opt": {
-    "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 0.00013962278268489793,
-    "tvm": 0.00013962278268489793,
-    "tensorflow": 0.000494656254488077,
-    "tflite": 0.0,
-    "openvino": 0.0
+    "onnxruntime": 4.2495663075085445e-05,
+    "torchscript": 6.041668657672252e-06
   },
-  "crashes": [
-    "torch_compile+opt"
-  ],
-  "errors": {
-    "torch_compile+opt": "TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')\n\nfrom user code:\n   File \"/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/reshape.py\", line 23, in torch_dynamo_resume_in__do_reshape_at_20\n    return torch.reshape(input_tensor, torch.Size(shape))\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n"
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
   },
+  "errors": {},
   "pattern_sequence": [
+    [
+      "constant",
+      "constant_add_mul"
+    ],
+    [
+      "broadcast",
+      "swish"
+    ],
+    [
+      "layout",
+      "double_transpose"
+    ],
     [
       "broadcast",
       "cumsum"
     ],
     [
-      "layout",
-      "reshape_softmax_reshape"
-    ],
-    [
-      "constant",
-      "pow_canonical"
+      "branch",
+      "concat_conv"
     ],
     [
       "broadcast",
-      "euclidean_norm_broadcast"
-    ],
-    [
-      "constant",
-      "where_const_cond"
-    ],
-    [
-      "constant",
-      "pow_canonical"
+      "swish"
     ]
   ],
   "input_shape": [
     1,
-    3,
+    64,
     32,
     32
   ]

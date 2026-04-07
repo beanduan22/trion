@@ -1,0 +1,58 @@
+{
+  "model_id": 11,
+  "total_score": 9.676574389870965e-05,
+  "n_valid_comparisons": 1,
+  "s_diff": {
+    "onnxruntime": 4.841264951343619e-05,
+    "torchscript": 0.0
+  },
+  "delta_opt": {
+    "onnxruntime": 4.835309438527346e-05,
+    "torchscript": 0.0
+  },
+  "crashes": [
+    "torchscript+opt"
+  ],
+  "crash_info": {
+    "torchscript+opt": "backend"
+  },
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 1
+  },
+  "errors": {
+    "torchscript+opt": "The following operation failed in the TorchScript interpreter.\nTraceback of TorchScript (most recent call last):\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/nn/functional.py(823): _max_pool2d\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_jit_internal.py(627): fn\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/nn/modules/pooling.py(226): forward\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/nn/modules/module.py(1765): _slow_forward\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/nn/modules/module.py(1786): _call_impl\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/nn/modules/module.py(1775): _wrapped_call_impl\n<eval_with_key>.136(11): forward\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/nn/modules/module.py(1765): _slow_forward\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/nn/modules/module.py(1786): _call_impl\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/nn/modules/module.py(1775): _wrapped_call_impl\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/fx/graph_module.py(400): __call__\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/fx/graph_module.py(837): call_wrapped\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/jit/_trace.py(1181): trace_module\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/jit/_trace.py(696): _trace_impl\n/home/binduan/miniconda3/lib/python3.13/site-packages/torch/jit/_trace.py(998): trace\n/home/binduan/myspace/trion/trion/oracle/torchscript_backend.py(54): run\n/home/binduan/myspace/trion/trion/oracle/oracle.py(189): score\n/home/binduan/myspace/trion/trion/runner.py(136): _run_one\n/home/binduan/myspace/trion/trion/runner.py(92): run\n/home/binduan/myspace/trion/run_trion.py(68): main\n/home/binduan/myspace/trion/run_trion.py(72): <module>\nRuntimeError: mkldnn_max_pool2d does not support dilation case\n"
+  },
+  "pattern_sequence": [
+    [
+      "layout",
+      "tile_conv"
+    ],
+    [
+      "branch",
+      "dual_pool_add"
+    ],
+    [
+      "layout",
+      "dilated_max_pool"
+    ],
+    [
+      "branch",
+      "residual_add_relu"
+    ],
+    [
+      "layout",
+      "reshape_layernorm_reshape"
+    ],
+    [
+      "normalization",
+      "variance_whitening"
+    ]
+  ],
+  "input_shape": [
+    1,
+    3,
+    32,
+    32
+  ]
+}

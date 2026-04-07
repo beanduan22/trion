@@ -1,61 +1,52 @@
 {
   "model_id": 33,
-  "total_score": 6.001156573901012,
+  "total_score": 0.00015185719632192772,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.0002276060665136735,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 0.00023457937780424352,
-    "tvm": 0.00023457937780424352,
-    "tensorflow": 0.00023457937780424352,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 3.696363655253283e-05,
+    "torchscript": 3.7340269698466635e-05
   },
   "delta_opt": {
-    "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 0.0,
-    "tvm": 0.0,
-    "tensorflow": 0.00022522970108621357,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 4.02130203724616e-05,
+    "torchscript": 3.7340269698466635e-05
   },
-  "crashes": [
-    "torch_compile+opt"
-  ],
-  "errors": {
-    "torch_compile+opt": "TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')\n\nfrom user code:\n   File \"/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/reshape.py\", line 23, in torch_dynamo_resume_in__do_reshape_at_20\n    return torch.reshape(input_tensor, torch.Size(shape))\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n"
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
   },
+  "errors": {},
   "pattern_sequence": [
     [
+      "fusion",
+      "conv_bn_silu"
+    ],
+    [
+      "normalization",
+      "layernorm_residual_add"
+    ],
+    [
       "constant",
-      "slice_full_range"
+      "transpose_inverse_cancel"
+    ],
+    [
+      "constant",
+      "pow_canonical"
+    ],
+    [
+      "fusion",
+      "conv_bn_elu"
     ],
     [
       "layout",
-      "squeeze_unsqueeze"
-    ],
-    [
-      "normalization",
-      "layernorm_relu"
-    ],
-    [
-      "attention",
-      "multi_head_self_attention"
-    ],
-    [
-      "layout",
-      "squeeze_unsqueeze"
-    ],
-    [
-      "normalization",
-      "layernorm_dropout_identity"
+      "reshape_transpose_reshape"
     ]
   ],
   "input_shape": [
     1,
-    16,
-    64
+    3,
+    32,
+    32
   ]
 }

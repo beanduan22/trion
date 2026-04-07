@@ -1,86 +1,50 @@
 {
   "model_id": 97,
-  "total_score": 2.0000051831061456,
+  "total_score": 4.722568338831732e-05,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 0.0,
-    "xla": 1.0,
-    "tvm": 1.0,
-    "tensorflow": 0.0,
-    "tflite": 0.0,
-    "openvino": 0.0
+    "onnxruntime": 2.401355206395421e-05,
+    "torchscript": 0.0
   },
   "delta_opt": {
-    "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 0.0,
-    "xla": 2.591553072753245e-06,
-    "tvm": 2.591553072753245e-06,
-    "tensorflow": 0.0,
-    "tflite": 0.0,
-    "openvino": 0.0
+    "onnxruntime": 2.3212131324363108e-05,
+    "torchscript": 0.0
   },
-  "crashes": [
-    "pytorch_eager",
-    "onnxruntime+opt",
-    "onnxruntime-opt",
-    "torchscript+opt",
-    "torchscript-opt",
-    "torch_compile+opt",
-    "torch_compile-opt",
-    "tensorflow+opt",
-    "tensorflow-opt",
-    "tflite+opt",
-    "tflite-opt",
-    "openvino+opt",
-    "openvino-opt"
-  ],
-  "errors": {
-    "pytorch_eager": "[ONNXRuntimeError] : 1 : FAIL : Node () Op (Add) [ShapeInferenceError] Incompatible dimensions",
-    "onnxruntime+opt": "[ONNXRuntimeError] : 1 : FAIL : Node () Op (Add) [ShapeInferenceError] Incompatible dimensions",
-    "onnxruntime-opt": "[ONNXRuntimeError] : 1 : FAIL : Node () Op (Add) [ShapeInferenceError] Incompatible dimensions",
-    "torchscript+opt": "'n500_cbrelu6_cv'",
-    "torchscript-opt": "'n500_cbrelu6_cv'",
-    "torch_compile+opt": "'n500_cbrelu6_cv'",
-    "torch_compile-opt": "'n500_cbrelu6_cv'",
-    "tensorflow+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 289, in dispatch_op  *\n        return [jnp.pad(x, pad_width, mode=mode if mode != \"constant\" else \"constant\")]\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py\", line 4363, in pad  *\n        array = util.ensure_arraylike(\"pad\", array)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 149, in ensure_arraylike  *\n        check_arraylike(fun_name, *args)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 175, in check_arraylike  *\n        raise TypeError(msg.format(fun_name, type(arg), pos))\n\n    TypeError: pad requires ndarray or scalar arguments, got <class 'tensorflow.python.framework.ops.SymbolicTensor'> at position 0.\n",
-    "tensorflow-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 289, in dispatch_op  *\n        return [jnp.pad(x, pad_width, mode=mode if mode != \"constant\" else \"constant\")]\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py\", line 4363, in pad  *\n        array = util.ensure_arraylike(\"pad\", array)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 149, in ensure_arraylike  *\n        check_arraylike(fun_name, *args)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 175, in check_arraylike  *\n        raise TypeError(msg.format(fun_name, type(arg), pos))\n\n    TypeError: pad requires ndarray or scalar arguments, got <class 'tensorflow.python.framework.ops.SymbolicTensor'> at position 0.\n",
-    "tflite+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 289, in dispatch_op  *\n        return [jnp.pad(x, pad_width, mode=mode if mode != \"constant\" else \"constant\")]\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py\", line 4363, in pad  *\n        array = util.ensure_arraylike(\"pad\", array)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 149, in ensure_arraylike  *\n        check_arraylike(fun_name, *args)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 175, in check_arraylike  *\n        raise TypeError(msg.format(fun_name, type(arg), pos))\n\n    TypeError: pad requires ndarray or scalar arguments, got <class 'tensorflow.python.framework.ops.SymbolicTensor'> at position 0.\n",
-    "tflite-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 289, in dispatch_op  *\n        return [jnp.pad(x, pad_width, mode=mode if mode != \"constant\" else \"constant\")]\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py\", line 4363, in pad  *\n        array = util.ensure_arraylike(\"pad\", array)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 149, in ensure_arraylike  *\n        check_arraylike(fun_name, *args)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 175, in check_arraylike  *\n        raise TypeError(msg.format(fun_name, type(arg), pos))\n\n    TypeError: pad requires ndarray or scalar arguments, got <class 'tensorflow.python.framework.ops.SymbolicTensor'> at position 0.\n",
-    "openvino+opt": "Check 'false' failed at src/frontends/onnx/frontend/src/frontend.cpp:387:\nFrontEnd API failed with GeneralFailure:\nErrors during ONNX translation:\n[ONNX Frontend] Conversion failed for Conv-17\nWhile validating ONNX node '<Node(Conv): n500_cbrelu6_cv>': Check 'data.get_partial_shape().rank().is_static()' failed at src/frontends/onnx/frontend/src/op/conv.cpp:38:\nFrontEnd API failed with GeneralFailure:\nThe input data tensor's rank has to be known (static)\n[ONNX Frontend] Conversion failed for LayerNormalization-17\nWhile validating ONNX node '<Node(LayerNormalization): n400_lnradd_ln>': Check 'TRShape::broadcast_merge_into(output_shape, input_shapes[1], autob)' failed at src/core/shape_inference/include/eltwise_shape_inference.hpp:26:\nWhile validating node 'opset1::Multiply Multiply_12461762 (opset6::MVN MVN_12461755[0]:f32[1,64,17,17], opset1::Constant n400_lnradd_sc[0]:f32[16]) -> (dynamic[...])' with friendly_name 'Multiply_12461762':\nArgument shapes are inconsistent.\n",
-    "openvino-opt": "Check 'false' failed at src/frontends/onnx/frontend/src/frontend.cpp:387:\nFrontEnd API failed with GeneralFailure:\nErrors during ONNX translation:\n[ONNX Frontend] Conversion failed for Conv-17\nWhile validating ONNX node '<Node(Conv): n500_cbrelu6_cv>': Check 'data.get_partial_shape().rank().is_static()' failed at src/frontends/onnx/frontend/src/op/conv.cpp:38:\nFrontEnd API failed with GeneralFailure:\nThe input data tensor's rank has to be known (static)\n[ONNX Frontend] Conversion failed for LayerNormalization-17\nWhile validating ONNX node '<Node(LayerNormalization): n400_lnradd_ln>': Check 'TRShape::broadcast_merge_into(output_shape, input_shapes[1], autob)' failed at src/core/shape_inference/include/eltwise_shape_inference.hpp:26:\nWhile validating node 'opset1::Multiply Multiply_12461836 (opset6::MVN MVN_12461829[0]:f32[1,64,17,17], opset1::Constant n400_lnradd_sc[0]:f32[16]) -> (dynamic[...])' with friendly_name 'Multiply_12461836':\nArgument shapes are inconsistent.\n"
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
   },
+  "errors": {},
   "pattern_sequence": [
     [
-      "constant",
-      "cast_roundtrip"
-    ],
-    [
       "broadcast",
-      "abs_neg_relu"
+      "logsumexp_step"
+    ],
+    [
+      "constant",
+      "identity_chain"
     ],
     [
       "layout",
-      "pad_conv"
+      "gather_reshape"
     ],
     [
-      "layout",
-      "ceil_mode_avg_pool_conv"
+      "branch",
+      "glu"
     ],
     [
-      "normalization",
-      "layernorm_residual_add"
+      "branch",
+      "add_layernorm"
     ],
     [
       "fusion",
-      "conv_bn_relu6"
+      "matmul_bias_gelu"
     ]
   ],
   "input_shape": [
     1,
-    3,
-    32,
-    32
+    128
   ]
 }

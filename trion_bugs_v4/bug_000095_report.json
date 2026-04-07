@@ -1,70 +1,51 @@
 {
   "model_id": 95,
-  "total_score": 9.004007884754863,
+  "total_score": 0.0004478157650951532,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.003776564200859431,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 1.0,
-    "tvm": 1.0,
-    "tensorflow": 1.0,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 0.0004478157650951532,
+    "torchscript": 0.0
   },
   "delta_opt": {
-    "onnxruntime": 1.0,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 0.00011566027700231742,
-    "tvm": 0.00011566027700231742,
-    "tensorflow": 0.0,
-    "tflite": 0.0,
-    "openvino": 1.0
+    "onnxruntime": 0.0,
+    "torchscript": 0.0
   },
-  "crashes": [
-    "torch_compile+opt",
-    "tensorflow+opt",
-    "tensorflow-opt",
-    "tflite+opt",
-    "tflite-opt"
-  ],
-  "errors": {
-    "torch_compile+opt": "TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')\n\nfrom user code:\n   File \"/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/reshape.py\", line 23, in torch_dynamo_resume_in__do_reshape_at_20\n    return torch.reshape(input_tensor, torch.Size(shape))\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
-    "tensorflow+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 289, in dispatch_op  *\n        return [jnp.pad(x, pad_width, mode=mode if mode != \"constant\" else \"constant\")]\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py\", line 4363, in pad  *\n        array = util.ensure_arraylike(\"pad\", array)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 149, in ensure_arraylike  *\n        check_arraylike(fun_name, *args)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 175, in check_arraylike  *\n        raise TypeError(msg.format(fun_name, type(arg), pos))\n\n    TypeError: pad requires ndarray or scalar arguments, got <class 'tensorflow.python.framework.ops.SymbolicTensor'> at position 0.\n",
-    "tensorflow-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 289, in dispatch_op  *\n        return [jnp.pad(x, pad_width, mode=mode if mode != \"constant\" else \"constant\")]\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py\", line 4363, in pad  *\n        array = util.ensure_arraylike(\"pad\", array)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 149, in ensure_arraylike  *\n        check_arraylike(fun_name, *args)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 175, in check_arraylike  *\n        raise TypeError(msg.format(fun_name, type(arg), pos))\n\n    TypeError: pad requires ndarray or scalar arguments, got <class 'tensorflow.python.framework.ops.SymbolicTensor'> at position 0.\n",
-    "tflite+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 289, in dispatch_op  *\n        return [jnp.pad(x, pad_width, mode=mode if mode != \"constant\" else \"constant\")]\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py\", line 4363, in pad  *\n        array = util.ensure_arraylike(\"pad\", array)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 149, in ensure_arraylike  *\n        check_arraylike(fun_name, *args)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 175, in check_arraylike  *\n        raise TypeError(msg.format(fun_name, type(arg), pos))\n\n    TypeError: pad requires ndarray or scalar arguments, got <class 'tensorflow.python.framework.ops.SymbolicTensor'> at position 0.\n",
-    "tflite-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 289, in dispatch_op  *\n        return [jnp.pad(x, pad_width, mode=mode if mode != \"constant\" else \"constant\")]\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py\", line 4363, in pad  *\n        array = util.ensure_arraylike(\"pad\", array)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 149, in ensure_arraylike  *\n        check_arraylike(fun_name, *args)\n    File \"/home/binduan/miniconda3/lib/python3.13/site-packages/jax/_src/numpy/util.py\", line 175, in check_arraylike  *\n        raise TypeError(msg.format(fun_name, type(arg), pos))\n\n    TypeError: pad requires ndarray or scalar arguments, got <class 'tensorflow.python.framework.ops.SymbolicTensor'> at position 0.\n"
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
   },
+  "errors": {},
   "pattern_sequence": [
     [
-      "layout",
-      "reflect_pad_conv"
-    ],
-    [
-      "broadcast",
-      "floor_ceil_round"
-    ],
-    [
-      "layout",
-      "reshape_softmax_reshape"
+      "attention",
+      "group_query_attention"
     ],
     [
       "normalization",
-      "layernorm_relu"
+      "layernorm_residual_add"
     ],
     [
-      "constant",
-      "cast_roundtrip"
+      "attention",
+      "causal_masked_attention"
     ],
     [
-      "constant",
-      "identity_chain"
+      "branch",
+      "glu"
+    ],
+    [
+      "broadcast",
+      "log_clamp"
+    ],
+    [
+      "broadcast",
+      "reciprocal_mul"
     ]
   ],
   "input_shape": [
     1,
-    32,
-    32,
-    32
+    64,
+    128
   ]
 }

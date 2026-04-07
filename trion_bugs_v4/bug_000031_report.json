@@ -1,57 +1,52 @@
 {
   "model_id": 31,
-  "total_score": 4.001748238086737,
+  "total_score": 4.254270805423291e-05,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 5.157779471252472e-05,
-    "torchscript": 0.0,
-    "torch_compile": 0.0006255889566356832,
-    "xla": 0.00024454707549397654,
-    "tvm": 0.00024454707549397654,
-    "tensorflow": 0.00024454707549397654,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 2.083620518632849e-05,
+    "torchscript": 3.6849328237434017e-06
   },
   "delta_opt": {
-    "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 5.204198285761675e-05,
-    "xla": 2.047118492592584e-05,
-    "tvm": 2.047118492592584e-05,
-    "tensorflow": 0.00024444575619723334,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 1.433663722041762e-05,
+    "torchscript": 3.6849328237434017e-06
   },
   "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
+  },
   "errors": {},
   "pattern_sequence": [
     [
-      "attention",
-      "causal_masked_attention"
+      "constant",
+      "identity_chain"
+    ],
+    [
+      "branch",
+      "add_layernorm"
     ],
     [
       "layout",
-      "squeeze_unsqueeze"
+      "ceil_mode_avg_pool_conv"
     ],
     [
-      "broadcast",
-      "clipped_affine"
+      "branch",
+      "channel_gating_branch"
     ],
     [
-      "broadcast",
-      "reciprocal_mul"
+      "normalization",
+      "ada_layer_norm"
     ],
     [
-      "layout",
-      "squeeze_unsqueeze"
-    ],
-    [
-      "layout",
-      "squeeze_unsqueeze"
+      "normalization",
+      "layernorm_temperature"
     ]
   ],
   "input_shape": [
     1,
+    128,
     16,
-    128
+    16
   ]
 }

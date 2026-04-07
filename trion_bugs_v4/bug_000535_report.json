@@ -1,0 +1,51 @@
+{
+  "model_id": 535,
+  "total_score": 1.546167394875968e-05,
+  "n_valid_comparisons": 2,
+  "s_diff": {
+    "onnxruntime": 1.0556315763190653e-05,
+    "torchscript": 0.0
+  },
+  "delta_opt": {
+    "onnxruntime": 4.905358185569026e-06,
+    "torchscript": 0.0
+  },
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
+  },
+  "errors": {},
+  "pattern_sequence": [
+    [
+      "broadcast",
+      "abs_neg_relu"
+    ],
+    [
+      "attention",
+      "multi_query_attention"
+    ],
+    [
+      "branch",
+      "add_layernorm"
+    ],
+    [
+      "normalization",
+      "layernorm_residual_add"
+    ],
+    [
+      "normalization",
+      "rmsnorm"
+    ],
+    [
+      "normalization",
+      "layernorm_dropout_identity"
+    ]
+  ],
+  "input_shape": [
+    1,
+    64,
+    64
+  ]
+}

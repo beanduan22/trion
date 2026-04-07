@@ -1,57 +1,50 @@
 {
   "model_id": 61,
-  "total_score": 4.008932169595141,
+  "total_score": 2.667931939178344e-05,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.0011463580130773332,
-    "torchscript": 0.0,
-    "torch_compile": 0.0008652164586708736,
-    "xla": 0.001094560176431983,
-    "tvm": 0.001094560176431983,
-    "tensorflow": 0.001094560176431983,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 1.3071043840838656e-05,
+    "torchscript": 0.0
   },
   "delta_opt": {
-    "onnxruntime": 0.0009760641102049702,
-    "torchscript": 0.0,
-    "torch_compile": 0.0006564707608049969,
-    "xla": 0.0006188019331426086,
-    "tvm": 0.0006188019331426086,
-    "tensorflow": 0.000766775856801263,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 1.3608275550944784e-05,
+    "torchscript": 0.0
   },
   "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
+  },
   "errors": {},
   "pattern_sequence": [
+    [
+      "constant",
+      "redundant_reshape"
+    ],
+    [
+      "layout",
+      "gather_reshape"
+    ],
+    [
+      "broadcast",
+      "softmax_mul"
+    ],
     [
       "branch",
       "add_layernorm"
     ],
     [
-      "normalization",
-      "ada_layer_norm"
+      "fusion",
+      "matmul_bias_tanh"
     ],
     [
-      "normalization",
-      "variance_whitening"
-    ],
-    [
-      "attention",
-      "scaled_dot_product_attention"
-    ],
-    [
-      "layout",
-      "squeeze_unsqueeze"
-    ],
-    [
-      "constant",
-      "slice_full_range"
+      "branch",
+      "add_layernorm"
     ]
   ],
   "input_shape": [
     1,
-    64,
     256
   ]
 }

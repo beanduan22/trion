@@ -1,68 +1,50 @@
 {
   "model_id": 41,
-  "total_score": 2.083323133008104,
+  "total_score": 0.0,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 4.2479592438545356e-05,
-    "torchscript": 3.723005954140072e-05,
-    "torch_compile": 0.002166942020385405,
-    "xla": 4.053692914964896e-05,
-    "tvm": 4.053692914964896e-05,
-    "tensorflow": 1.0,
-    "tflite": 1.0,
-    "openvino": 0.0403991091944421
+    "onnxruntime": 0.0,
+    "torchscript": 0.0
   },
   "delta_opt": {
-    "onnxruntime": 3.616103048199396e-05,
-    "torchscript": 3.723005954140072e-05,
-    "torch_compile": 5.53944756606262e-05,
-    "xla": 3.3922053513305906e-05,
-    "tvm": 3.3922053513305906e-05,
-    "tensorflow": 0.0,
-    "tflite": 0.0,
-    "openvino": 0.040399668610286744
+    "onnxruntime": 0.0,
+    "torchscript": 0.0
   },
-  "crashes": [
-    "tensorflow+opt",
-    "tensorflow-opt",
-    "tflite+opt",
-    "tflite-opt"
-  ],
-  "errors": {
-    "tensorflow+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 317, in dispatch_op  *\n        return _conv(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 504, in _conv  *\n        y_nhwc = tf.nn.depthwise_conv2d(\n\n    ValueError: Dimensions must be equal, but are 32 and 8 for '{{node depthwise}} = DepthwiseConv2dNative[T=DT_FLOAT, data_format=\"NHWC\", dilations=[1, 1, 1, 1], explicit_paddings=[0, 0, 1, 1, 1, 1, 0, 0], padding=\"EXPLICIT\", strides=[1, 1, 1, 1]](transpose_12, transpose_14)' with input shapes: [1,32,32,32], [3,3,8,32].\n",
-    "tensorflow-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 317, in dispatch_op  *\n        return _conv(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 504, in _conv  *\n        y_nhwc = tf.nn.depthwise_conv2d(\n\n    ValueError: Dimensions must be equal, but are 32 and 8 for '{{node depthwise}} = DepthwiseConv2dNative[T=DT_FLOAT, data_format=\"NHWC\", dilations=[1, 1, 1, 1], explicit_paddings=[0, 0, 1, 1, 1, 1, 0, 0], padding=\"EXPLICIT\", strides=[1, 1, 1, 1]](transpose_12, transpose_14)' with input shapes: [1,32,32,32], [3,3,8,32].\n",
-    "tflite+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 317, in dispatch_op  *\n        return _conv(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 504, in _conv  *\n        y_nhwc = tf.nn.depthwise_conv2d(\n\n    ValueError: Dimensions must be equal, but are 32 and 8 for '{{node depthwise}} = DepthwiseConv2dNative[T=DT_FLOAT, data_format=\"NHWC\", dilations=[1, 1, 1, 1], explicit_paddings=[0, 0, 1, 1, 1, 1, 0, 0], padding=\"EXPLICIT\", strides=[1, 1, 1, 1]](transpose_12, transpose_14)' with input shapes: [1,32,32,32], [3,3,8,32].\n",
-    "tflite-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 317, in dispatch_op  *\n        return _conv(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 504, in _conv  *\n        y_nhwc = tf.nn.depthwise_conv2d(\n\n    ValueError: Dimensions must be equal, but are 32 and 8 for '{{node depthwise}} = DepthwiseConv2dNative[T=DT_FLOAT, data_format=\"NHWC\", dilations=[1, 1, 1, 1], explicit_paddings=[0, 0, 1, 1, 1, 1, 0, 0], padding=\"EXPLICIT\", strides=[1, 1, 1, 1]](transpose_12, transpose_14)' with input shapes: [1,32,32,32], [3,3,8,32].\n"
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
   },
+  "errors": {},
   "pattern_sequence": [
     [
-      "normalization",
-      "batchnorm_eval"
+      "fusion",
+      "matmul_bias_tanh"
     ],
     [
-      "branch",
-      "aspp_dilated_branch"
-    ],
-    [
-      "normalization",
-      "layernorm_relu"
+      "constant",
+      "sqrt_reciprocal_mul"
     ],
     [
       "fusion",
-      "grouped_conv_bn_relu"
-    ],
-    [
-      "broadcast",
-      "euclidean_norm_broadcast"
+      "linear_layernorm_gelu"
     ],
     [
       "broadcast",
       "logsumexp_step"
+    ],
+    [
+      "fusion",
+      "linear_layernorm_gelu"
+    ],
+    [
+      "layout",
+      "gather_reshape"
     ]
   ],
   "input_shape": [
     1,
-    3,
-    32,
-    32
+    128
   ]
 }

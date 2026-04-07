@@ -1,57 +1,52 @@
 {
   "model_id": 67,
-  "total_score": 1.065349257840742,
+  "total_score": 2.3424702560219285e-05,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.00015199997087661935,
-    "torchscript": 0.0,
-    "torch_compile": 0.00015192580645606533,
-    "xla": 0.21296420511461206,
-    "tvm": 0.21296420511461206,
-    "tensorflow": 0.21296420511461206,
-    "tflite": 0.21296952157136956,
-    "openvino": 0.21296324923119864
+    "onnxruntime": 2.3424702560219285e-05,
+    "torchscript": 0.0
   },
   "delta_opt": {
     "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 0.0,
-    "xla": 4.9161906531679624e-05,
-    "tvm": 4.9161906531679624e-05,
-    "tensorflow": 0.00012162210394157981,
-    "tflite": 0.0,
-    "openvino": 0.0
+    "torchscript": 0.0
   },
   "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
+  },
   "errors": {},
   "pattern_sequence": [
-    [
-      "branch",
-      "add_layernorm"
-    ],
     [
       "branch",
       "glu"
     ],
     [
+      "fusion",
+      "gap_linear"
+    ],
+    [
+      "normalization",
+      "l2_normalize"
+    ],
+    [
+      "normalization",
+      "layernorm_residual_add"
+    ],
+    [
       "broadcast",
-      "mul_add_relu"
-    ],
-    [
-      "layout",
-      "squeeze_unsqueeze"
+      "sub_mul_add"
     ],
     [
       "constant",
-      "slice_full_range"
-    ],
-    [
-      "constant",
-      "cast_roundtrip"
+      "log_exp_cancel"
     ]
   ],
   "input_shape": [
     1,
-    64,
-    128
+    3,
+    32,
+    32
   ]
 }

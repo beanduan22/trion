@@ -1,0 +1,52 @@
+{
+  "model_id": 353,
+  "total_score": 1.3021742662035276e-05,
+  "n_valid_comparisons": 2,
+  "s_diff": {
+    "onnxruntime": 4.707686948687893e-06,
+    "torchscript": 2.4565919313773447e-06
+  },
+  "delta_opt": {
+    "onnxruntime": 3.400871850592693e-06,
+    "torchscript": 2.4565919313773447e-06
+  },
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
+  },
+  "errors": {},
+  "pattern_sequence": [
+    [
+      "broadcast",
+      "sub_mul_add"
+    ],
+    [
+      "normalization",
+      "ada_layer_norm"
+    ],
+    [
+      "broadcast",
+      "swish"
+    ],
+    [
+      "normalization",
+      "layernorm_residual_add"
+    ],
+    [
+      "branch",
+      "dense_residual_block"
+    ],
+    [
+      "layout",
+      "reshape_softmax_reshape"
+    ]
+  ],
+  "input_shape": [
+    1,
+    3,
+    32,
+    32
+  ]
+}

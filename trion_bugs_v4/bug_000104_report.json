@@ -1,57 +1,52 @@
 {
   "model_id": 104,
-  "total_score": 4.006398985236713,
+  "total_score": 8.744676074772229e-05,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.0009698725410395979,
-    "torchscript": 0.0,
-    "torch_compile": 0.0006781699928622007,
-    "xla": 0.0008227907274281952,
-    "tvm": 0.0008227907274281952,
-    "tensorflow": 0.0008227907274281952,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 2.7352492641375954e-05,
+    "torchscript": 1.581041913401926e-05
   },
   "delta_opt": {
-    "onnxruntime": 0.00025998551807562077,
-    "torchscript": 0.0,
-    "torch_compile": 0.0004676142668217936,
-    "xla": 0.00033015367992663715,
-    "tvm": 0.00033015367992663715,
-    "tensorflow": 0.000894663375775909,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 2.8473429838307817e-05,
+    "torchscript": 1.581041913401926e-05
   },
   "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
+  },
   "errors": {},
   "pattern_sequence": [
     [
-      "attention",
-      "transformer_encoder_layer"
+      "fusion",
+      "dilated_conv_bn_relu"
     ],
     [
-      "layout",
-      "squeeze_unsqueeze"
-    ],
-    [
-      "layout",
-      "squeeze_unsqueeze"
+      "branch",
+      "dual_pool_add"
     ],
     [
       "broadcast",
-      "mul_add_relu"
-    ],
-    [
-      "attention",
-      "transformer_ffn"
+      "expand_add_mul"
     ],
     [
       "constant",
-      "identity_chain"
+      "where_const_cond"
+    ],
+    [
+      "layout",
+      "ceil_mode_avg_pool_conv"
+    ],
+    [
+      "layout",
+      "flatten_unsqueeze_concat"
     ]
   ],
   "input_shape": [
     1,
+    3,
     32,
-    256
+    32
   ]
 }

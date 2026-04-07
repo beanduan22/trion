@@ -1,70 +1,50 @@
 {
   "model_id": 19,
-  "total_score": 4.0,
+  "total_score": 0.0,
+  "n_valid_comparisons": 2,
   "s_diff": {
     "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 0.0,
-    "tvm": 0.0,
-    "tensorflow": 1.0,
-    "tflite": 1.0,
-    "openvino": 0.0
+    "torchscript": 0.0
   },
   "delta_opt": {
     "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 0.0,
-    "tvm": 0.0,
-    "tensorflow": 0.0,
-    "tflite": 0.0,
-    "openvino": 0.0
+    "torchscript": 0.0
   },
-  "crashes": [
-    "torch_compile+opt",
-    "tensorflow+opt",
-    "tensorflow-opt",
-    "tflite+opt",
-    "tflite-opt"
-  ],
-  "errors": {
-    "torch_compile+opt": "TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')\n\nfrom user code:\n   File \"<eval_with_key>.955\", line 7, in forward\n    expand = self.Expand(initializers_onnx_initializer_0, initializers_onnx_initializer_1);  initializers_onnx_initializer_0 = initializers_onnx_initializer_1 = None\n  File \"/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/expand.py\", line 29, in forward\n    return _forward()\n  File \"/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/expand.py\", line 24, in _forward\n    return input_tensor * torch.ones(torch.Size(shape), dtype=input_tensor.dtype, device=input_tensor.device)\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n",
-    "tensorflow+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 317, in dispatch_op  *\n        return _conv(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 504, in _conv  *\n        y_nhwc = tf.nn.depthwise_conv2d(\n\n    ValueError: Dimensions must be equal, but are 3 and 1 for '{{node depthwise}} = DepthwiseConv2dNative[T=DT_FLOAT, data_format=\"NHWC\", dilations=[1, 1, 1, 1], explicit_paddings=[0, 0, 1, 1, 1, 1, 0, 0], padding=\"EXPLICIT\", strides=[1, 1, 1, 1]](transpose, transpose_2)' with input shapes: [1,32,32,3], [3,3,1,3].\n",
-    "tensorflow-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tf_backend.py\", line 61, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 317, in dispatch_op  *\n        return _conv(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 504, in _conv  *\n        y_nhwc = tf.nn.depthwise_conv2d(\n\n    ValueError: Dimensions must be equal, but are 3 and 1 for '{{node depthwise}} = DepthwiseConv2dNative[T=DT_FLOAT, data_format=\"NHWC\", dilations=[1, 1, 1, 1], explicit_paddings=[0, 0, 1, 1, 1, 1, 0, 0], padding=\"EXPLICIT\", strides=[1, 1, 1, 1]](transpose, transpose_2)' with input shapes: [1,32,32,3], [3,3,1,3].\n",
-    "tflite+opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 317, in dispatch_op  *\n        return _conv(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 504, in _conv  *\n        y_nhwc = tf.nn.depthwise_conv2d(\n\n    ValueError: Dimensions must be equal, but are 3 and 1 for '{{node depthwise}} = DepthwiseConv2dNative[T=DT_FLOAT, data_format=\"NHWC\", dilations=[1, 1, 1, 1], explicit_paddings=[0, 0, 1, 1, 1, 1, 0, 0], padding=\"EXPLICIT\", strides=[1, 1, 1, 1]](transpose, transpose_2)' with input shapes: [1,32,32,3], [3,3,1,3].\n",
-    "tflite-opt": "in user code:\n\n    File \"/home/binduan/myspace/trion/trion/oracle/tflite_backend.py\", line 60, in model_fn  *\n        results = dispatch_op(node, values, tnp)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 317, in dispatch_op  *\n        return _conv(node, get, F)\n    File \"/home/binduan/myspace/trion/trion/oracle/_onnx_ops.py\", line 504, in _conv  *\n        y_nhwc = tf.nn.depthwise_conv2d(\n\n    ValueError: Dimensions must be equal, but are 3 and 1 for '{{node depthwise}} = DepthwiseConv2dNative[T=DT_FLOAT, data_format=\"NHWC\", dilations=[1, 1, 1, 1], explicit_paddings=[0, 0, 1, 1, 1, 1, 0, 0], padding=\"EXPLICIT\", strides=[1, 1, 1, 1]](transpose, transpose_2)' with input shapes: [1,32,32,3], [3,3,1,3].\n"
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
   },
+  "errors": {},
   "pattern_sequence": [
     [
       "broadcast",
-      "expand_add_mul"
+      "euclidean_norm_broadcast"
     ],
     [
       "broadcast",
       "abs_neg_relu"
     ],
     [
-      "fusion",
-      "depthwise_conv_bn_relu"
+      "layout",
+      "gather_reshape"
     ],
     [
-      "branch",
-      "dense_residual_block"
+      "broadcast",
+      "logsumexp_step"
+    ],
+    [
+      "broadcast",
+      "reciprocal_mul"
     ],
     [
       "normalization",
-      "l2_normalize"
-    ],
-    [
-      "branch",
-      "se_block"
+      "layernorm_dropout_identity"
     ]
   ],
   "input_shape": [
     1,
-    3,
-    32,
-    32
+    64
   ]
 }

@@ -1,60 +1,51 @@
 {
   "model_id": 58,
-  "total_score": 6.00213330683113,
+  "total_score": 3.859792231396954e-05,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.0005891316333106869,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 0.0003233470068115259,
-    "tvm": 0.0003233470068115259,
-    "tensorflow": 0.0003233470068115259,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 3.859792231396954e-05,
+    "torchscript": 0.0
   },
   "delta_opt": {
     "onnxruntime": 0.0,
-    "torchscript": 0.0,
-    "torch_compile": 1.0,
-    "xla": 0.00018753631788850944,
-    "tvm": 0.00018753631788850944,
-    "tensorflow": 0.00019906154160860253,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "torchscript": 0.0
   },
-  "crashes": [
-    "torch_compile+opt"
-  ],
-  "errors": {
-    "torch_compile+opt": "TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')\n\nfrom user code:\n   File \"/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/reshape.py\", line 23, in torch_dynamo_resume_in__do_reshape_at_20\n    return torch.reshape(input_tensor, torch.Size(shape))\n\nSet TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS=\"+dynamo\"\n"
+  "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
   },
+  "errors": {},
   "pattern_sequence": [
     [
-      "constant",
-      "slice_full_range"
-    ],
-    [
       "normalization",
-      "instance_norm_1d"
+      "ada_layer_norm"
     ],
     [
-      "fusion",
-      "matmul_bias_sigmoid"
+      "broadcast",
+      "euclidean_norm_broadcast"
     ],
     [
-      "normalization",
-      "layernorm_temperature"
+      "layout",
+      "squeeze_unsqueeze"
     ],
     [
       "constant",
-      "self_sub_zero"
+      "learned_temperature_scale"
     ],
     [
-      "branch",
-      "residual_add_relu"
+      "broadcast",
+      "cumsum"
+    ],
+    [
+      "normalization",
+      "layernorm_residual_add"
     ]
   ],
   "input_shape": [
     1,
+    32,
     64
   ]
 }

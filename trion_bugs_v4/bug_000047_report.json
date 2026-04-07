@@ -1,52 +1,46 @@
 {
   "model_id": 47,
-  "total_score": 4.36704806402492,
+  "total_score": 0.0008649225142806354,
+  "n_valid_comparisons": 2,
   "s_diff": {
-    "onnxruntime": 0.0031500572762770585,
-    "torchscript": 0.0018113558257273573,
-    "torch_compile": 0.2961365540156857,
-    "xla": 0.003552753095537107,
-    "tvm": 0.003552753095537107,
-    "tensorflow": 0.002828441522685089,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 0.0007343665120623057,
+    "torchscript": 4.1603739962126804e-05
   },
   "delta_opt": {
-    "onnxruntime": 0.004226077715631149,
-    "torchscript": 0.0018113558257273573,
-    "torch_compile": 0.03636000097654638,
-    "xla": 0.0048938349449786705,
-    "tvm": 0.0048938349449786705,
-    "tensorflow": 0.0038310447856084967,
-    "tflite": 1.0,
-    "openvino": 1.0
+    "onnxruntime": 4.734852229407609e-05,
+    "torchscript": 4.1603739962126804e-05
   },
   "crashes": [],
+  "crash_info": {},
+  "crash_counts": {
+    "frontend": 0,
+    "backend": 0
+  },
   "errors": {},
   "pattern_sequence": [
     [
-      "constant",
-      "log_exp_cancel"
+      "branch",
+      "max_avg_pool_fusion"
+    ],
+    [
+      "fusion",
+      "conv_bn_sigmoid"
     ],
     [
       "normalization",
-      "manual_layernorm"
+      "groupnorm_relu"
     ],
     [
       "branch",
-      "multi_scale_conv_branch"
-    ],
-    [
-      "normalization",
-      "spatial_reduce_mean"
+      "conv_branch_add"
     ],
     [
       "fusion",
       "dilated_conv_bn_relu"
     ],
     [
-      "constant",
-      "slice_full_range"
+      "layout",
+      "double_transpose"
     ]
   ],
   "input_shape": [
