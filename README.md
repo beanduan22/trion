@@ -106,15 +106,25 @@ Transformer attention variants that stress compiler fusion and tiling:
 
 **1000 models generated** | **8 backends tested** | **195 verified unique bugs**
 
-Verification: 202 initial bugs → 7 duplicate crash bugs removed (same error signature already represented by a higher-scoring bug) → 0 false positives → **195 confirmed**.
+Verification: 202 initial bugs → 7 duplicate crash bugs removed (same error signature already represented by a higher-scoring bug) → **195 confirmed**.
 
 ### Bug Types
 
 | Type | Count | Description |
 |---|---|---|
-| Discrepancy-only | 184 | Numerical output diverges from PyTorch eager reference |
+| Discrepancy-only | 184 | Numerical output diverges from reference; no crash |
 | Crash-only | 7 | Backend crashes, no numerical output produced |
 | Crash + Discrepancy | 4 | Both crash and numerical divergence observed |
+
+### Root Cause Classification
+
+| Root Cause | Count | Explanation |
+|---|---|---|
+| **Compiler optimization bug** | 188 | Output is correct without optimization (`opt=False`) but wrong with optimization (`opt=True`). The bug is introduced by the optimizer. |
+| **Compiler support gap** | 5 | Backend crashes with **both** `opt=True` and `opt=False`. The compiler cannot handle a valid ONNX operator regardless of optimization level. |
+| **Invalid model (edge case)** | 2 | Even PyTorch eager crashes (`bug_0013`, `bug_0032`). The generated model contains an unsupported op configuration. Kept for completeness. |
+
+> **Key insight:** 188 of 195 bugs (96%) are **not present when optimization is disabled** — they are introduced purely by the compiler's optimization passes. The remaining 7 are compiler support gaps where the backend fails to execute a valid ONNX model at any optimization level.
 
 ### Bugs by Compiler
 
@@ -220,6 +230,19 @@ python run_trion.py --quiet
 
 ### Reproduce existing bugs
 
+Each bug has a standalone Python script in `reproduce/`:
+
+```bash
+# Run any individual reproducer directly
+python reproduce/bug_0035.py     # crash bug
+python reproduce/bug_0060.py     # discrepancy bug
+python reproduce/bug_0000.py     # crash + discrepancy bug
+```
+
+Each script is self-contained: it loads the ONNX model, runs the affected backend(s) with and without optimization, and prints whether the bug is confirmed. No arguments needed.
+
+Or use the batch reproduction script:
+
 ```bash
 # List all confirmed bugs
 python reproduce_bugs.py --list
@@ -230,12 +253,15 @@ python reproduce_bugs.py
 # Reproduce bugs for a specific compiler
 python reproduce_bugs.py --class torch_compile
 python reproduce_bugs.py --class tflite
-python reproduce_bugs.py --class openvino
 
 # Reproduce a single bug by ID
 python reproduce_bugs.py --bug bug_0071
 
-# Verbose: print full error trace on failure
+# Filter by bug type
+python reproduce_bugs.py --type discrepancy
+python reproduce_bugs.py --type crash
+
+# Verbose: print full error trace
 python reproduce_bugs.py --verbose
 ```
 
@@ -289,7 +315,9 @@ trion/
 │   ├── bug_NNNN.onnx         # minimal ONNX reproducer (one per bug)
 │   ├── bug_NNNN_report.json  # bug metadata (score, patterns, errors)
 │   └── removed_duplicates/   # 7 duplicate crash bugs (kept for reference)
-├── trion_bugs_v4/            # v4 corpus — all generated models (target: 1000)
+├── reproduce/                # 195 individual standalone reproducer scripts
+│   └── bug_NNNN.py          # one self-contained script per verified bug
+├── trion_bugs_v4/            # v4 corpus — all 1000 generated models (with --save-all)
 └── trion/                    # core library
     ├── config.py             # TrionConfig dataclass
     ├── runner.py             # TrionRunner — main orchestration loop
