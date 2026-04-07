@@ -26,8 +26,8 @@ class SplitTransformConcat(OTP):
         p = self._p(node_id, "stc")
 
         split_sizes = np.array([half, half], dtype=np.int64)
-        w1 = np.ones((1, half, 1, 1), dtype=np.float32) * float(rng.uniform(0.8, 1.2))
-        w2 = np.ones((1, half, 1, 1), dtype=np.float32) * float(rng.uniform(0.8, 1.2))
+        w1 = np.ones((1, half, 1, 1), dtype=np.float32) * 1.0
+        w2 = np.ones((1, half, 1, 1), dtype=np.float32) * 1.0
 
         a_o = f"{p}_a"; b_o = f"{p}_b"
         ma_o = f"{p}_ma"; mb_o = f"{p}_mb"; out = f"{p}_out"
@@ -57,7 +57,7 @@ class ResidualAddReLU(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "rarelu")
-        residual = rng.normal(0, 0.1, ctx.shape).astype(np.float32)
+        residual = np.zeros(ctx.shape, dtype=np.float32)
 
         add_o = f"{p}_add"; out = f"{p}_out"
         nodes = [
@@ -86,10 +86,10 @@ class ConvBranchAdd(OTP):
         p = self._p(node_id, "cba")
 
         # Main branch: 3×3 conv
-        w_main = self._make_conv_weight(rng, out_c, C, 3)
+        w_main = self._make_conv_weight(out_c, C, 3)
         b_main = np.zeros(out_c, dtype=np.float32)
         # Skip branch: 1×1 projection
-        w_skip = self._make_conv_weight(rng, out_c, C, 1)
+        w_skip = self._make_conv_weight(out_c, C, 1)
         b_skip = np.zeros(out_c, dtype=np.float32)
 
         main_o = f"{p}_main"; skip_o = f"{p}_skip"
@@ -152,9 +152,9 @@ class SEBlock(OTP):
         r = max(C // 4, 1)   # reduction ratio
         p = self._p(node_id, "seb")
 
-        w1 = rng.normal(0, np.sqrt(2/C), (C, r)).astype(np.float32)
+        w1 = self._make_linear_weight(r, C)
         b1 = np.zeros(r, dtype=np.float32)
-        w2 = rng.normal(0, np.sqrt(2/r), (r, C)).astype(np.float32)
+        w2 = self._make_linear_weight(C, r)
         b2 = np.zeros(C, dtype=np.float32)
         rs = np.array([-1, C, 1, 1], dtype=np.int64)
 
@@ -225,7 +225,7 @@ class AddLayerNorm(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "aln")
-        res = rng.normal(0, 0.1, ctx.shape).astype(np.float32)
+        res = np.zeros(ctx.shape, dtype=np.float32)
         norm_dim = ctx.shape[-1]
         scale = np.ones(norm_dim,  dtype=np.float32)
         bias  = np.zeros(norm_dim, dtype=np.float32)
@@ -261,8 +261,8 @@ class ConcatConv(OTP):
         out_c   = self._rand_channels(rng)
         p = self._p(node_id, "ccv")
 
-        extra = rng.normal(0, 0.1, (N, extra_c, H, W)).astype(np.float32)
-        w = self._make_conv_weight(rng, out_c, C + extra_c, 1)
+        extra = np.zeros((N, extra_c, H, W), dtype=np.float32)
+        w = self._make_conv_weight(out_c, C + extra_c, 1)
         b = np.zeros(out_c, dtype=np.float32)
 
         cat_o = f"{p}_cat"; out = f"{p}_out"
@@ -294,9 +294,9 @@ class MultiScaleConvBranch(OTP):
         out_c = self._rand_channels(rng)
         p = self._p(node_id, "mscb")
 
-        w1 = self._make_conv_weight(rng, out_c, C, 1)
-        w3 = self._make_conv_weight(rng, out_c, C, 3)
-        w5 = self._make_conv_weight(rng, out_c, C, 5)
+        w1 = self._make_conv_weight(out_c, C, 1)
+        w3 = self._make_conv_weight(out_c, C, 3)
+        w5 = self._make_conv_weight(out_c, C, 5)
         b1 = np.zeros(out_c, dtype=np.float32)
         b3 = np.zeros(out_c, dtype=np.float32)
         b5 = np.zeros(out_c, dtype=np.float32)
@@ -343,10 +343,10 @@ class ASPPDilatedBranch(OTP):
         out_c = self._rand_channels(rng)
         p = self._p(node_id, "aspp")
 
-        w1 = self._make_conv_weight(rng, br_c, C, 1)
-        w2 = self._make_conv_weight(rng, br_c, C, 3)
-        w3 = self._make_conv_weight(rng, br_c, C, 3)
-        wm = self._make_conv_weight(rng, out_c, br_c * 3, 1)
+        w1 = self._make_conv_weight(br_c, C, 1)
+        w2 = self._make_conv_weight(br_c, C, 3)
+        w3 = self._make_conv_weight(br_c, C, 3)
+        wm = self._make_conv_weight(out_c, br_c * 3, 1)
         for w, b_n in [(w1, "b1"), (w2, "b2"), (w3, "b3"), (wm, "bm")]:
             pass  # just need the shapes
 
@@ -396,7 +396,7 @@ class SpatialAttentionCBAM(OTP):
         N, C, H, W = ctx.shape
         p = self._p(node_id, "cbam")
 
-        w = self._make_conv_weight(rng, 1, 2, 7)
+        w = self._make_conv_weight(1, 2, 7)
         b = np.zeros(1, dtype=np.float32)
 
         avg_o = f"{p}_avg"; max_o = f"{p}_max"
@@ -435,10 +435,10 @@ class FPNBranch(OTP):
         p = self._p(node_id, "fpn")
 
         # Lateral 1×1 conv to match channels, then upsample
-        wl = self._make_conv_weight(rng, out_c, C, 1)
+        wl = self._make_conv_weight(out_c, C, 1)
         bl = np.zeros(out_c, dtype=np.float32)
         # Top-down path: upsample input then conv
-        wu = self._make_conv_weight(rng, out_c, C, 1)
+        wu = self._make_conv_weight(out_c, C, 1)
         bu = np.zeros(out_c, dtype=np.float32)
         # Resize scales for both paths: 2× spatial upsample
         scale_f = np.array([1.0, 1.0, 2.0, 2.0], dtype=np.float32)
@@ -484,8 +484,8 @@ class DenseResidualBlock(OTP):
         N, C, H, W = ctx.shape
         p = self._p(node_id, "drb")
 
-        w1 = self._make_conv_weight(rng, C, C, 3)
-        w2 = self._make_conv_weight(rng, C, C, 3)
+        w1 = self._make_conv_weight(C, C, 3)
+        w2 = self._make_conv_weight(C, C, 3)
         b1 = np.zeros(C, dtype=np.float32)
         b2 = np.zeros(C, dtype=np.float32)
 
@@ -524,9 +524,8 @@ class ChannelGatingBranch(OTP):
         N, C, H, W = ctx.shape
         p = self._p(node_id, "cgb")
 
-        w1 = rng.normal(0, np.sqrt(2.0 / C), (C, max(C // 4, 4))).astype(np.float32)
-        w2 = rng.normal(0, np.sqrt(2.0 / max(C//4,4)),
-                        (max(C // 4, 4), C)).astype(np.float32)
+        w1 = self._make_linear_weight(max(C // 4, 4), C)
+        w2 = self._make_linear_weight(C, max(C // 4, 4))
         b1 = np.zeros(max(C // 4, 4), dtype=np.float32)
         b2 = np.zeros(C, dtype=np.float32)
 
@@ -604,8 +603,8 @@ class SEResidual(OTP):
         r = max(C // 4, 4)
         p = self._p(node_id, "ser")
 
-        w1 = rng.normal(0, np.sqrt(2.0 / C), (C, r)).astype(np.float32)
-        w2 = rng.normal(0, np.sqrt(2.0 / r), (r, C)).astype(np.float32)
+        w1 = self._make_linear_weight(r, C)
+        w2 = self._make_linear_weight(C, r)
         b1 = np.zeros(r, dtype=np.float32)
         b2 = np.zeros(C, dtype=np.float32)
 

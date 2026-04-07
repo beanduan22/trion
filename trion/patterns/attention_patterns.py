@@ -74,9 +74,9 @@ class ScaledDotProductAttention(OTP):
         p = self._p(node_id, "sdpa")
         scale = np.array([1.0 / float(np.sqrt(D))], dtype=np.float32)
 
-        Wq = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wk = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wv = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
+        Wq = self._make_linear_weight(D, D)
+        Wk = self._make_linear_weight(D, D)
+        Wv = self._make_linear_weight(D, D)
 
         q_o = f"{p}_q"; k_o = f"{p}_k"; v_o = f"{p}_v"
         kt_o = f"{p}_kt"; raw = f"{p}_raw"; sc_o = f"{p}_sc"
@@ -127,10 +127,10 @@ class MultiHeadSelfAttention(OTP):
         dh = D // H
         p = self._p(node_id, "mhsa")
 
-        Wq = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wk = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wv = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wo = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
+        Wq = self._make_linear_weight(D, D)
+        Wk = self._make_linear_weight(D, D)
+        Wv = self._make_linear_weight(D, D)
+        Wo = self._make_linear_weight(D, D)
         bq = np.zeros(D, dtype=np.float32)
         scale = np.array([1.0 / float(np.sqrt(dh))], dtype=np.float32)
 
@@ -202,9 +202,9 @@ class CausalMaskedAttention(OTP):
         p = self._p(node_id, "cma")
         scale = np.array([1.0 / float(np.sqrt(D))], dtype=np.float32)
 
-        Wq = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wk = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wv = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
+        Wq = self._make_linear_weight(D, D)
+        Wk = self._make_linear_weight(D, D)
+        Wv = self._make_linear_weight(D, D)
 
         # Lower-triangular causal mask [S, S] — True = keep, False = mask out
         mask = np.tril(np.ones((S, S), dtype=bool))
@@ -257,9 +257,9 @@ class TransformerFFN(OTP):
         ffn_D = D * 4   # standard 4x expansion
         p = self._p(node_id, "tffn")
 
-        W1 = rng.normal(0, np.sqrt(2.0 / D),     (D,     ffn_D)).astype(np.float32)
+        W1 = self._make_linear_weight(ffn_D, D)
         b1 = np.zeros(ffn_D, dtype=np.float32)
-        W2 = rng.normal(0, np.sqrt(2.0 / ffn_D), (ffn_D, D    )).astype(np.float32)
+        W2 = self._make_linear_weight(D, ffn_D)
         b2 = np.zeros(D, dtype=np.float32)
 
         lin1_nodes, lin1_inits, lin1_out = _linear(input_name, W1, b1, p, "l1")
@@ -292,12 +292,12 @@ class TransformerEncoderLayer(OTP):
         ffn_D = min(D * 4, 2048)
 
         scale = np.array([1.0 / float(np.sqrt(D))], dtype=np.float32)
-        Wq = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wk = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wv = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        W1 = rng.normal(0, np.sqrt(2.0 / D),     (D, ffn_D)).astype(np.float32)
+        Wq = self._make_linear_weight(D, D)
+        Wk = self._make_linear_weight(D, D)
+        Wv = self._make_linear_weight(D, D)
+        W1 = self._make_linear_weight(ffn_D, D)
         b1 = np.zeros(ffn_D, dtype=np.float32)
-        W2 = rng.normal(0, np.sqrt(2.0 / ffn_D), (ffn_D, D)).astype(np.float32)
+        W2 = self._make_linear_weight(D, ffn_D)
         b2 = np.zeros(D, dtype=np.float32)
         ln1_names, ln1_inits = _ln_params(D, f"{p}_ln1")
         ln2_names, ln2_inits = _ln_params(D, f"{p}_ln2")
@@ -378,9 +378,9 @@ class GatedMLPBlock(OTP):
         B, S, D = ctx.shape
         p = self._p(node_id, "gmlp")
 
-        W_gate = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        W_up   = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        W_down = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
+        W_gate = self._make_linear_weight(D, D)
+        W_up   = self._make_linear_weight(D, D)
+        W_down = self._make_linear_weight(D, D)
 
         gate_o = f"{p}_gate"; up_o = f"{p}_up"; sig_o = f"{p}_sig"
         silu_o = f"{p}_silu"; mix_o = f"{p}_mix"; out = f"{p}_out"
@@ -424,10 +424,10 @@ class AttentionWithBias(OTP):
         p = self._p(node_id, "awb")
         scale = np.array([1.0 / float(np.sqrt(D))], dtype=np.float32)
 
-        Wq = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wk = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wv = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        pos_bias = rng.normal(0, 0.02, (1, S, S)).astype(np.float32)
+        Wq = self._make_linear_weight(D, D)
+        Wk = self._make_linear_weight(D, D)
+        Wv = self._make_linear_weight(D, D)
+        pos_bias = np.zeros((1, S, S), dtype=np.float32)
 
         q_o = f"{p}_q"; k_o = f"{p}_k"; v_o = f"{p}_v"
         kt  = f"{p}_kt"; raw = f"{p}_raw"; sc_o = f"{p}_sc"
@@ -480,9 +480,9 @@ class GroupQueryAttention(OTP):
         dg = D // G      # K/V head dim = G * dh
         p  = self._p(node_id, "gqa")
 
-        Wq = rng.normal(0, np.sqrt(2.0 / D), (D, H * dh)).astype(np.float32)
-        Wk = rng.normal(0, np.sqrt(2.0 / D), (D, G * dh)).astype(np.float32)
-        Wv = rng.normal(0, np.sqrt(2.0 / D), (D, G * dh)).astype(np.float32)
+        Wq = self._make_linear_weight(H * dh, D)
+        Wk = self._make_linear_weight(G * dh, D)
+        Wv = self._make_linear_weight(G * dh, D)
         scale = np.array([1.0 / float(np.sqrt(dh))], dtype=np.float32)
 
         q_shape  = np.array([B, S, H, dh],       dtype=np.int64)
@@ -566,11 +566,11 @@ class KVCacheAttention(OTP):
         p = self._p(node_id, "kvca")
         scale = np.array([1.0 / float(np.sqrt(D))], dtype=np.float32)
 
-        Wq = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wk = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wv = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        past_K = rng.normal(0, 0.1, (B, past_S, D)).astype(np.float32)
-        past_V = rng.normal(0, 0.1, (B, past_S, D)).astype(np.float32)
+        Wq = self._make_linear_weight(D, D)
+        Wk = self._make_linear_weight(D, D)
+        Wv = self._make_linear_weight(D, D)
+        past_K = np.zeros((B, past_S, D), dtype=np.float32)
+        past_V = np.zeros((B, past_S, D), dtype=np.float32)
 
         q_o = f"{p}_q"; k_o = f"{p}_k"; v_o = f"{p}_v"
         k_ext = f"{p}_kext"; v_ext = f"{p}_vext"
@@ -624,9 +624,9 @@ class RotaryEmbeddingAttention(OTP):
         p = self._p(node_id, "rope")
         scale = np.array([1.0 / float(np.sqrt(D))], dtype=np.float32)
 
-        Wq = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wk = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wv = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
+        Wq = self._make_linear_weight(D, D)
+        Wk = self._make_linear_weight(D, D)
+        Wv = self._make_linear_weight(D, D)
 
         # Precomputed cos/sin for positions 0..S-1 on half dimensions
         pos    = np.arange(S, dtype=np.float32)
@@ -727,9 +727,9 @@ class SelfAttentionResidual(OTP):
         p = self._p(node_id, "sar")
         scale = np.array([1.0 / float(np.sqrt(D))], dtype=np.float32)
 
-        Wq = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wk = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
-        Wv = rng.normal(0, np.sqrt(2.0 / D), (D, D)).astype(np.float32)
+        Wq = self._make_linear_weight(D, D)
+        Wk = self._make_linear_weight(D, D)
+        Wv = self._make_linear_weight(D, D)
         ln_names, ln_inits = _ln_params(D, p)
 
         q_o = f"{p}_q"; k_o = f"{p}_k"; v_o = f"{p}_v"
@@ -785,10 +785,10 @@ class MultiQueryAttention(OTP):
         scale = np.array([1.0 / float(np.sqrt(dh))], dtype=np.float32)
 
         # H Q projections, but only 1 K/V projection
-        Wq = rng.normal(0, np.sqrt(2.0 / D), (D, H * dh)).astype(np.float32)
-        Wk = rng.normal(0, np.sqrt(2.0 / D), (D, dh)).astype(np.float32)
-        Wv = rng.normal(0, np.sqrt(2.0 / D), (D, dh)).astype(np.float32)
-        Wo = rng.normal(0, np.sqrt(2.0 / (H * dh)), (H * dh, D)).astype(np.float32)
+        Wq = self._make_linear_weight(H * dh, D)
+        Wk = self._make_linear_weight(dh, D)
+        Wv = self._make_linear_weight(dh, D)
+        Wo = self._make_linear_weight(D, H * dh)
 
         q_shape   = np.array([B, S, H, dh], dtype=np.int64)
         out_shape = np.array([B, S, H * dh], dtype=np.int64)

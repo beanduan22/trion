@@ -11,7 +11,7 @@ from .base import OTP, PatternInstance, CAT_FUSION
 from ..generation.context import StructuralContext
 
 
-def _bn_params(rng, channels, prefix):
+def _bn_params(channels, prefix):
     """Create BatchNorm scale/bias/mean/var initializers."""
     names = [f"{prefix}_bn_scale", f"{prefix}_bn_bias",
              f"{prefix}_bn_mean", f"{prefix}_bn_var"]
@@ -41,9 +41,9 @@ class ConvBNReLU(OTP):
         stride = int(rng.choice([1, 2]))
         p = self._p(node_id, "cbrelu")
 
-        w = self._make_conv_weight(rng, out_c, C, k)
+        w = self._make_conv_weight(out_c, C, k)
         b = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
 
         conv_out = f"{p}_cv"; bn_out = f"{p}_bn"; out = f"{p}_out"
 
@@ -82,12 +82,12 @@ class ConvBNLeakyReLU(OTP):
         k = int(rng.choice([1, 3]))
         pad = k // 2
         stride = int(rng.choice([1, 2]))
-        alpha = float(rng.uniform(0.01, 0.3))
+        alpha = 0.1
         p = self._p(node_id, "cblrelu")
 
-        w = self._make_conv_weight(rng, out_c, C, k)
+        w = self._make_conv_weight(out_c, C, k)
         b = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
 
         cv_o = f"{p}_cv"; bn_o = f"{p}_bn"; out = f"{p}_out"
         nodes = [
@@ -122,9 +122,9 @@ class ConvBNSigmoid(OTP):
         pad = k // 2
         p = self._p(node_id, "cbsig")
 
-        w = self._make_conv_weight(rng, out_c, C, k)
+        w = self._make_conv_weight(out_c, C, k)
         b = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
 
         cv_o = f"{p}_cv"; bn_o = f"{p}_bn"; out = f"{p}_out"
         nodes = [
@@ -157,10 +157,10 @@ class ConvAddReLU(OTP):
         k = 1
         p = self._p(node_id, "carelu")
 
-        w = self._make_conv_weight(rng, C, C, k)
+        w = self._make_conv_weight(C, C, k)
         b = np.zeros(C, dtype=np.float32)
         bias_name = f"{p}_bias"
-        bias = rng.normal(0, 0.01, (1, C, 1, 1)).astype(np.float32)
+        bias = np.zeros((1, C, 1, 1), dtype=np.float32)
 
         cv_o = f"{p}_cv"; add_o = f"{p}_add"; out = f"{p}_out"
         nodes = [
@@ -191,7 +191,7 @@ class MatMulBiasReLU(OTP):
         K = int(rng.choice([64, 128, 256, 512]))
         p = self._p(node_id, "mmbrelu")
 
-        w = rng.normal(0, np.sqrt(2/M), (M, K)).astype(np.float32)
+        w = self._make_linear_weight(K, M)
         b = np.zeros(K, dtype=np.float32)
 
         mm_o = f"{p}_mm"; add_o = f"{p}_add"; out = f"{p}_out"
@@ -221,7 +221,7 @@ class MatMulBiasGELU(OTP):
         K = int(rng.choice([64, 128, 256]))
         p = self._p(node_id, "mmbgelu")
 
-        w = rng.normal(0, np.sqrt(2/M), (M, K)).astype(np.float32)
+        w = self._make_linear_weight(K, M)
         b = np.zeros(K, dtype=np.float32)
 
         # GELU(x) = 0.5 * x * (1 + erf(x / sqrt(2)))
@@ -270,9 +270,12 @@ class DepthwiseConvBNReLU(OTP):
         p = self._p(node_id, "dwcbrelu")
 
         # Depthwise: group = C, weight shape [C, 1, k, k]
-        w = rng.normal(0, 0.1, (C, 1, k, k)).astype(np.float32)
+        fan_in = k * k
+        _dw_val = np.sqrt(2.0 / fan_in)
+        w = np.full((C, 1, k, k), _dw_val, dtype=np.float32)
+        w[1::2] = -_dw_val
         b = np.zeros(C, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, C, p)
+        bn_names, bn_inits = _bn_params(C, p)
 
         cv_o = f"{p}_cv"; bn_o = f"{p}_bn"; out = f"{p}_out"
         nodes = [
@@ -305,11 +308,11 @@ class ConvReLUConvBN(OTP):
         out_c = self._rand_channels(rng)
         p = self._p(node_id, "crcrbn")
 
-        w1 = self._make_conv_weight(rng, mid_c, C, 3)
+        w1 = self._make_conv_weight(mid_c, C, 3)
         b1 = np.zeros(mid_c, dtype=np.float32)
-        w2 = self._make_conv_weight(rng, out_c, mid_c, 1)
+        w2 = self._make_conv_weight(out_c, mid_c, 1)
         b2 = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
 
         cv1_o = f"{p}_cv1"; relu_o = f"{p}_relu"
         cv2_o = f"{p}_cv2"; out = f"{p}_out"
@@ -345,7 +348,7 @@ class LinearLayerNormGELU(OTP):
         K = int(rng.choice([64, 128, 256, 512]))
         p = self._p(node_id, "llng")
 
-        w = rng.normal(0, np.sqrt(2/M), (M, K)).astype(np.float32)
+        w = self._make_linear_weight(K, M)
         b = np.zeros(K, dtype=np.float32)
         ln_scale = np.ones(K, dtype=np.float32)
         ln_bias  = np.zeros(K, dtype=np.float32)
@@ -397,7 +400,7 @@ class GlobalAvgPoolLinear(OTP):
         K = int(rng.choice([64, 128, 256]))
         p = self._p(node_id, "gaplin")
 
-        w = rng.normal(0, np.sqrt(2/C), (C, K)).astype(np.float32)
+        w = self._make_linear_weight(K, C)
         b = np.zeros(K, dtype=np.float32)
 
         gap_o = f"{p}_gap"; flat_o = f"{p}_flat"; out = f"{p}_out"
@@ -430,9 +433,9 @@ class ConvBNReLUMaxPool(OTP):
         k = 3; pad = 1
         p = self._p(node_id, "cbrmp")
 
-        w = self._make_conv_weight(rng, out_c, C, k)
+        w = self._make_conv_weight(out_c, C, k)
         b = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
 
         cv_o = f"{p}_cv"; bn_o = f"{p}_bn"; relu_o = f"{p}_relu"; out = f"{p}_out"
         nodes = [
@@ -466,7 +469,7 @@ class MatMulBiasSigmoid(OTP):
         K = int(rng.choice([64, 128, 256]))
         p = self._p(node_id, "mmbsig")
 
-        w = rng.normal(0, np.sqrt(2/M), (M, K)).astype(np.float32)
+        w = self._make_linear_weight(K, M)
         b = np.zeros(K, dtype=np.float32)
 
         mm_o = f"{p}_mm"; add_o = f"{p}_add"; out = f"{p}_out"
@@ -500,10 +503,12 @@ class ConvTransposeBNReLU(OTP):
         p = self._p(node_id, "ctbnr")
 
         # ConvTranspose weight: [C_in, C_out, k, k]
-        w = rng.normal(0, np.sqrt(2.0 / (C * k * k)),
-                       (C, out_c, k, k)).astype(np.float32)
+        _ct_fan = C * k * k
+        _ct_val = np.sqrt(2.0 / _ct_fan)
+        w = np.full((C, out_c, k, k), _ct_val, dtype=np.float32)
+        w[1::2] = -_ct_val
         b = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
 
         ct_o = f"{p}_ct"; bn_o = f"{p}_bn"; out = f"{p}_out"
         nodes = [
@@ -545,9 +550,9 @@ class DilatedConvBNReLU(OTP):
         pad = dilation   # same-output padding for dilated conv
         p = self._p(node_id, "dcbnr")
 
-        w = self._make_conv_weight(rng, out_c, C, k)
+        w = self._make_conv_weight(out_c, C, k)
         b = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
 
         cv_o = f"{p}_cv"; bn_o = f"{p}_bn"; out = f"{p}_out"
         nodes = [
@@ -587,9 +592,9 @@ class ConvBNSiLU(OTP):
         pad = k // 2
         p = self._p(node_id, "cbsilu")
 
-        w = self._make_conv_weight(rng, out_c, C, k)
+        w = self._make_conv_weight(out_c, C, k)
         b = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
 
         cv_o = f"{p}_cv"; bn_o = f"{p}_bn"
         sig_o = f"{p}_sig"; out = f"{p}_out"
@@ -627,9 +632,9 @@ class ConvBNHardswish(OTP):
         pad = k // 2
         p = self._p(node_id, "cbhs")
 
-        w = self._make_conv_weight(rng, out_c, C, k)
+        w = self._make_conv_weight(out_c, C, k)
         b = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
         three  = np.array([3.0], dtype=np.float32)
         six    = np.array([6.0], dtype=np.float32)
         zero   = np.array([0.0], dtype=np.float32)
@@ -677,9 +682,9 @@ class ConvBNReLU6(OTP):
         pad = k // 2
         p = self._p(node_id, "cbrelu6")
 
-        w = self._make_conv_weight(rng, out_c, C, k)
+        w = self._make_conv_weight(out_c, C, k)
         b = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
         zero = np.array([0.0], dtype=np.float32)
         six  = np.array([6.0], dtype=np.float32)
 
@@ -723,10 +728,12 @@ class GroupedConvBNReLU(OTP):
         p = self._p(node_id, "gcbnr")
 
         # weight shape: [out_c, in_c/groups, k, k]
-        w = rng.normal(0, np.sqrt(2.0 / (C // groups * k * k)),
-                       (out_c, C // groups, k, k)).astype(np.float32)
+        _gc_fan = C // groups * k * k
+        _gc_val = np.sqrt(2.0 / _gc_fan)
+        w = np.full((out_c, C // groups, k, k), _gc_val, dtype=np.float32)
+        w[1::2] = -_gc_val
         b = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
 
         cv_o = f"{p}_cv"; bn_o = f"{p}_bn"; out = f"{p}_out"
         nodes = [
@@ -771,9 +778,9 @@ class ConvAsymPadBN(OTP):
         out_c = self._rand_channels(rng)
         p = self._p(node_id, "capbn")
 
-        w = self._make_conv_weight(rng, out_c, C, 3)
+        w = self._make_conv_weight(out_c, C, 3)
         b = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
 
         # Pad 1 on H_start and 1 on W_end only (asymmetric).
         # ONNX pads layout for 4-D: [n_b,c_b,h_b,w_b, n_e,c_e,h_e,w_e]
@@ -818,12 +825,12 @@ class ConvBNELU(OTP):
         out_c = self._rand_channels(rng)
         k = int(rng.choice([1, 3]))
         pad = k // 2
-        alpha = float(rng.uniform(0.5, 2.0))
+        alpha = 1.0
         p = self._p(node_id, "cbelu")
 
-        w = self._make_conv_weight(rng, out_c, C, k)
+        w = self._make_conv_weight(out_c, C, k)
         b = np.zeros(out_c, dtype=np.float32)
-        bn_names, bn_inits = _bn_params(rng, out_c, p)
+        bn_names, bn_inits = _bn_params(out_c, p)
 
         cv_o = f"{p}_cv"; bn_o = f"{p}_bn"; out = f"{p}_out"
         nodes = [
@@ -857,14 +864,17 @@ class PointwiseDWBlock(OTP):
         expand = max(C * 2, 32)
         p = self._p(node_id, "pwdw")
 
-        w_pw  = self._make_conv_weight(rng, expand, C, 1)
+        w_pw  = self._make_conv_weight(expand, C, 1)
         b_pw  = np.zeros(expand, dtype=np.float32)
-        w_dw  = rng.normal(0, 0.1, (expand, 1, 3, 3)).astype(np.float32)
+        _dw_fan = 3 * 3
+        _dw_v = np.sqrt(2.0 / _dw_fan)
+        w_dw  = np.full((expand, 1, 3, 3), _dw_v, dtype=np.float32)
+        w_dw[1::2] = -_dw_v
         b_dw  = np.zeros(expand, dtype=np.float32)
-        w_proj = self._make_conv_weight(rng, C, expand, 1)
+        w_proj = self._make_conv_weight(C, expand, 1)
         b_proj = np.zeros(C, dtype=np.float32)
-        bn1_names, bn1_inits = _bn_params(rng, expand, f"{p}_bn1")
-        bn2_names, bn2_inits = _bn_params(rng, expand, f"{p}_bn2")
+        bn1_names, bn1_inits = _bn_params(expand, f"{p}_bn1")
+        bn2_names, bn2_inits = _bn_params(expand, f"{p}_bn2")
 
         pw_o = f"{p}_pw"; bn1_o = f"{p}_bn1o"; relu1 = f"{p}_relu1"
         dw_o = f"{p}_dw"; bn2_o = f"{p}_bn2o"; relu2 = f"{p}_relu2"; out = f"{p}_out"
@@ -909,7 +919,7 @@ class ConvGELU(OTP):
         pad = k // 2
         p = self._p(node_id, "cvgelu")
 
-        w = self._make_conv_weight(rng, out_c, C, k)
+        w = self._make_conv_weight(out_c, C, k)
         b = np.zeros(out_c, dtype=np.float32)
         sqrt2 = np.array([np.sqrt(2.0)], dtype=np.float32)
         half  = np.array([0.5],          dtype=np.float32)
@@ -953,7 +963,7 @@ class MatMulBiasTanh(OTP):
         K = int(rng.choice([64, 128, 256]))
         p = self._p(node_id, "mmbtanh")
 
-        w = rng.normal(0, np.sqrt(2.0 / M), (M, K)).astype(np.float32)
+        w = self._make_linear_weight(K, M)
         b = np.zeros(K, dtype=np.float32)
 
         mm_o = f"{p}_mm"; add_o = f"{p}_add"; out = f"{p}_out"
@@ -982,8 +992,8 @@ class AvgPoolScaleBias(OTP):
     def instantiate(self, input_name, ctx, rng, node_id):
         N, C, H, W = ctx.shape
         p = self._p(node_id, "apsb")
-        scale = rng.normal(1.0, 0.1, (1, C, 1, 1)).astype(np.float32)
-        bias  = rng.normal(0.0, 0.1, (1, C, 1, 1)).astype(np.float32)
+        scale = np.ones((1, C, 1, 1), dtype=np.float32)
+        bias  = np.zeros((1, C, 1, 1), dtype=np.float32)
 
         pool_o = f"{p}_pool"; sc_o = f"{p}_sc"; out = f"{p}_out"
         nodes = [

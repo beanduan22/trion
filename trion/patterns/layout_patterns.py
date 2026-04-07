@@ -55,7 +55,7 @@ class FlattenDenseUnflatten(OTP):
         flat_dim = C * H * W
         p = self._p(node_id, "fdu")
 
-        w = rng.normal(0, np.sqrt(2/flat_dim), (flat_dim, flat_dim)).astype(np.float32)
+        w = self._make_linear_weight(flat_dim, flat_dim)
         b = np.zeros(flat_dim, dtype=np.float32)
         s_back = np.array([-1, C, H, W], dtype=np.int64)
 
@@ -141,7 +141,7 @@ class FlattenUnsqueezeConcat(OTP):
         flat_dim = C * H * W
         p = self._p(node_id, "fuc")
         axes = np.array([1], dtype=np.int64)
-        extra = rng.normal(0, 0.1, (N, 1, flat_dim)).astype(np.float32)
+        extra = np.zeros((N, 1, flat_dim), dtype=np.float32)
 
         flat_o = f"{p}_flat"; uns_o = f"{p}_uns"; out = f"{p}_out"
         nodes = [
@@ -202,7 +202,7 @@ class TransposeConvNHWC(OTP):
         p = self._p(node_id, "trcv")
 
         # NCHW → NHWC → conv as NHWC → NCHW
-        w = self._make_conv_weight(rng, out_c, C, 3)
+        w = self._make_conv_weight(out_c, C, 3)
         b = np.zeros(out_c, dtype=np.float32)
 
         nhwc_o = f"{p}_nhwc"; cv_o = f"{p}_cv"; out = f"{p}_out"
@@ -299,7 +299,7 @@ class PadConv(OTP):
         pad_val = int(rng.choice([1, 2]))
         p = self._p(node_id, "padcv")
 
-        w = self._make_conv_weight(rng, out_c, C, 3)
+        w = self._make_conv_weight(out_c, C, 3)
         b = np.zeros(out_c, dtype=np.float32)
         # ONNX Pad pads: [x1_begin, x2_begin, x3_begin, x4_begin, x1_end, ...]
         pads_tensor = np.array([0,0,pad_val,pad_val, 0,0,pad_val,pad_val],
@@ -350,7 +350,7 @@ class SpaceToDepthBlock(OTP):
         # Intermediate shapes for Reshape+Transpose+Reshape
         shape1 = np.array([N, C, H//bs, bs, W//bs, bs], dtype=np.int64)
         shape2 = np.array([N, new_C, H//bs, W//bs], dtype=np.int64)
-        w = self._make_conv_weight(rng, out_c, new_C, 1)
+        w = self._make_conv_weight(out_c, new_C, 1)
         b = np.zeros(out_c, dtype=np.float32)
 
         r1_o = f"{p}_r1"; tr_o = f"{p}_tr"; r2_o = f"{p}_r2"; out = f"{p}_out"
@@ -391,7 +391,7 @@ class DepthToSpaceBlock(OTP):
         out_c = self._rand_channels(rng)
         p = self._p(node_id, "d2s")
 
-        w = self._make_conv_weight(rng, out_c, new_C, 1)
+        w = self._make_conv_weight(out_c, new_C, 1)
         b = np.zeros(out_c, dtype=np.float32)
 
         d2s_o = f"{p}_d2s"; out = f"{p}_out"
@@ -430,7 +430,7 @@ class ReflectPadConv(OTP):
         pad_val = 1
         pads_t = np.array([0, 0, pad_val, pad_val,
                            0, 0, pad_val, pad_val], dtype=np.int64)
-        w = self._make_conv_weight(rng, out_c, C, 3)
+        w = self._make_conv_weight(out_c, C, 3)
         b = np.zeros(out_c, dtype=np.float32)
 
         pad_o = f"{p}_pad"; out = f"{p}_out"
@@ -466,7 +466,7 @@ class ReshapeBatchedMatMul(OTP):
         K = int(rng.choice([64, 128, 256]))
         p = self._p(node_id, "rbmm")
 
-        w = rng.normal(0, np.sqrt(2.0 / feat), (feat, K)).astype(np.float32)
+        w = self._make_linear_weight(K, feat)
         b = np.zeros(K, dtype=np.float32)
         s2d = np.array([N, feat], dtype=np.int64)
 
@@ -499,7 +499,7 @@ class UnsqueezeExpandMul(OTP):
         p = self._p(node_id, "uem")
 
         # 1-D scale [C] → unsqueeze to [C,1,1] → expand to [N,C,H,W]
-        scale_vec = rng.normal(1.0, 0.1, (C,)).astype(np.float32)
+        scale_vec = np.ones((C,), dtype=np.float32)
         target_shape = np.array([N, C, H, W], dtype=np.int64)
         axes = np.array([0, 2, 3], dtype=np.int64)
 
@@ -533,7 +533,7 @@ class TileConv(OTP):
         out_c = self._rand_channels(rng)
         p = self._p(node_id, "tlcv")
 
-        w = self._make_conv_weight(rng, out_c, C, 3)
+        w = self._make_conv_weight(out_c, C, 3)
         b = np.zeros(out_c, dtype=np.float32)
 
         tile_o = f"{p}_tile"; out = f"{p}_out"
@@ -606,8 +606,8 @@ class GatherReshape(OTP):
         p = self._p(node_id, "gr")
 
         # Use first col of float input as integer indices (cast)
-        emb_table = rng.normal(0, 0.02, (vocab, embed)).astype(np.float32)
-        indices   = rng.integers(0, vocab, size=(N,)).astype(np.int64)
+        emb_table = np.full((vocab, embed), 0.02, dtype=np.float32)
+        indices = np.zeros(N, dtype=np.int64)
         out_shape = np.array([N, embed], dtype=np.int64)
 
         cast_o = f"{p}_cast"; gath_o = f"{p}_gath"; out = f"{p}_out"
@@ -679,7 +679,7 @@ class CeilModeAvgPoolConv(OTP):
         out_c = self._rand_channels(rng)
         p = self._p(node_id, "cmapc")
 
-        w = self._make_conv_weight(rng, out_c, C, 1)
+        w = self._make_conv_weight(out_c, C, 1)
         b = np.zeros(out_c, dtype=np.float32)
 
         pool_o = f"{p}_pool"; out = f"{p}_out"

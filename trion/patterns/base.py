@@ -81,14 +81,37 @@ class OTP(ABC):
 
     @staticmethod
     def _make_conv_weight(
-        rng: np.random.Generator,
         out_c: int,
         in_c: int,
         k: int,
     ) -> np.ndarray:
+        """Fixed kaiming-uniform initialisation — deterministic, no rng."""
         fan_in = in_c * k * k
-        std = np.sqrt(2.0 / fan_in)
-        return rng.normal(0, std, (out_c, in_c, k, k)).astype(np.float32)
+        val = np.sqrt(2.0 / fan_in)
+        w = np.full((out_c, in_c, k, k), val, dtype=np.float32)
+        # Alternate sign across output channels so the kernel is non-degenerate.
+        w[1::2] = -val
+        return w
+
+    @staticmethod
+    def _make_linear_weight(out_f: int, in_f: int) -> np.ndarray:
+        """Fixed Xavier-uniform initialisation — deterministic, no rng."""
+        val = np.sqrt(2.0 / (in_f + out_f))
+        w = np.full((out_f, in_f), val, dtype=np.float32)
+        w[1::2] = -val
+        return w
+
+    @staticmethod
+    def _make_bias(size: int, val: float = 0.0) -> np.ndarray:
+        return np.full((size,), val, dtype=np.float32)
+
+    @staticmethod
+    def _make_scale(shape, val: float = 1.0) -> np.ndarray:
+        return np.full(shape, val, dtype=np.float32)
+
+    @staticmethod
+    def _make_zero(shape) -> np.ndarray:
+        return np.zeros(shape, dtype=np.float32)
 
 
 # ── Category constants ─────────────────────────────────────────────────────

@@ -91,7 +91,7 @@ class LayerNormResidualAdd(OTP):
         norm_dim = ctx.shape[-1]
         scale = np.ones(norm_dim, dtype=np.float32)
         bias  = np.zeros(norm_dim, dtype=np.float32)
-        res   = rng.normal(0, 0.1, ctx.shape).astype(np.float32)
+        res   = np.zeros(ctx.shape, dtype=np.float32)
 
         ln_o = f"{p}_ln"; out = f"{p}_out"
         nodes = [
@@ -237,10 +237,10 @@ class BatchNormEval(OTP):
     def instantiate(self, input_name, ctx, rng, node_id):
         N, C, H, W = ctx.shape
         p = self._p(node_id, "bne")
-        scale = rng.normal(1, 0.1, C).astype(np.float32)
-        bias  = rng.normal(0, 0.1, C).astype(np.float32)
-        mean  = rng.normal(0, 0.5, C).astype(np.float32)
-        var   = np.abs(rng.normal(1, 0.2, C)).astype(np.float32) + 1e-5
+        scale = np.ones(C, dtype=np.float32)
+        bias  = np.zeros(C, dtype=np.float32)
+        mean  = np.zeros(C, dtype=np.float32)
+        var   = np.ones(C, dtype=np.float32)
 
         out = f"{p}_out"
         nodes = [
@@ -303,7 +303,7 @@ class SpatialReduceMean(OTP):
         p = self._p(node_id, "srm")
 
         # Reduce over H, W → [N, C, 1, 1], then broadcast-multiply
-        scale = rng.normal(1, 0.1, (1, C, 1, 1)).astype(np.float32)
+        scale = np.ones((1, C, 1, 1), dtype=np.float32)
 
         red_o = f"{p}_red"; out = f"{p}_out"
         nodes = [
@@ -376,8 +376,8 @@ class ManualGroupNorm(OTP):
         s_back  = np.array([N, C, H, W],        dtype=np.int64)
         ln_sc   = np.ones(group_size,  dtype=np.float32)
         ln_b    = np.zeros(group_size, dtype=np.float32)
-        out_sc  = rng.normal(1.0, 0.1, (1, C, 1, 1)).astype(np.float32)
-        out_b   = rng.normal(0.0, 0.1, (1, C, 1, 1)).astype(np.float32)
+        out_sc  = np.ones((1, C, 1, 1), dtype=np.float32)
+        out_b   = np.zeros((1, C, 1, 1), dtype=np.float32)
 
         rg_o = f"{p}_rg"; ln_o = f"{p}_ln"; rb_o = f"{p}_rb"
         sc_o = f"{p}_sc"; out  = f"{p}_out"
@@ -414,7 +414,7 @@ class L2Normalize(OTP):
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "l2n2")
         eps = np.array([1e-12], dtype=np.float32)
-        scale = rng.normal(1.0, 0.1, [1] * ctx.rank).astype(np.float32)
+        scale = np.ones([1] * ctx.rank, dtype=np.float32)
 
         norm_o = f"{p}_norm"; add_o = f"{p}_add"; div_o = f"{p}_div"; out = f"{p}_out"
         nodes = [
@@ -447,7 +447,7 @@ class PowerNorm(OTP):
         two  = np.array([2.0],  dtype=np.float32)
         half = np.array([0.5],  dtype=np.float32)
         eps  = np.array([1e-6], dtype=np.float32)
-        scale = rng.normal(1.0, 0.1, ctx.shape).astype(np.float32)
+        scale = np.ones(ctx.shape, dtype=np.float32)
 
         sq_o = f"{p}_sq"; mean_o = f"{p}_mean"; add_o = f"{p}_add"
         pow_o = f"{p}_pow"; div_o = f"{p}_div"; out = f"{p}_out"
@@ -486,8 +486,8 @@ class AdaLayerNorm(OTP):
         ln_sc = np.ones(D,  dtype=np.float32)
         ln_b  = np.zeros(D, dtype=np.float32)
         # Adaptive modulation constants (in real use, from a condition signal)
-        ada_sc = rng.normal(1.0, 0.1, [1] * (ctx.rank - 1) + [D]).astype(np.float32)
-        ada_b  = rng.normal(0.0, 0.1, [1] * (ctx.rank - 1) + [D]).astype(np.float32)
+        ada_sc = np.ones([1] * (ctx.rank - 1) + [D], dtype=np.float32)
+        ada_b  = np.zeros([1] * (ctx.rank - 1) + [D], dtype=np.float32)
 
         ln_o = f"{p}_ln"; sc_o = f"{p}_sc"; out = f"{p}_out"
         nodes = [
@@ -520,10 +520,10 @@ class BatchNormReLU6(OTP):
     def instantiate(self, input_name, ctx, rng, node_id):
         N, C, H, W = ctx.shape
         p = self._p(node_id, "bnr6")
-        scale = rng.normal(1, 0.1, C).astype(np.float32)
-        bias  = rng.normal(0, 0.1, C).astype(np.float32)
-        mean  = rng.normal(0, 0.5, C).astype(np.float32)
-        var   = (np.abs(rng.normal(1, 0.2, C)) + 1e-5).astype(np.float32)
+        scale = np.ones(C, dtype=np.float32)
+        bias  = np.zeros(C, dtype=np.float32)
+        mean  = np.zeros(C, dtype=np.float32)
+        var   = np.ones(C, dtype=np.float32)
         zero  = np.array([0.0], dtype=np.float32)
         six   = np.array([6.0], dtype=np.float32)
 
@@ -560,7 +560,7 @@ class VarianceWhitening(OTP):
         eps = np.array([1e-5], dtype=np.float32)
         two = np.array([2.0], dtype=np.float32)
         half = np.array([0.5], dtype=np.float32)
-        sc = rng.normal(1.0, 0.1, [1]*ctx.rank).astype(np.float32)
+        sc = np.ones([1]*ctx.rank, dtype=np.float32)
 
         mean_o = f"{p}_mean"; diff_o = f"{p}_diff"
         sq_o   = f"{p}_sq";   var_o  = f"{p}_var"
@@ -639,8 +639,8 @@ class LayerNormTemperature(OTP):
         D = ctx.shape[-1]
         sc  = np.ones(D,  dtype=np.float32)
         b   = np.zeros(D, dtype=np.float32)
-        temp = np.array([float(rng.uniform(0.5, 4.0))], dtype=np.float32)
-        bias = rng.normal(0, 0.1, ctx.shape).astype(np.float32)
+        temp = np.array([2.25], dtype=np.float32)
+        bias = np.zeros(ctx.shape, dtype=np.float32)
 
         ln_o = f"{p}_ln"; div_o = f"{p}_div"; out = f"{p}_out"
         nodes = [

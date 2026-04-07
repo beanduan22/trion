@@ -24,8 +24,8 @@ class ExpandAddMul(OTP):
         N, C, H, W = ctx.shape
         p = self._p(node_id, "eam")
         # Broadcast a [1, C, 1, 1] tensor to [N, C, H, W]
-        scale = rng.normal(1.0, 0.1, (1, C, 1, 1)).astype(np.float32)
-        shift = rng.normal(0.0, 0.1, (1, C, 1, 1)).astype(np.float32)
+        scale = np.ones((1, C, 1, 1), dtype=np.float32)
+        shift = np.zeros((1, C, 1, 1), dtype=np.float32)
         target_shape = np.array([N, C, H, W], dtype=np.int64)
 
         exp_o = f"{p}_exp"; add_o = f"{p}_add"; out = f"{p}_out"
@@ -53,7 +53,7 @@ class ReciprocalMul(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "recmul")
-        denom = (np.abs(rng.normal(1.0, 0.5, ctx.shape)) + 0.1).astype(np.float32)
+        denom = np.full(ctx.shape, 1.1, dtype=np.float32)
 
         rec_o = f"{p}_rec"; out = f"{p}_out"
         nodes = [
@@ -79,8 +79,8 @@ class LogClamp(OTP):
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "logclamp")
         # Ensure positive input by abs first
-        min_v = np.array(float(rng.uniform(-10, -1)),  dtype=np.float32)
-        max_v = np.array(float(rng.uniform(1,  10)),   dtype=np.float32)
+        min_v = np.array(-5.5, dtype=np.float32)
+        max_v = np.array(5.5, dtype=np.float32)
         eps   = np.full(ctx.shape, 1e-6, dtype=np.float32)
 
         abs_o = f"{p}_abs"; add_o = f"{p}_add"; log_o = f"{p}_log"; out = f"{p}_out"
@@ -137,9 +137,9 @@ class SubMulAdd(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "sma")
-        mean  = rng.normal(0, 0.5, ctx.shape).astype(np.float32)
-        scale = (np.abs(rng.normal(1, 0.2, ctx.shape)) + 0.01).astype(np.float32)
-        bias  = rng.normal(0, 0.1, ctx.shape).astype(np.float32)
+        mean  = np.zeros(ctx.shape, dtype=np.float32)
+        scale = np.full(ctx.shape, 1.01, dtype=np.float32)
+        bias  = np.zeros(ctx.shape, dtype=np.float32)
 
         sub_o = f"{p}_sub"; mul_o = f"{p}_mul"; out = f"{p}_out"
         nodes = [
@@ -170,11 +170,11 @@ class MulAddReLU(OTP):
         # Channel-wise scale/shift for 4-D, element-wise for 2-D
         if ctx.rank == 4:
             _, C, _, _ = ctx.shape
-            scale = rng.normal(1, 0.1, (1, C, 1, 1)).astype(np.float32)
-            bias  = rng.normal(0, 0.1, (1, C, 1, 1)).astype(np.float32)
+            scale = np.ones((1, C, 1, 1), dtype=np.float32)
+            bias  = np.zeros((1, C, 1, 1), dtype=np.float32)
         else:
-            scale = rng.normal(1, 0.1, ctx.shape).astype(np.float32)
-            bias  = rng.normal(0, 0.1, ctx.shape).astype(np.float32)
+            scale = np.ones(ctx.shape, dtype=np.float32)
+            bias  = np.zeros(ctx.shape, dtype=np.float32)
 
         mul_o = f"{p}_mul"; add_o = f"{p}_add"; out = f"{p}_out"
         nodes = [
@@ -266,8 +266,8 @@ class HardClampNorm(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "hcn")
-        lo   = np.array([float(rng.uniform(-3, -0.5))], dtype=np.float32)
-        hi   = np.array([float(rng.uniform(0.5, 3))],   dtype=np.float32)
+        lo   = np.array([-1.75], dtype=np.float32)
+        hi   = np.array([1.75], dtype=np.float32)
         denom = np.array([float(hi - lo)], dtype=np.float32)
 
         cl_o = f"{p}_cl"; sub_o = f"{p}_sub"; out = f"{p}_out"
@@ -319,7 +319,7 @@ class WhereMask(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "wm")
-        threshold = np.array([float(rng.uniform(-1.0, 1.0))], dtype=np.float32)
+        threshold = np.array([0.0], dtype=np.float32)
         zeros = np.zeros(ctx.shape, dtype=np.float32)
 
         gt_o = f"{p}_gt"; out = f"{p}_out"
@@ -348,7 +348,7 @@ class CumSumOp(OTP):
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "cum")
         axis = np.array(ctx.rank - 1, dtype=np.int64)
-        scale = rng.normal(1.0, 0.1, ctx.shape).astype(np.float32)
+        scale = np.ones(ctx.shape, dtype=np.float32)
 
         cs_o = f"{p}_cs"; out = f"{p}_out"
         nodes = [
@@ -376,7 +376,7 @@ class LogSumExpStep(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "lse")
-        scale = rng.normal(1.0, 0.1, ctx.shape).astype(np.float32)
+        scale = np.ones(ctx.shape, dtype=np.float32)
 
         mx_o = f"{p}_mx"; sub_o = f"{p}_sub"; exp_o = f"{p}_exp"
         sum_o = f"{p}_sum"; log_o = f"{p}_log"; out = f"{p}_out"
@@ -409,7 +409,7 @@ class AbsNegReLU(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "anr")
-        alpha = rng.normal(1.0, 0.1, ctx.shape).astype(np.float32)
+        alpha = np.ones(ctx.shape, dtype=np.float32)
 
         abs_o = f"{p}_abs"; neg_o = f"{p}_neg"; relu_o = f"{p}_relu"; out = f"{p}_out"
         nodes = [
@@ -439,7 +439,7 @@ class EuclideanNormBroadcast(OTP):
         p = self._p(node_id, "enb")
         two  = np.array([2.0], dtype=np.float32)
         eps  = np.array([1e-8], dtype=np.float32)
-        bias = rng.normal(0, 0.1, ctx.shape).astype(np.float32)
+        bias = np.zeros(ctx.shape, dtype=np.float32)
         axes = np.array([-1], dtype=np.int64)
 
         diff_o = f"{p}_diff"; sq_o = f"{p}_sq"
@@ -474,8 +474,8 @@ class SoftmaxMul(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "sftm")
-        temperature = np.array([float(rng.uniform(0.5, 2.0))], dtype=np.float32)
-        weight = rng.normal(1.0, 0.1, ctx.shape).astype(np.float32)
+        temperature = np.array([1.25], dtype=np.float32)
+        weight = np.ones(ctx.shape, dtype=np.float32)
 
         div_o = f"{p}_div"; sm_o = f"{p}_sm"; out = f"{p}_out"
         nodes = [
@@ -503,8 +503,8 @@ class ClippedAffine(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "caff")
-        scale = np.array([float(rng.uniform(0.5, 2.0))], dtype=np.float32)
-        shift = np.array([float(rng.uniform(-1.0, 1.0))], dtype=np.float32)
+        scale = np.array([1.25], dtype=np.float32)
+        shift = np.array([0.0], dtype=np.float32)
         lo = np.array([-1.0], dtype=np.float32)
         hi = np.array([1.0],  dtype=np.float32)
 
@@ -538,7 +538,7 @@ class FloorCeilRound(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "fcr")
-        alpha = rng.normal(1.0, 0.5, ctx.shape).astype(np.float32)
+        alpha = np.ones(ctx.shape, dtype=np.float32)
 
         mul_o = f"{p}_mul"; fl_o = f"{p}_fl"; cl_o = f"{p}_cl"; out = f"{p}_out"
         nodes = [

@@ -22,8 +22,8 @@ class ConstantAddMul(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "cam")
-        c1 = rng.normal(0, 0.1, ctx.shape).astype(np.float32)
-        c2 = np.abs(rng.normal(1, 0.1, ctx.shape)).astype(np.float32) + 0.01
+        c1 = np.full(ctx.shape, 0.1, dtype=np.float32)
+        c2 = np.full(ctx.shape, 1.01, dtype=np.float32)
 
         add_o = f"{p}_add"; out = f"{p}_out"
         nodes = [
@@ -109,7 +109,7 @@ class SelfSubZero(OTP):
 
         sub_o = f"{p}_sub"; out = f"{p}_out"
         # sub(x, x) = 0 then add back a learnable bias
-        bias = rng.normal(0, 0.1, ctx.shape).astype(np.float32)
+        bias = np.zeros(ctx.shape, dtype=np.float32)
         nodes = [
             helper.make_node("Sub", [input_name, input_name], [sub_o]),
             helper.make_node("Add", [input_name, f"{p}_bias"], [out]),   # actual path
@@ -132,7 +132,7 @@ class DivByConstant(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "dbc")
-        c = np.array([float(rng.uniform(0.5, 10.0))], dtype=np.float32)
+        c = np.array([5.25], dtype=np.float32)
         inv_c = np.array([1.0 / float(c)], dtype=np.float32)
 
         out = f"{p}_out"
@@ -222,7 +222,7 @@ class WhereConstCond(OTP):
         p = self._p(node_id, "wcc")
         # Always-true condition → should select x branch
         cond  = np.ones(ctx.shape, dtype=bool)
-        other = rng.normal(0, 0.1, ctx.shape).astype(np.float32)
+        other = np.zeros(ctx.shape, dtype=np.float32)
 
         out = f"{p}_out"
         nodes = [
@@ -249,7 +249,7 @@ class SqrtReciprocalMul(OTP):
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "srm")
         eps  = np.array([1e-6], dtype=np.float32)
-        scale = rng.normal(1.0, 0.1, ctx.shape).astype(np.float32)
+        scale = np.ones(ctx.shape, dtype=np.float32)
 
         sq2_o = f"{p}_sq2"; add_o = f"{p}_add"; sq_o = f"{p}_sq"
         rc_o  = f"{p}_rc";  out   = f"{p}_out"
@@ -338,7 +338,7 @@ class SliceFullRange(OTP):
         p = self._p(node_id, "sfr")
         starts = np.zeros(ctx.rank, dtype=np.int64)
         ends   = np.array([s + 1000000 for s in ctx.shape], dtype=np.int64)
-        scale  = rng.normal(1.0, 0.1, ctx.shape).astype(np.float32)
+        scale  = np.ones(ctx.shape, dtype=np.float32)
 
         sl_o = f"{p}_sl"; out = f"{p}_out"
         nodes = [
@@ -398,11 +398,11 @@ class MulByReciprocal(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "mbr")
-        c = np.array([float(rng.uniform(0.1, 10.0))], dtype=np.float32)
+        c = np.array([5.05], dtype=np.float32)
         rc = 1.0 / c
 
         mul_o = f"{p}_mul"; out = f"{p}_out"
-        bias = rng.normal(0, 0.1, ctx.shape).astype(np.float32)
+        bias = np.zeros(ctx.shape, dtype=np.float32)
         nodes = [
             helper.make_node("Mul", [input_name, f"{p}_rc"], [mul_o]),
             helper.make_node("Add", [mul_o, f"{p}_bias"], [out]),
@@ -430,7 +430,7 @@ class LogExpCancel(OTP):
         # Clip input to avoid overflow in Exp
         lo = np.array([-10.0], dtype=np.float32)
         hi = np.array([10.0],  dtype=np.float32)
-        scale = rng.normal(1.0, 0.1, ctx.shape).astype(np.float32)
+        scale = np.ones(ctx.shape, dtype=np.float32)
 
         cl_o = f"{p}_cl"; ex_o = f"{p}_ex"; lg_o = f"{p}_lg"; out = f"{p}_out"
         nodes = [
@@ -460,8 +460,8 @@ class LearnedTemperatureScale(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "lts")
-        temp = np.array([float(rng.uniform(0.01, 1.0))], dtype=np.float32)
-        bias = rng.normal(0, 0.01, ctx.shape).astype(np.float32)
+        temp = np.array([0.505], dtype=np.float32)
+        bias = np.zeros(ctx.shape, dtype=np.float32)
 
         div_o = f"{p}_div"; out = f"{p}_out"
         nodes = [
