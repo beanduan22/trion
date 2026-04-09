@@ -172,9 +172,9 @@ def _gen_op(op: str, node, ins: list[Optional[str]],
         return f"jnp.transpose({i(0)}, {list(perm)})"
 
     if op == "Reshape":
-        # shape is always a static initializer → embed directly
+        # shape tensor must be int — cast to be safe
         sh_var = i(1)
-        return f"jnp.reshape({i(0)}, {sh_var}.tolist())"
+        return f"jnp.reshape({i(0)}, [int(v) for v in {sh_var}.flat])"
 
     if op == "Flatten":
         axis = int(_attr(node, "axis", 1))
@@ -427,6 +427,199 @@ def _gen_op(op: str, node, ins: list[Optional[str]],
                     f"[_x.shape[0], _x.shape[1]//({bs*bs}), _x.shape[2]*{bs}, _x.shape[3]*{bs}]))"
                     f"({x})")
 
+    # ── Activations ──────────────────────────────────────────────────────────────
+    if op == "LeakyRelu":
+        alpha = float(_attr(node, "alpha", 0.01))
+        return f"jnp.where({i(0)} >= 0, {i(0)}, np.float32({alpha!r}) * {i(0)})"
+    if op == "Celu":
+        alpha = float(_attr(node, "alpha", 1.0))
+        return f"jnp.maximum(0.0, {i(0)}) + jnp.minimum(0.0, np.float32({alpha!r}) * (jnp.exp({i(0)} / np.float32({alpha!r})) - 1.0))"
+    if op == "Softsign":
+        return f"({i(0)} / (np.float32(1.0) + jnp.abs({i(0)})))"
+    if op == "Dropout":
+        return i(0)  # inference mode: identity
+    if op == "Asin":
+        return f"jnp.arcsin({i(0)})"
+    if op == "Acos":
+        return f"jnp.arccos({i(0)})"
+    if op == "Atan":
+        return f"jnp.arctan({i(0)})"
+    if op == "Erf":
+        return f"jax.scipy.special.erf({i(0)})"
+
+    # ── Shape manipulation ────────────────────────────────────────────────────────
+    if op == "Squeeze":
+        x = i(0)
+        axes_inp = i(1)
+        if axes_inp:
+            return f"jnp.squeeze({x}, axis=tuple(int(a) for a in {axes_inp}.flat))"
+        axes_attr = _attr(node, "axes", None)
+        if axes_attr is not None:
+            return f"jnp.squeeze({x}, axis={tuple(int(a) for a in axes_attr)})"
+        return f"jnp.squeeze({x})"
+    if op == "Unsqueeze":
+        x = i(0)
+        axes_inp = i(1)
+        if axes_inp:
+            # apply unsqueeze one axis at a time in sorted order
+            return (f"(lambda _x, _axes: "
+                    f"__import__('functools').reduce(lambda a, ax: jnp.expand_dims(a, axis=int(ax)), sorted(_axes.flat), _x))"
+                    f"({x}, {axes_inp})")
+        axes_attr = list(int(a) for a in _attr(node, "axes", []))
+        expr = x
+        for ax in sorted(axes_attr):
+            expr = f"jnp.expand_dims({expr}, axis={ax})"
+        return expr
+    if op == "Flatten":
+        axis = int(_attr(node, "axis", 1))
+        return f"jnp.reshape({i(0)}, [{i(0)}.shape[0], -1])" if axis == 1 else f"jnp.reshape({i(0)}, [-1])"
+    if op == "Expand":
+        return f"jnp.broadcast_to({i(0)}, {i(1)}.tolist())"
+    if op == "Tile":
+        return f"jnp.tile({i(0)}, {i(1)}.tolist())"
+
+    # ── Indexing ──────────────────────────────────────────────────────────────────
+    if op == "Gather":
+        axis = int(_attr(node, "axis", 0))
+        return f"jnp.take({i(0)}, {i(1)}, axis={axis})"
+    if op == "GatherElements":
+        axis = int(_attr(node, "axis", 0))
+        return f"jnp.take_along_axis({i(0)}, {i(1)}, axis={axis})"
+    if op == "Slice":
+        x = i(0); starts = i(1); ends = i(2); axes = i(3); steps = i(4)
+        return (f"(lambda _x, _st, _en, _ax, _sp: "
+                f"_x[tuple(slice(int(_st[k]), int(_en[k]), int(_sp[k]) if _sp is not None else 1) "
+                f"if k in [int(a) for a in _ax.flat] else slice(None) "
+                f"for k in range(_x.ndim))])"
+                f"({x}, {starts}, {ends}, {axes if axes else 'np.arange(' + x + '.ndim)'}, {steps if steps else 'None'})")
+
+    # ── Linear algebra ────────────────────────────────────────────────────────────
+    if op == "Gemm":
+        A = i(0); B = i(1); C = i(2)
+        alpha = float(_attr(node, "alpha", 1.0))
+        beta  = float(_attr(node, "beta",  1.0))
+        transA = int(_attr(node, "transA", 0))
+        transB = int(_attr(node, "transB", 0))
+        a_expr = f"{A}.T" if transA else A
+        b_expr = f"{B}.T" if transB else B
+        expr = f"np.float32({alpha!r}) * jnp.matmul({a_expr}, {b_expr})"
+        if C:
+            expr += f" + np.float32({beta!r}) * {C}"
+        return expr
+    if op == "Einsum":
+        eq = _attr(node, "equation", b"").decode() if isinstance(_attr(node, "equation", b""), bytes) else _attr(node, "equation", "")
+        args = ", ".join(ins[k] for k in range(len(ins)) if ins[k])
+        return f"jnp.einsum({eq!r}, {args})"
+
+    # ── Type / value ops ─────────────────────────────────────────────────────────
+    if op == "Cast":
+        to = int(_attr(node, "to", TensorProto.FLOAT))
+        dtype_map = {TensorProto.FLOAT: "np.float32", TensorProto.DOUBLE: "np.float64",
+                     TensorProto.INT32: "np.int32", TensorProto.INT64: "np.int64",
+                     TensorProto.BOOL: "np.bool_"}
+        dtype = dtype_map.get(to, "np.float32")
+        return f"{i(0)}.astype({dtype})"
+    if op == "Clip":
+        mn = i(1); mx = i(2)
+        x = i(0)
+        if mn and mx:
+            return f"jnp.clip({x}, {mn}.item() if hasattr({mn}, 'item') else float({mn}), {mx}.item() if hasattr({mx}, 'item') else float({mx}))"
+        if mn:
+            return f"jnp.maximum({x}, {mn}.item() if hasattr({mn}, 'item') else float({mn}))"
+        if mx:
+            return f"jnp.minimum({x}, {mx}.item() if hasattr({mx}, 'item') else float({mx}))"
+        return x
+    if op == "Pad":
+        x = i(0); pads_v = i(1)
+        mode = _attr(node, "mode", b"constant")
+        if isinstance(mode, bytes): mode = mode.decode()
+        if mode == "constant":
+            return (f"(lambda _x, _p: jnp.pad(_x, "
+                    f"[(int(_p[k]), int(_p[k+_x.ndim])) for k in range(_x.ndim)]))"
+                    f"({x}, {pads_v})")
+        return f"jnp.pad({x}, [(0,0)]*{x}.ndim)"  # safe fallback
+    if op == "Mod":
+        fmod = int(_attr(node, "fmod", 0))
+        if fmod:
+            return f"jnp.fmod({i(0)}, {i(1)})"
+        return f"jnp.mod({i(0)}, {i(1)})"
+    if op == "Range":
+        return f"jnp.arange(float({i(0)}.flat[0]), float({i(1)}.flat[0]), float({i(2)}.flat[0]), dtype=np.float32)"
+
+    # ── Reductions (extra) ────────────────────────────────────────────────────────
+    if op in ("ReduceL1", "ReduceLogSum", "ReduceLogSumExp", "ReduceSumSquare", "ReduceProd"):
+        x = i(0)
+        axes = _attr(node, "axes", None)
+        if axes is None and i(1):
+            axes = f"tuple({i(1)}.tolist())"
+        else:
+            axes = tuple(int(a) for a in axes) if axes else None
+        kd = bool(_attr(node, "keepdims", 1))
+        ax_repr = repr(axes)
+        if op == "ReduceL1":        return f"jnp.sum(jnp.abs({x}), axis={ax_repr}, keepdims={kd})"
+        if op == "ReduceLogSum":    return f"jnp.log(jnp.sum({x}, axis={ax_repr}, keepdims={kd}))"
+        if op == "ReduceLogSumExp": return f"jax.scipy.special.logsumexp({x}, axis={ax_repr}, keepdims={kd})"
+        if op == "ReduceSumSquare": return f"jnp.sum({x}*{x}, axis={ax_repr}, keepdims={kd})"
+        if op == "ReduceProd":      return f"jnp.prod({x}, axis={ax_repr}, keepdims={kd})"
+
+    # ── Misc ──────────────────────────────────────────────────────────────────────
+    if op == "TopK":
+        x = i(0); K = i(1)
+        axis = int(_attr(node, "axis", -1))
+        largest = int(_attr(node, "largest", 1))
+        return (f"(lambda _x, _k: (jnp.take_along_axis(_x, "
+                f"jnp.argsort(_x, axis={axis})[..., ::-1][..., :int(_k.flat[0])] if {largest} "
+                f"else jnp.argsort(_x, axis={axis})[..., :int(_k.flat[0])], axis={axis}), "
+                f"jnp.argsort(_x, axis={axis})[..., ::-1][..., :int(_k.flat[0])] if {largest} "
+                f"else jnp.argsort(_x, axis={axis})[..., :int(_k.flat[0])]))"
+                f"({x}, {K})")
+    if op == "Sum":
+        return " + ".join(ins[k] for k in range(len(ins)) if ins[k])
+    if op == "Max":
+        args = ", ".join(ins[k] for k in range(len(ins)) if ins[k])
+        if len([k for k in range(len(ins)) if ins[k]]) == 1:
+            return i(0)
+        return f"jnp.maximum({', '.join(ins[k] for k in range(len(ins)) if ins[k])})"
+    if op == "Min":
+        args = [ins[k] for k in range(len(ins)) if ins[k]]
+        if len(args) == 1: return args[0]
+        return f"jnp.minimum({args[0]}, {args[1]})"
+    if op == "Mean":
+        args = [ins[k] for k in range(len(ins)) if ins[k]]
+        return f"({' + '.join(args)}) / np.float32({len(args)})"
+    if op == "ReduceMin":
+        x = i(0)
+        axes = _attr(node, "axes", None)
+        if axes is None and i(1):
+            axes = f"tuple({i(1)}.tolist())"
+        else:
+            axes = tuple(int(a) for a in axes) if axes else None
+        kd = bool(_attr(node, "keepdims", 1))
+        return f"jnp.min({x}, axis={repr(axes)}, keepdims={kd})"
+    if op == "PRelu":
+        return f"jnp.where({i(0)} >= 0, {i(0)}, {i(1)} * {i(0)})"
+    if op == "HardSwish":
+        return f"(lambda _x: _x * jnp.clip(_x / 6.0 + 0.5, 0.0, 1.0))({i(0)})"
+    if op == "HardSigmoid":
+        alpha = float(_attr(node, "alpha", 0.2))
+        beta  = float(_attr(node, "beta",  0.5))
+        return f"jnp.clip({i(0)} * np.float32({alpha!r}) + np.float32({beta!r}), 0.0, 1.0)"
+    if op == "Mish":
+        return f"(lambda _x: _x * jnp.tanh(jnp.log(np.float32(1.0) + jnp.exp(_x))))({i(0)})"
+    if op == "LRN":
+        x = i(0)
+        size  = int(_attr(node, "size", 5))
+        alpha = float(_attr(node, "alpha", 1e-4))
+        beta  = float(_attr(node, "beta",  0.75))
+        bias  = float(_attr(node, "bias",  1.0))
+        # LRN: across-channel normalization
+        return (f"(lambda _x: _x / jnp.power("
+                f"np.float32({bias!r}) + np.float32({alpha!r}/{size}) * "
+                f"lax.reduce_window(_x**2, 0.0, lax.add, "
+                f"(1,{size},1,1), (1,1,1,1), 'SAME'), np.float32({beta!r})))({x})")
+    if op == "Identity":
+        return i(0)
+
     if op in ("Split",):
         raise _NotSupported(op)  # multi-output; handled separately below
 
@@ -447,15 +640,25 @@ def _build_jax_body(model: onnx.ModelProto) -> tuple[list[str], list[str], bool]
     var_map: dict[str, str] = {}   # onnx name → python var name
 
     # ── Embed weights as hex numpy arrays ─────────────────────────────────────
+    _INT_DTYPES = {np.dtype('int32'), np.dtype('int64'), np.dtype('uint8'), np.dtype('bool')}
     for idx, (name, arr) in enumerate(init_map.items()):
         vname = f"_w{idx}"
         var_map[name] = vname
-        arr_f32 = np.ascontiguousarray(arr.astype(np.float32))
-        hex_str = arr_f32.tobytes().hex()
-        weight_lines.append(
-            f'{vname} = np.frombuffer(bytes.fromhex("{hex_str}"), '
-            f'dtype=np.float32).reshape({list(arr_f32.shape)})'
-        )
+        if arr.dtype in _INT_DTYPES or np.issubdtype(arr.dtype, np.integer):
+            # Integer weights (shapes, indices): keep as int64
+            arr_out = np.ascontiguousarray(arr.astype(np.int64))
+            hex_str = arr_out.tobytes().hex()
+            weight_lines.append(
+                f'{vname} = np.frombuffer(bytes.fromhex("{hex_str}"), '
+                f'dtype=np.int64).reshape({list(arr_out.shape)})'
+            )
+        else:
+            arr_f32 = np.ascontiguousarray(arr.astype(np.float32))
+            hex_str = arr_f32.tobytes().hex()
+            weight_lines.append(
+                f'{vname} = np.frombuffer(bytes.fromhex("{hex_str}"), '
+                f'dtype=np.float32).reshape({list(arr_f32.shape)})'
+            )
 
     inp_name = model.graph.input[0].name
     out_name = model.graph.output[0].name
@@ -527,14 +730,50 @@ def _inp_line(name: str, arr: np.ndarray) -> str:
 
 def make_jax_repro_native(uid: int, model: onnx.ModelProto, inp: np.ndarray,
                            patterns: list, inp_name: str,
-                           weight_lines: list[str], fn_body: list[str]) -> str:
+                           weight_lines: list[str], fn_body: list[str],
+                           expected: Optional[np.ndarray] = None) -> str:
     fn_src = "\n".join(f"    {l}" for l in fn_body)
     weights = "\n".join(weight_lines)
     inp_line = _inp_line(inp_name, inp)
+
+    if expected is not None:
+        # Bug is impl-diff (xla/tvm vs pytorch_eager): compare jax.jit vs embedded reference
+        exp_arr = np.ascontiguousarray(expected.astype(np.float32))
+        exp_line = (f'EXPECTED = np.frombuffer(bytes.fromhex("{exp_arr.tobytes().hex()}"), '
+                    f'dtype=np.float32)  # pytorch_eager reference')
+        bug_desc = "jax.jit (XLA) produces wrong output vs PyTorch eager reference"
+        comparison = f'''\
+    x_jax = jnp.array(INPUT)
+    out = np.array(jax.jit(model)(x_jax), dtype=np.float32).ravel()
+
+    diff = float(np.linalg.norm(EXPECTED.astype(np.float64) - out.astype(np.float64))
+                 / (np.linalg.norm(EXPECTED.astype(np.float64)) + 1e-8))
+    print(f"expected (pytorch_eager): {{EXPECTED[:6]}}")
+    print(f"actual   (jax.jit/XLA) : {{out[:6]}}")
+    print(f"rel L2 : {{diff:.4e}}")'''
+    else:
+        # True JIT compiler bug: jax.jit diverges from jax.disable_jit
+        exp_line = ""
+        bug_desc = "jax.jit produces wrong output vs jax.disable_jit"
+        comparison = f'''\
+    x_jax = jnp.array(INPUT)
+
+    with jax.disable_jit():
+        ref = np.array(model(x_jax), dtype=np.float32).ravel()
+
+    out = np.array(jax.jit(model)(x_jax), dtype=np.float32).ravel()
+
+    diff = float(np.linalg.norm(ref.astype(np.float64) - out.astype(np.float64))
+                 / (np.linalg.norm(ref.astype(np.float64)) + 1e-8))
+    print(f"expected (jax.disable_jit): {{ref[:6]}}")
+    print(f"actual   (jax.jit)        : {{out[:6]}}")
+    print(f"rel L2 : {{diff:.4e}}")'''
+
+    exp_section = f"\n{exp_line}\n" if exp_line else ""
     return f'''\
 #!/usr/bin/env python3
 """
-Bug #{uid:04d}: jax.jit produces wrong output vs jax.disable_jit.
+Bug #{uid:04d}: {bug_desc}.
 
 Patterns    : {patterns}
 Dependencies: numpy jax
@@ -551,7 +790,7 @@ import jax.scipy.special
 
 # ── Triggering input ─────────────────────────────────────────────────────────
 {inp_line}
-
+{exp_section}
 
 # ── Model computation (translated from ONNX) ──────────────────────────────────
 def model(x):
@@ -559,18 +798,7 @@ def model(x):
 
 
 if __name__ == "__main__":
-    x_jax = jnp.array(INPUT)
-
-    with jax.disable_jit():
-        ref = np.array(model(x_jax), dtype=np.float32).ravel()
-
-    out = np.array(jax.jit(model)(x_jax), dtype=np.float32).ravel()
-
-    diff = float(np.linalg.norm(ref.astype(np.float64) - out.astype(np.float64))
-                 / (np.linalg.norm(ref.astype(np.float64)) + 1e-8))
-    print(f"expected (jax.disable_jit): {{ref[:6]}}")
-    print(f"actual   (jax.jit)        : {{out[:6]}}")
-    print(f"rel L2 : {{diff:.4e}}")
+{comparison}
     if diff > 0.001:
         print("BUG REPRODUCED")
         sys.exit(0)
@@ -754,14 +982,25 @@ def main():
         if is_jax:
             weight_lines, fn_body, ok = _build_jax_body(model)
             if ok:
+                # Determine if this is a true JIT bug or impl-diff bug
+                delta = report.get("delta_opt", {})
+                xla_delta = max(float(delta.get("xla", 0)), float(delta.get("tvm", 0)))
+                if xla_delta > 0.001:
+                    # True JIT compiler bug: jax.jit vs jax.disable_jit
+                    expected_arr = None
+                else:
+                    # Impl-diff bug: XLA/TVM vs pytorch_eager — embed reference output
+                    ref_flat = report.get("expected_outputs", {}).get("__reference__", [])
+                    expected_arr = np.asarray(ref_flat, dtype=np.float32).ravel() if ref_flat else None
                 src  = make_jax_repro_native(uid, model, inp, patterns,
-                                             inp_name, weight_lines, fn_body)
+                                             inp_name, weight_lines, fn_body,
+                                             expected=expected_arr)
                 note = "native-jax"
             else:
-                # Fallback: copy .onnx and use dispatch (shouldn't happen often)
-                shutil.copy2(str(src_onnx), out / model_name)
-                src  = make_ort_repro(uid, model_name, inp, patterns, inp_name)
-                note = "ort-fallback"
+                # Can't generate native JAX — skip (ORT fallback won't reproduce XLA bugs)
+                ops = sorted({n.op_type for n in model.graph.node})
+                print(f"unique_{uid:04d}: [SKIP unsupported-ops for jax]  ops={ops}")
+                continue
         elif is_tc:
             shutil.copy2(str(src_onnx), out / model_name)
             src  = make_tc_repro(uid, model_name, inp, patterns, inp_name)
