@@ -67,9 +67,3 @@ python unique_NNNN.py
 | unique_0065.py | torch_compile | — |
 | unique_0066.py | onnxruntime | — |
 | unique_0069.py | xla+onnxruntime+tvm | — |
-
-## Notes
-
-- False positive rate in raw campaign: ~81.9% (386 raw → 37 verified)
-- Root causes: openvino/tflite backend nondeterminism, CPU vs CUDA precision mismatch in torch_compile reference
-- Oracle fixed: tflite now enforces float32 (no quantization), openvino uses deterministic single-thread config
