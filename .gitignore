@@ -10,6 +10,7 @@ trion_results*/
 *.onnx
 !bugs/*.onnx
 !trion_bugs_v4/*.onnx
+!verified_bugs/*.onnx
 bugs/bug_0110.onnx
 trion_bugs_v4/bug_000087.onnx
 trion_bugs_v4/bug_000390.onnx
