@@ -204,7 +204,7 @@ def _gen_op(op: str, node, ins: list[Optional[str]],
 
     if op == "Expand":
         sh = i(1)
-        return f"jnp.broadcast_to({i(0)}, {sh}.tolist())"
+        return f"jnp.broadcast_to({i(0)}, [int(v) for v in {sh}.flat])"
 
     if op == "Gather":
         axis = int(_attr(node, "axis", 0))
@@ -218,27 +218,30 @@ def _gen_op(op: str, node, ins: list[Optional[str]],
     if op == "Slice":
         x = i(0)
         starts = i(1); ends = i(2); axes_v = i(3); steps_v = i(4)
-        # All slice inputs are static initializers; build slice at codegen time
-        # We can't statically evaluate these easily — emit runtime slicing
+        # Build a runtime slice that correctly maps axes → slice entries.
+        # axes[j] = which tensor dimension; starts[j]/ends[j]/steps[j] apply to that dim.
         return (f"(lambda _x, _s, _e, _ax, _st: _x[tuple("
-                f"slice(int(_s[k]),int(_e[k]) if abs(int(_e[k]))<2**30 else None,int(_st[k])) "
-                f"if k < len(_ax) else slice(None) "
-                f"for k in range(len(_x.shape)))])"
+                f"(lambda _j: slice(int(_s[_j]), "
+                f"int(_e[_j]) if abs(int(_e[_j])) < 2**30 else None, "
+                f"int(_st[_j])))"
+                f"([int(a) for a in _ax].index(k)) "
+                f"if k in [int(a) for a in _ax] else slice(None) "
+                f"for k in range(_x.ndim))])"
                 f"({x}, {starts}, {ends}, "
-                f"{axes_v if axes_v else f'np.arange(len({x}.shape))'}, "
-                f"{steps_v if steps_v else 'np.ones(len('+starts+'), dtype=np.int64)'})")
+                f"{axes_v if axes_v else f'np.arange({x}.ndim)'}, "
+                f"{steps_v if steps_v else 'np.ones(len('+starts+'.flat), dtype=np.int64)'})")
 
     if op == "Pad":
         x = i(0); pads_v = i(1)
         mode = _attr(node, "mode", b"constant")
         if isinstance(mode, bytes): mode = mode.decode()
         return (f"jnp.pad({x}, "
-                f"[(int({pads_v}[k]), int({pads_v}[k+len({x}.shape)])) "
-                f"for k in range(len({x}.shape))], "
+                f"[(int({pads_v}[k]), int({pads_v}[k+{x}.ndim])) "
+                f"for k in range({x}.ndim)], "
                 f"mode={mode!r})")
 
     if op == "Tile":
-        return f"jnp.tile({i(0)}, {i(1)}.tolist())"
+        return f"jnp.tile({i(0)}, [int(v) for v in {i(1)}.flat])"
 
     # ── Linear algebra ────────────────────────────────────────────────────────
     if op == "MatMul":
@@ -391,7 +394,7 @@ def _gen_op(op: str, node, ins: list[Optional[str]],
         sh = i(0)
         val_attr = _attr(node, "value", None)
         val = float(val_attr.flat[0]) if val_attr is not None else 0.0
-        return f"jnp.full({sh}.tolist(), np.float32({val!r}))"
+        return f"jnp.full([int(v) for v in {sh}.flat], np.float32({val!r}))"
 
     if op == "Shape":
         return f"np.array({i(0)}.shape, dtype=np.int64)"
@@ -724,7 +727,7 @@ def _build_jax_body(model: onnx.ModelProto) -> tuple[list[str], list[str], bool]
 def _inp_line(name: str, arr: np.ndarray) -> str:
     arr = np.ascontiguousarray(arr.astype(np.float32))
     return (f'INPUT = np.frombuffer(bytes.fromhex("{arr.tobytes().hex()}"), '
-            f'dtype=np.float32).reshape({list(arr.shape)})  '
+            f'dtype=np.float32).copy().reshape({list(arr.shape)})  '
             f'# input "{name}"')
 
 
@@ -933,9 +936,9 @@ def main():
     ap.add_argument("--manifest", default="full_campaign/bugs_final/manifest.json")
     ap.add_argument("--verify",   default="full_campaign/bugs_final/verify_results.json")
     ap.add_argument("--out",      default="verified_bugs")
-    ap.add_argument("--uid-offset", type=int, default=0,
-                    help="Add this offset to all unique IDs (avoids collisions when "
-                         "appending to an existing verified_bugs/ directory)")
+    ap.add_argument("--uid-offset", type=int, default=None,
+                    help="Add this offset to all unique IDs. Omit to auto-detect "
+                         "(max existing UID + 1). Pass 0 to start from zero.")
     args = ap.parse_args()
 
     camp = Path(args.campaign)
@@ -943,12 +946,12 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
 
     # Auto-detect offset if not specified: use max existing UID + 1
-    uid_offset = args.uid_offset
-    if uid_offset == 0:
+    if args.uid_offset is not None:
+        uid_offset = args.uid_offset
+    else:
         existing = sorted(int(f.stem.replace("unique_",""))
                           for f in out.glob("unique_*.py"))
-        if existing:
-            uid_offset = existing[-1] + 1
+        uid_offset = (existing[-1] + 1) if existing else 0
 
     manifest = json.loads(Path(args.manifest).read_text())
     verify   = json.loads(Path(args.verify).read_text())
