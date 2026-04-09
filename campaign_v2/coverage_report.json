@@ -1,0 +1,57 @@
+{
+  "onnxruntime": {
+    "py_files_touched": 1,
+    "py_lines_total": 461,
+    "py_lines_hit": 73,
+    "py_lines_pct": 15.835140997830802,
+    "py_branches_total": 140,
+    "py_branches_hit": 30,
+    "py_branches_pct": 21.428571428571427,
+    "cpp_status": "not instrumented",
+    "cpp_gcda_files": 0,
+    "cpp_lines_total": 0,
+    "cpp_lines_hit": 0,
+    "cpp_lines_pct": 0.0,
+    "cpp_branches_total": 0,
+    "cpp_branches_hit": 0,
+    "cpp_branches_pct": 0.0
+  },
+  "xla": {
+    "py_files_touched": 76,
+    "py_lines_total": 35667,
+    "py_lines_hit": 5781,
+    "py_lines_pct": 16.20825973589032,
+    "py_branches_total": 10368,
+    "py_branches_hit": 1917,
+    "py_branches_pct": 18.489583333333332,
+    "cpp_status": "not instrumented",
+    "cpp_gcda_files": 0,
+    "cpp_lines_total": 0,
+    "cpp_lines_hit": 0,
+    "cpp_lines_pct": 0.0,
+    "cpp_branches_total": 0,
+    "cpp_branches_hit": 0,
+    "cpp_branches_pct": 0.0
+  },
+  "tvm": {
+    "py_status": "package not importable",
+    "cpp_status": "package not importable"
+  },
+  "torch_compile": {
+    "py_files_touched": 266,
+    "py_lines_total": 98330,
+    "py_lines_hit": 39767,
+    "py_lines_pct": 40.44238787755517,
+    "py_branches_total": 30132,
+    "py_branches_hit": 8103,
+    "py_branches_pct": 26.891676622859418,
+    "cpp_status": "not instrumented",
+    "cpp_gcda_files": 0,
+    "cpp_lines_total": 0,
+    "cpp_lines_hit": 0,
+    "cpp_lines_pct": 0.0,
+    "cpp_branches_total": 0,
+    "cpp_branches_hit": 0,
+    "cpp_branches_pct": 0.0
+  }
+}

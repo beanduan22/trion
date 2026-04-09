@@ -11,6 +11,9 @@ import argparse
 import json
 import re
 import shutil
+import subprocess
+import sys
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -702,11 +705,22 @@ def main():
     ap.add_argument("--manifest", default="full_campaign/bugs_final/manifest.json")
     ap.add_argument("--verify",   default="full_campaign/bugs_final/verify_results.json")
     ap.add_argument("--out",      default="verified_bugs")
+    ap.add_argument("--uid-offset", type=int, default=0,
+                    help="Add this offset to all unique IDs (avoids collisions when "
+                         "appending to an existing verified_bugs/ directory)")
     args = ap.parse_args()
 
     camp = Path(args.campaign)
     out  = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+
+    # Auto-detect offset if not specified: use max existing UID + 1
+    uid_offset = args.uid_offset
+    if uid_offset == 0:
+        existing = sorted(int(f.stem.replace("unique_",""))
+                          for f in out.glob("unique_*.py"))
+        if existing:
+            uid_offset = existing[-1] + 1
 
     manifest = json.loads(Path(args.manifest).read_text())
     verify   = json.loads(Path(args.verify).read_text())
@@ -716,7 +730,7 @@ def main():
     for fname, rc in sorted(verify.items()):
         if rc != 0:
             continue
-        uid      = int(fname.replace("unique_","").replace(".py",""))
+        uid      = int(fname.replace("unique_","").replace(".py","")) + uid_offset
         entry    = genuine[fname]
         src_bug  = entry["source_bug"]
         backends = entry["genuine_backends"]
@@ -757,12 +771,35 @@ def main():
             src  = make_ort_repro(uid, model_name, inp, patterns, inp_name)
             note = "ort"
 
-        (out / f"unique_{uid:04d}.py").write_text(src)
-        written += 1
-        ops = sorted({n.op_type for n in model.graph.node})
-        print(f"unique_{uid:04d}: [{note}]  backends={backends}  ops={ops}")
+        py_path = out / f"unique_{uid:04d}.py"
+        py_path.write_text(src)
 
-    print(f"\nWritten: {written} bugs → {out}/")
+        # ── Verify the clean repro actually reproduces the bug ────────────────
+        try:
+            result = subprocess.run(
+                [sys.executable, str(py_path)],
+                capture_output=True, timeout=120,
+            )
+            verified = (result.returncode == 0)
+        except subprocess.TimeoutExpired:
+            verified = False
+            result = None
+
+        if verified:
+            written += 1
+            ops = sorted({n.op_type for n in model.graph.node})
+            print(f"unique_{uid:04d}: [VERIFIED {note}]  backends={backends}  ops={ops}")
+        else:
+            # Clean repro didn't reproduce — remove the file (and any .onnx)
+            py_path.unlink(missing_ok=True)
+            onnx_copy = out / model_name
+            if onnx_copy.exists():
+                onnx_copy.unlink()
+            stderr = (result.stderr.decode(errors='replace')[:200]
+                      if result else "timeout")
+            print(f"unique_{uid:04d}: [FAILED verify {note}]  {stderr!r}")
+
+    print(f"\nVerified: {written} bugs → {out}/")
 
 
 if __name__ == "__main__":

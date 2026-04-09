@@ -1,6 +1,6 @@
 # Verified Bug Reproducers
 
-37 confirmed compiler bugs found by the Trion fuzzing campaign (500 models tested).
+41 confirmed compiler bugs found by the Trion fuzzing campaign.
 
 Each file is **fully self-contained** — no project dependencies required.
 
@@ -24,7 +24,7 @@ python unique_NNNN.py
 |---|---|---|
 | JAX/XLA (jax.jit) | 26 | jax.jit diverges from eager on specific op patterns |
 | OnnxRuntime (ORT) | 10 | ORT_ENABLE_ALL diverges from pytorch_eager |
-| torch.compile | 1 | inductor CUDA divergence from eager |
+| torch.compile | 5 | inductor divergence from eager |
 
 ## Files
 
