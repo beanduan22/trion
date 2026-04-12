@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""
+Bug v2-0038 — OnnxRuntime wrong output vs ONNX spec reference.
+Compiler  : OnnxRuntime (ORT_ENABLE_ALL)
+Root cause: ORT incorrectly eliminates sub_self (x-x→0) and mul_by_one (x*1→x) in sequence — the combined elimination removes computation that was shaping the tensor layout for subsequent relu.
+Report to : https://github.com/microsoft/onnxruntime/issues
+           (label: bug, regression, Resize / TopK / CumSum etc.)
+
+Oracle: ORT_ENABLE_ALL output vs pytorch_eager (onnx2torch) reference.
+        ORT_DISABLE_ALL gives the same wrong answer — this is a fundamental
+        implementation divergence, not an optimization regression.
+
+The ONNX model is embedded in unique_2657.py (the reference repro).
+Run: python v2_0038_onnxruntime.py  →  exit 0 = BUG REPRODUCED
+"""
+import sys, os, subprocess
+
+_ref = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                    '..', '..', 'unique_2657.py')
+
+if not os.path.exists(_ref):
+    print("Reference unique_2657.py not found")
+    sys.exit(1)
+
+r = subprocess.run([sys.executable, _ref], capture_output=True, timeout=120)
+sys.stdout.buffer.write(r.stdout)
+sys.stderr.buffer.write(r.stderr)
+if r.returncode == 0 and b'BUG REPRODUCED' in r.stdout:
+    sys.exit(0)
+sys.exit(r.returncode)
