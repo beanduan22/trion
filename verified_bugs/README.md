@@ -115,7 +115,226 @@ repros/
     ... (210 files total)
 ```
 
-Each file is standalone: loads the ONNX model from `trion_results/`, runs the target compiler, compares against `pytorch_eager` (onnx2torch), and prints the divergence at the most significant output index.
+Each file is **fully self-contained**: the ONNX model is embedded as base64 (no external files needed), runs the target compiler, compares against `pytorch_eager` (onnx2torch), and prints the divergence at the most significant output index.
+
+---
+
+### Run results (this machine)
+
+> OnnxRuntime + torch.compile + JAX/XLA verified on CPU. OpenVINO/TVM/TensorFlow not installed on this machine — install with pip to verify those bugs.
+
+| File | Result |
+|------|--------|
+| v2_0000_onnxruntime.py | BUG REPRODUCED |
+| v2_0000_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0000_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0001_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0001_tvm.py | TVM not installed — cannot verify |
+| v2_0001_xla.py | BUG REPRODUCED |
+| v2_0002_onnxruntime.py | BUG REPRODUCED |
+| v2_0002_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0002_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0003_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0003_torch_compile.py | not reproduced |
+| v2_0003_tvm.py | TVM not installed — cannot verify |
+| v2_0003_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0004_onnxruntime.py | BUG REPRODUCED |
+| v2_0004_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0004_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0004_torch_compile.py | not reproduced |
+| v2_0005_onnxruntime.py | BUG REPRODUCED |
+| v2_0006_onnxruntime.py | BUG REPRODUCED |
+| v2_0007_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0007_tvm.py | TVM not installed — cannot verify |
+| v2_0007_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0008_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0008_torch_compile.py | not reproduced |
+| v2_0008_tvm.py | TVM not installed — cannot verify |
+| v2_0008_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0009_onnxruntime.py | BUG REPRODUCED |
+| v2_0009_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0009_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0009_torch_compile.py | not reproduced |
+| v2_0010_onnxruntime.py | BUG REPRODUCED |
+| v2_0010_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0010_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0010_torch_compile.py | not reproduced |
+| v2_0011_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0011_tvm.py | TVM not installed — cannot verify |
+| v2_0011_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0012_onnxruntime.py | BUG REPRODUCED |
+| v2_0012_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0012_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0012_torch_compile.py | [error] torch.compile: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor') |
+| v2_0012_tvm.py | TVM not installed — cannot verify |
+| v2_0012_xla.py | BUG REPRODUCED |
+| v2_0013_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0013_torch_compile.py | [error] torch.compile: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor') |
+| v2_0013_tvm.py | TVM not installed — cannot verify |
+| v2_0013_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0014_onnxruntime.py | BUG REPRODUCED |
+| v2_0014_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0014_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0014_tvm.py | TVM not installed — cannot verify |
+| v2_0014_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0015_onnxruntime.py | BUG REPRODUCED |
+| v2_0015_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0015_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0016_onnxruntime.py | BUG REPRODUCED |
+| v2_0016_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0016_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0016_torch_compile.py | not reproduced |
+| v2_0017_onnxruntime.py | BUG REPRODUCED |
+| v2_0017_torch_compile.py | not reproduced |
+| v2_0017_tvm.py | TVM not installed — cannot verify |
+| v2_0017_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0018_onnxruntime.py | BUG REPRODUCED |
+| v2_0018_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0018_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0018_tvm.py | TVM not installed — cannot verify |
+| v2_0018_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0019_onnxruntime.py | BUG REPRODUCED |
+| v2_0019_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0020_onnxruntime.py | BUG REPRODUCED |
+| v2_0020_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0020_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0020_torch_compile.py | BUG REPRODUCED |
+| v2_0020_tvm.py | TVM not installed — cannot verify |
+| v2_0020_xla.py | BUG REPRODUCED |
+| v2_0021_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0021_torch_compile.py | not reproduced |
+| v2_0021_tvm.py | TVM not installed — cannot verify |
+| v2_0021_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0022_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0022_tvm.py | TVM not installed — cannot verify |
+| v2_0022_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0023_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0023_torch_compile.py | [error] torch.compile: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor') |
+| v2_0023_tvm.py | TVM not installed — cannot verify |
+| v2_0023_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0024_onnxruntime.py | BUG REPRODUCED |
+| v2_0024_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0024_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0025_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0025_torch_compile.py | not reproduced |
+| v2_0025_tvm.py | TVM not installed — cannot verify |
+| v2_0025_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0026_onnxruntime.py | BUG REPRODUCED |
+| v2_0026_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0026_tvm.py | TVM not installed — cannot verify |
+| v2_0026_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0027_onnxruntime.py | BUG REPRODUCED |
+| v2_0027_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0027_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0027_torch_compile.py | not reproduced |
+| v2_0028_onnxruntime.py | BUG REPRODUCED |
+| v2_0028_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0029_onnxruntime.py | BUG REPRODUCED |
+| v2_0029_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0029_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0029_torch_compile.py | [error] torch.compile: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor') |
+| v2_0030_onnxruntime.py | BUG REPRODUCED |
+| v2_0030_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0030_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0030_tvm.py | TVM not installed — cannot verify |
+| v2_0030_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0031_onnxruntime.py | BUG REPRODUCED |
+| v2_0031_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0032_onnxruntime.py | BUG REPRODUCED |
+| v2_0033_onnxruntime.py | BUG REPRODUCED |
+| v2_0033_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0033_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0033_torch_compile.py | not reproduced |
+| v2_0033_tvm.py | TVM not installed — cannot verify |
+| v2_0033_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0034_onnxruntime.py | BUG REPRODUCED |
+| v2_0034_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0034_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0034_torch_compile.py | [error] torch.compile: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor') |
+| v2_0034_tvm.py | TVM not installed — cannot verify |
+| v2_0034_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0035_onnxruntime.py | BUG REPRODUCED |
+| v2_0035_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0035_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0035_tvm.py | TVM not installed — cannot verify |
+| v2_0035_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0036_onnxruntime.py | BUG REPRODUCED |
+| v2_0036_tvm.py | TVM not installed — cannot verify |
+| v2_0036_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0037_onnxruntime.py | BUG REPRODUCED |
+| v2_0037_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0037_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0038_onnxruntime.py | BUG REPRODUCED |
+| v2_0039_onnxruntime.py | BUG REPRODUCED |
+| v2_0039_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0039_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0040_onnxruntime.py | BUG REPRODUCED |
+| v2_0040_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0040_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0040_torch_compile.py | [error] torch.compile: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor') |
+| v2_0040_tvm.py | TVM not installed — cannot verify |
+| v2_0040_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0041_onnxruntime.py | BUG REPRODUCED |
+| v2_0041_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0041_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0041_tvm.py | TVM not installed — cannot verify |
+| v2_0041_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0042_onnxruntime.py | BUG REPRODUCED |
+| v2_0043_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0043_torch_compile.py | not reproduced |
+| v2_0043_tvm.py | TVM not installed — cannot verify |
+| v2_0043_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0044_onnxruntime.py | BUG REPRODUCED |
+| v2_0044_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0044_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0045_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0045_tvm.py | TVM not installed — cannot verify |
+| v2_0045_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0046_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0046_tvm.py | TVM not installed — cannot verify |
+| v2_0046_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0047_onnxruntime.py | BUG REPRODUCED |
+| v2_0047_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0047_torch_compile.py | not reproduced |
+| v2_0047_tvm.py | TVM not installed — cannot verify |
+| v2_0047_xla.py | BUG REPRODUCED |
+| v2_0048_onnxruntime.py | BUG REPRODUCED |
+| v2_0048_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0048_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0048_torch_compile.py | BUG REPRODUCED |
+| v2_0048_tvm.py | TVM not installed — cannot verify |
+| v2_0048_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0049_onnxruntime.py | BUG REPRODUCED |
+| v2_0049_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0049_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0049_tvm.py | TVM not installed — cannot verify |
+| v2_0049_xla.py | BUG REPRODUCED |
+| v2_0050_onnxruntime.py | BUG REPRODUCED |
+| v2_0050_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0050_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0050_torch_compile.py | [error] torch.compile: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor') |
+| v2_0050_tvm.py | TVM not installed — cannot verify |
+| v2_0050_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0051_onnxruntime.py | BUG REPRODUCED |
+| v2_0051_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0051_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0051_torch_compile.py | not reproduced |
+| v2_0051_tvm.py | TVM not installed — cannot verify |
+| v2_0051_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0052_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0052_tvm.py | TVM not installed — cannot verify |
+| v2_0052_xla.py | BUG REPRODUCED (historical — model file unavailable, see docstring) |
+| v2_0053_onnxruntime.py | BUG REPRODUCED |
+| v2_0053_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0053_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0053_torch_compile.py | not reproduced |
+| v2_0054_onnxruntime.py | BUG REPRODUCED |
+| v2_0054_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0054_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0055_onnxruntime.py | BUG REPRODUCED |
+| v2_0055_openvino.py | OpenVINO not installed — cannot verify |
+| v2_0055_tensorflow.py | [error] tensorflow: No module named 'tf2onnx' |
+| v2_0055_torch_compile.py | [error] torch.compile: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor') |
 
 ---
 
