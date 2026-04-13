@@ -56,6 +56,7 @@ print(f"All outputs finite: {all_finite}")
 print(f"Output[0,0,:3,:3]: {out[0,0,:3,:3]}")
 print(f"PASS={shape_ok and all_finite}")
 
+PASS = shape_ok and all_finite
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

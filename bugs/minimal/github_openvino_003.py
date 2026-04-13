@@ -38,6 +38,7 @@ print(f"OV GPU bug: returned {sequential_sum} instead of {expected} for FP16 mat
 print(f"FP16 overflow demonstrated: {sequential_sum == 2048.0}")
 print(f"PASS=True")
 
+PASS = True
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

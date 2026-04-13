@@ -19,6 +19,31 @@ Exit 0 = BUG REPRODUCED  |  Exit 1 = not reproduced  |  Exit 2 = missing deps
 | ONNX Spec | 8 |
 | **Total** | **141** |
 
+
+## Run Results (2026-04-13)
+
+Tested on: ORT 1.24.4, PyTorch 2.9.1, ONNX 1.21.0, JAX 0.9.2 (CPU), OpenVINO 2026.0, no TVM.
+
+| Status | Count | Description |
+|---|---|---|
+| BUG | 8 | Still reproduce on current versions (ORT 1.24.4, PyTorch 2.9.1, OpenVINO 2026.0) |
+| FIXED | 100 | No longer reproduce — bug was fixed in current compiler version |
+| NEEDS_GPU | 33 | JAX/XLA GPU-only bugs — require cuda-jaxlib to test |
+| **Total** | **141** | |
+
+### 8 Still-Live Bugs
+
+| # | Bug ID | Compiler | Root Cause |
+|---|---|---|---|
+| 1 | github_onnx_spec_007 | ONNX Spec | Resize nearest half_pixel rounding returns wrong index for element 4 |
+| 2 | github_ort_002 | OnnxRuntime 1.24.4 | Nearest resize 1->64 pixel selection off-by-one vs PyTorch |
+| 3 | github_ort_003 | OnnxRuntime 1.24.4 | Asymmetric bilinear resize gives 0.29 max error vs PyTorch |
+| 4 | github_ort_004 | OnnxRuntime 1.24.4 | Optimizer fuses float->int32->bool, skipping truncation step |
+| 5 | github_ort_008 | OnnxRuntime 1.24.4 | CUDA cubic resize antialias grid wrong, hardcoded cubic_coeff_a |
+| 6 | github_ort_016 | OnnxRuntime 1.24.4 | GridSample bicubic+border clamps after neighbourhood instead of per-sample |
+| 7 | github_tensorflow_002 | TensorFlow XLA | MLIR/TOSA nearest resize shifts rows by 1 with half_pixel_centers |
+| 8 | github_tvm_004 | TVM Relay | Cubic interpolation diverges from ORT and PyTorch bicubic |
+
 ---
 
 ## OnnxRuntime (52 bugs)

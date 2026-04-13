@@ -50,6 +50,7 @@ print(f"All runs identical (deterministic on CPU): {len(unique) == 1}")
 print(f"Expected lower indices first on tie: indices should be [0,1,2]")
 print(f"PASS={len(unique) == 1}")
 
+PASS = len(unique) == 1
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

@@ -56,6 +56,7 @@ print(f"ORT output [0:3]:        {out[:3]}")
 print(f"Max abs error: {max_err:.6f}")
 print(f"PASS={max_err < 1e-5}")
 
+PASS = max_err < 1e-5
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

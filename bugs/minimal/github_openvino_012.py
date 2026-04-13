@@ -44,6 +44,7 @@ print(f"arm_bug:  {arm_bug}  (x*x for negatives)")
 print(f"max_diff: {max_diff:.2e}")
 print(f"PASS={max_diff < 1e-5}")
 
+PASS = max_diff < 1e-5
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

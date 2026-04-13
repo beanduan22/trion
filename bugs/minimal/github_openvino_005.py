@@ -43,6 +43,7 @@ print(f"NaN preserved: {np.isnan(out[0])}  (OV bug: optimizer folded to 0.0)")
 print(f"inf*0 is NaN:  {np.isnan(out[1])}")
 print(f"PASS={bool(np.isnan(out[0]) and np.isnan(out[1]) and out[2] == 0.0)}")
 
+PASS = bool(np.isnan(out[0]) and np.isnan(out[1]) and out[2] == 0.0)
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

@@ -60,6 +60,7 @@ print(f"PyTorch bicubic output[0,0]: \n{torch_out[0,0]}")
 print(f"Max abs error (CPU cubic vs PyTorch bicubic): {max_err:.6f}")
 print(f"PASS={max_err < 0.05}")
 
+PASS = max_err < 0.05
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

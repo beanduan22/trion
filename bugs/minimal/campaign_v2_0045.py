@@ -96,6 +96,7 @@ print(f"  ORT_ENABLE_ALL vs ORT_DISABLE_ALL max_diff={max_diff:.6f}")
 passed = max_diff < 0.01
 print(f"PASS={passed}")
 
+PASS = passed
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

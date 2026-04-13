@@ -42,6 +42,7 @@ print(f"sorted desc:  {sorted_ok}")
 print(f"indices match: {indices_ok}")
 print(f"PASS={sorted_ok and indices_ok}")
 
+PASS = sorted_ok and indices_ok
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

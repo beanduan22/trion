@@ -43,6 +43,7 @@ print(f"ORT CPU output:             {out}")
 print(f"Max diff: {max_diff:.6f}")
 print(f"PASS={max_diff < 1e-5}  (CPU deterministic; JSEP race was on WebGPU)")
 
+PASS = max_diff < 1e-5
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

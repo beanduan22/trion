@@ -44,6 +44,7 @@ print(f"border window: ort={out[0,0,0,2]:.4f}  correct=11.0  wrong(OV bug)=7.33"
 print(f"max_diff: {max_diff:.2e}")
 print(f"PASS={max_diff < 1e-4}")
 
+PASS = max_diff < 1e-4
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

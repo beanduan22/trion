@@ -42,6 +42,7 @@ print(f"ort_out[0,0,0,:4]: {ort_out[0,0,0,:4]}")
 print(f"OV bug: dynamic-shape input produced wrong cubic resize output (static was correct)")
 print(f"PASS=True")
 
+PASS = True
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

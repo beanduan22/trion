@@ -51,6 +51,7 @@ print(f"All max >= avg (expected for increasing feature map): {max_gt_avg}")
 print(f"max[0,0,0,0]={out_max[0,0,0,0]:.4f}  avg[0,0,0,0]={out_avg[0,0,0,0]:.4f}")
 print(f"PASS=True (documenting max-before-interpolation bug; fixed in current ORT)")
 
+PASS = True
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

@@ -90,6 +90,7 @@ print(f'ORT_DISABLE_ALL: {expected.ravel()[:4]}')
 print(f'max_diff={diff:.4e}')
 print(f'PASS={diff < 1e-4}')
 
+PASS = diff < 1e-4
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

@@ -48,6 +48,7 @@ print(f"max_diff: {max_diff:.4f}  (non-zero proves scale position matters)")
 print(f"OV bug: scale applied to Q before matmul instead of to scores after")
 print(f"PASS={max_diff > 1e-3}")
 
+PASS = max_diff > 1e-3
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

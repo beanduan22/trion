@@ -40,6 +40,7 @@ print(f"output shape: {out.shape}  (expected {expected_shape})")
 print(f"OV bug: SAME_LOWER applied SAME_UPPER formula, causing 1-pixel shape error")
 print(f"PASS={shape_ok}")
 
+PASS = shape_ok
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

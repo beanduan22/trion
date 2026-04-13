@@ -48,6 +48,7 @@ print(f"expected[0,0,0,:2]: {expected_first4[0,0,0,:2]}")
 print(f"max_diff first 4ch: {max_diff:.2e}")
 print(f"PASS={max_diff < 1e-5}")
 
+PASS = max_diff < 1e-5
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")

@@ -50,6 +50,7 @@ print(f"expected[0,:4]: {expected[0, :4]}")
 print(f"max_diff: {max_diff:.2e}")
 print(f"PASS={max_diff < 1e-4}")
 
+PASS = max_diff < 1e-4
 import sys as _sys
 if not PASS:
     print("BUG REPRODUCED")
