@@ -1,11 +1,9 @@
-# Reproducible Bugs — Trion Campaign v2
+# Reproducible Bugs
 
-**48 confirmed compiler bugs** extracted from the Trion differential fuzzing campaign.
+This directory contains two sets of confirmed compiler bugs:
 
-SUSPECT bugs (all 6 compilers diverge from the `onnx2torch` pytorch_eager reference — likely a reference error, not a real compiler bug) are **excluded**: uid 12, 20, 33, 34, 40, 48, 50, 51.
-
-Each `.py` file is fully self-contained: the ONNX model is embedded as base64, no external files needed.  
-Exit 0 = bug reproduced, exit 1 = not reproduced, exit 2 = dependency missing.
+1. **`bug_v2_*.py`** (48 files) — Campaign v2 differential fuzzing bugs, one file per bug.
+2. **`gh_bug_*.py`** (10 files) — GitHub-reported bugs cross-referenced across compilers.
 
 ```bash
 pip install numpy onnx onnxruntime torch onnx2torch
@@ -14,6 +12,50 @@ pip install tvm           # for TVM bugs
 pip install openvino      # for OpenVINO bugs
 pip install tensorflow    # for TF bugs
 ```
+
+---
+
+## GitHub Cross-Compiler Bugs (`gh_bug_*.py`)
+
+These 10 files group **65 GitHub-reported bugs** from 6 compiler projects (ORT, OpenVINO,
+TVM, TensorFlow, PyTorch Inductor, ONNX spec) by **shared root cause**. Each file covers
+one operator where the same underlying bug appeared independently in 2–5 compilers.
+
+| File | Operator | Compilers | Bug IDs |
+|------|----------|-----------|---------|
+| gh_bug_001_resize_cubic_multicompiler.py | Resize cubic | ORT + TVM + OV | ORT #25264, TVM PR#8455, OV #22854 |
+| gh_bug_002_resize_nearest_coord_modes.py | Resize nearest | ORT + TVM + TF | ORT #14407/#7982, TVM PR#10401, TF #57780/MLIR |
+| gh_bug_003_batchnorm_fusion_multicompiler.py | BatchNorm | Inductor + TVM + TF + OV | Inductor #100970/#100987, TVM #6852, TF #43882, OV #23539 |
+| gh_bug_004_convtranspose_autopad_outputpadding.py | ConvTranspose | ORT + OV + TVM + Inductor | ORT #4086/#14208, OV #30798, TVM PR#7958, Inductor #108908 |
+| gh_bug_005_topk_tiebreak_nan.py | TopK | ORT + OV + spec | ORT #3391, OV #29297, ONNX spec #3501/#7754 |
+| gh_bug_006_scatternd_gpu_correctness.py | ScatterND | ORT + TVM + Inductor | ORT PR#23755, TVM PR#7447, Inductor #122291 |
+| gh_bug_007_avgpool_ceil_border_divisor.py | AveragePool ceil_mode | Inductor + OV | Inductor #100987, OV #20815 |
+| gh_bug_008_einsum_edge_cases.py | Einsum | ORT + OV + Inductor | ORT #4944, OV PR#30189, Inductor #85224 |
+| gh_bug_009_prelu_broadcast_axis.py | PReLU | OV + TVM | OV PR#28223, TVM PR#7208 |
+| gh_bug_010_instancenorm_precision.py | InstanceNorm | ORT + TVM | ORT PR#9879, TVM #15683 |
+
+### Cross-compiler bug patterns
+
+| Root cause pattern | Files | Compilers affected |
+|-------------------|-------|--------------------|
+| Resize coordinate mode wrong | 001, 002 | ORT, TVM, OV, TF |
+| Normalization layer fusion/precision | 003, 010 | Inductor, TVM, TF, OV, ORT |
+| Transposed convolution shape/padding | 004 | ORT, OV, TVM, Inductor |
+| Sort/selection edge cases (NaN, ties, large-K) | 005 | ORT, OV, spec |
+| Scatter GPU race / missing return | 006 | ORT, TVM, Inductor |
+| Border window divisor in pool | 007 | Inductor, OV |
+| Einsum parser/semantic bugs | 008 | ORT, OV, Inductor |
+| Slope broadcast axis wrong | 009 | OV, TVM |
+
+---
+
+## Campaign v2 Bugs (`bug_v2_*.py`)
+
+**48 confirmed compiler bugs** extracted from the Trion differential fuzzing campaign.
+
+SUSPECT bugs (all 6 compilers diverge from the `onnx2torch` pytorch_eager reference — likely a reference error, not a real compiler bug) are **excluded**: uid 12, 20, 33, 34, 40, 48, 50, 51.
+
+Each `bug_v2_*.py` file is fully self-contained: the ONNX model is embedded as base64, no external files needed.
 
 ---
 
