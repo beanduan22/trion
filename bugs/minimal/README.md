@@ -1,6 +1,6 @@
 # Minimal Reproducible Bug Scripts
 
-**141 self-contained Python scripts** — one per unique root cause.
+**145 self-contained Python scripts** — one per unique root cause.
 Each file constructs its test model inline (no external files, no embedded weights).
 
 ```
@@ -13,11 +13,11 @@ Exit 0 = BUG REPRODUCED  |  Exit 1 = not reproduced  |  Exit 2 = missing deps
 |---|---|
 | OnnxRuntime | 52 |
 | JAX/XLA | 43 |
-| torch.compile | 15 |
-| OpenVINO | 14 |
+| torch.compile / onnx2torch | 18 |
+| OpenVINO | 15 |
 | TVM | 9 |
 | ONNX Spec | 8 |
-| **Total** | **141** |
+| **Total** | **145** |
 
 
 ## Run Results (2026-04-13)
@@ -26,23 +26,28 @@ Tested on: ORT 1.24.4, PyTorch 2.9.1, ONNX 1.21.0, JAX 0.9.2 (CPU), OpenVINO 202
 
 | Status | Count | Description |
 |---|---|---|
-| BUG | 8 | Still reproduce on current versions (ORT 1.24.4, PyTorch 2.9.1, OpenVINO 2026.0) |
-| FIXED | 100 | No longer reproduce — bug was fixed in current compiler version |
-| NEEDS_GPU | 33 | JAX/XLA GPU-only bugs — require cuda-jaxlib to test |
-| **Total** | **141** | |
+| BUG | 12 | Still reproduce on current versions |
+| FIXED | 133 | No longer reproduce — bug was fixed in current compiler version |
+| **Total** | **145** | |
 
-### 8 Still-Live Bugs
+Tested on: ORT 1.24.4, PyTorch 2.9.1, ONNX 1.21.0, JAX 0.9.2 + CUDA, OpenVINO 2026.0.
 
-| # | Bug ID | Compiler | Root Cause |
-|---|---|---|---|
-| 1 | github_onnx_spec_007 | ONNX Spec | Resize nearest half_pixel rounding returns wrong index for element 4 |
-| 2 | github_ort_002 | OnnxRuntime 1.24.4 | Nearest resize 1->64 pixel selection off-by-one vs PyTorch |
-| 3 | github_ort_003 | OnnxRuntime 1.24.4 | Asymmetric bilinear resize gives 0.29 max error vs PyTorch |
-| 4 | github_ort_004 | OnnxRuntime 1.24.4 | Optimizer fuses float->int32->bool, skipping truncation step |
-| 5 | github_ort_008 | OnnxRuntime 1.24.4 | CUDA cubic resize antialias grid wrong, hardcoded cubic_coeff_a |
-| 6 | github_ort_016 | OnnxRuntime 1.24.4 | GridSample bicubic+border clamps after neighbourhood instead of per-sample |
-| 7 | github_tensorflow_002 | TensorFlow XLA | MLIR/TOSA nearest resize shifts rows by 1 with half_pixel_centers |
-| 8 | github_tvm_004 | TVM Relay | Cubic interpolation diverges from ORT and PyTorch bicubic |
+### 12 Still-Live Bugs
+
+| # | Bug ID | Compiler | max_diff | Root Cause |
+|---|---|---|---|---|
+| 1 | github_onnx_spec_007 | ONNX Spec | — | Resize nearest half_pixel rounding returns wrong index for element 4 |
+| 2 | github_ort_002 | OnnxRuntime 1.24.4 | — | Nearest resize 1->64 pixel selection off-by-one vs PyTorch |
+| 3 | github_ort_003 | OnnxRuntime 1.24.4 | 0.29 | Asymmetric bilinear resize max error vs PyTorch |
+| 4 | github_ort_004 | OnnxRuntime 1.24.4 | — | Optimizer fuses float->int32->bool, skipping truncation step |
+| 5 | github_ort_008 | OnnxRuntime 1.24.4 | — | CUDA cubic resize antialias grid wrong, hardcoded cubic_coeff_a |
+| 6 | github_ort_016 | OnnxRuntime 1.24.4 | — | GridSample bicubic+border clamps after neighbourhood instead of per-sample |
+| 7 | github_tensorflow_002 | TensorFlow XLA | 1.0 | MLIR/TOSA nearest resize shifts rows by 1 with half_pixel_centers |
+| 8 | github_tvm_004 | TVM Relay | 0.053 | Cubic interpolation diverges from ORT and PyTorch bicubic |
+| 9 | **cross_onnx2torch_resize_nearest_ceil** | **onnx2torch** | **3.00** | **onnx2torch uses floor nearest_mode instead of ceil** |
+| 10 | **cross_onnx2torch_resize_linear_asym** | **onnx2torch** | **0.80** | **asymmetric coord mode mapped to wrong PyTorch interpolation** |
+| 11 | **cross_openvino_conv_bn_fusion** | **OpenVINO 2026.0** | **0.022** | **Conv+BN fusion rounding error above tolerance** |
+| 12 | **cross_onnx2torch_cumsum** | **onnx2torch** | **4.50** | **CumSum axis.item() causes graph break and wrong output** |
 
 ---
 
