@@ -1,6 +1,6 @@
 # Minimal Reproducible Bug Scripts — Real Bugs Only
 
-**71 self-contained Python scripts** — every bug verified to reproduce on current
+**80 self-contained Python scripts** — every bug verified to reproduce on current
 compiler versions (2026-04-14).
 
 ```
@@ -25,13 +25,14 @@ Each script follows the same format:
 | New GitHub bugs — batch 2 (2026-04-14) | 4 | Inductor, ORT BitShift, TVM Gelu, OV Conv |
 | Campaign v4 (oracle-verified) | 14 | 300-model sweep, 5-compiler differential |
 | Cross-compiler sweep (2026-04-14) | 3 | BitShift UB, Resize ceil, CumSum+KVAttn |
-| **Total real bugs** | **71** | all reproduce on current CI |
+| **New GitHub bugs — batch 3 (2026-04-14)** | **9** | OV integer arithmetic + NaN, Inductor bf16 cast |
+| **Total real bugs** | **80** | all reproduce on current CI |
 
 Tested on: Python 3.13, ONNX 1.21, ORT 1.24.4 (CPU), OpenVINO 2026.0,
 TensorFlow 2.21.0 (CPU), PyTorch 2.9.1 (torch.compile inductor, torch.jit),
 JAX 0.9.2, onnx2torch.
 
-Uniqueness: each of the 71 bugs has a distinct ONNX graph signature (op
+Uniqueness: each of the 80 bugs has a distinct ONNX graph signature (op
 sequence + key attributes). No two bugs share the same structure.
 
 ---
@@ -179,6 +180,26 @@ These low-level patterns explain most of the 34 new bugs:
 | 52 | [github_inductor_011_bitshift_ub_shift64](github_inductor_011_bitshift_ub_shift64.py) | ORT + Inductor | 1000 | **ACTIVE** | C UB: `x >> 64` on x86 masks shift count to 6 bits → `x >> 0 = x` instead of 0; ORT's ONNX BitShift op also affected — `[1000,255] >> [64,64]` returns `[1000,255]` (pytorch/pytorch#143555, also ORT) |
 | 53 | [github_tvm_012_gelu_approx_tanh](github_tvm_012_gelu_approx_tanh.py) | TVM Relax | 2.18e-04 | **ACTIVE** | TVM's ONNX frontend ignores `approximate="tanh"` attribute on opset-20 Gelu; maps to exact erf formula — systematic error >1e-4 for all activations (apache/tvm#18750) |
 | 54 | [cross_openvino_conv_fp32_precision](cross_openvino_conv_fp32_precision.py) | OpenVINO 2026.0 | 0.054 | **ACTIVE** | OV CPU plugin selects Winograd/tiled-GEMM for float32 Conv; different accumulation order produces 0.054 max diff vs ORT direct-conv (3×3) and 0.083 for 5×5 kernel |
+
+---
+
+## Part 1D — 9 New GitHub Bugs — batch 3 (2026-04-14)
+
+All discovered by targeted GitHub issue research + differential probing. Verified on ORT 1.24.4 + OpenVINO 2026.0 + PyTorch 2.9.1.
+
+| # | Bug ID | Compiler | Root cause |
+|---|---|---|---|
+| 55* | [github_ov_019_uint8_sub_no_wrap](github_ov_019_uint8_sub_no_wrap.py) | OpenVINO 2026.0 | uint8 Sub saturates to [0,255] instead of ONNX-mandated modular wrap: 5-10=251 expected, OV gives 0 (OV #33518) |
+| 56* | [github_ov_020_uint8_mul_no_wrap](github_ov_020_uint8_mul_no_wrap.py) | OpenVINO 2026.0 | uint8 Mul saturates: 200×200=40000 mod 256=64 expected, OV gives 255 (OV #33518 Mul) |
+| 57* | [github_ov_021_uint8_add_no_wrap](github_ov_021_uint8_add_no_wrap.py) | OpenVINO 2026.0 | uint8 Add saturates: 200+100=44 expected (mod 256), OV gives 255 (OV #33518 Add) |
+| 58* | [github_ov_022_reducelogsumexp_overflow](github_ov_022_reducelogsumexp_overflow.py) | OpenVINO 2026.0 | ReduceLogSumExp computes log(Σexp(x)) naively; exp(100)=inf in fp32 → output=inf; correct stable formula subtracts max first (OV #32839) |
+| 59* | [github_ov_023_relu_nan_propagation](github_ov_023_relu_nan_propagation.py) | OpenVINO 2026.0 | Relu(NaN)→0.0; IEEE 754 requires max(0,NaN)=NaN; ORT correctly propagates NaN |
+| 60* | [github_ov_024_int8_sub_saturation](github_ov_024_int8_sub_saturation.py) | OpenVINO 2026.0 | int8 Sub saturates: -128-1=-129→should wrap to 127, OV gives -128 (extends #33518 to int8) |
+| 61* | [github_ov_025_int8_add_saturation](github_ov_025_int8_add_saturation.py) | OpenVINO 2026.0 | int8 Add saturates: 100+100=200→should wrap to -56, OV gives 127 (extends #33518 to int8 Add) |
+| 62* | [github_ov_026_exp_nan_to_inf](github_ov_026_exp_nan_to_inf.py) | OpenVINO 2026.0 | Exp(NaN)→+inf; IEEE 754 requires exp(NaN)=NaN; ORT returns NaN (new discovery) |
+| 63* | [github_inductor_013_bf16_cast_elide](github_inductor_013_bf16_cast_elide.py) | PyTorch Inductor | x.to(bf16).to(fp32) round-trip eliminated by Inductor as identity; bf16 has 7 mantissa bits vs fp32's 23 — not lossless (pytorch/pytorch#179561) |
+
+\* renumbers after inserting before Part 3
 
 ---
 
@@ -341,6 +362,6 @@ bugs/minimal/
 ├── ROOT_CAUSES.md            # legacy root-cause notes (kept)
 ├── bug_000XXX.py             # 34 campaign v3 bugs (programmatic ONNX)
 ├── bug_v4_0XXXXX.py          # 13 campaign v4 bugs (base64 ONNX, 5-compiler sweep)
-├── github_*.py, cross_*.py   # 20 still-live + new active bugs
+├── github_*.py, cross_*.py   # 29 still-live + new active bugs (batch 3 adds 9)
 └── _fixed_archive/           # 133 bugs fixed upstream + bug_000350 (borderline) — kept for reference
 ```
