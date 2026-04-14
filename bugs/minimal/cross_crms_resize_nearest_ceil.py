@@ -3,14 +3,15 @@
 Bug ID     : cross_crms_resize_nearest_ceil
 Source     : Cross-compiler testing (2026-04-14) — campaign v4 bug_000078
 Compiler   : TorchScript (onnx2torch) fails; ORT and OpenVINO agree
-Patterns   : cRMS-norm (Mul→ReduceMean→Add→Sqrt→Div→Mul×2) +
-             Resize(nearest, half_pixel, nearest_mode=ceil, scale×2)
-Root cause : onnx2torch's Resize converter ignores nearest_mode="ceil" and
-             always uses PyTorch's floor-based nearest interpolation.
-             For half_pixel coordinates, ceil vs floor choose different
-             source pixels at every other destination pixel, producing
-             large diffs (max_diff ≈ 5.6 for random fp32 inputs).
-             ORT and OpenVINO both implement ceil correctly.
+Patterns   : Resize(nearest, half_pixel, nearest_mode=ceil, scale×2)
+Root cause : onnx2torch's Resize converter hard-codes PyTorch's floor-based
+             nearest interpolation and ignores nearest_mode="ceil".
+             For half_pixel coordinates with scale=2, the source pixel for
+             destination d is (d+0.5)/2 - 0.5 = d/2 - 0.25.  With ceil
+             rounding, d=1 maps to source 1; with floor it maps to source 0.
+             Every other destination pixel is assigned the wrong source pixel,
+             causing max_diff ≈ 6 on random fp32 inputs.  ORT and OpenVINO
+             both implement nearest_mode=ceil correctly.
 Tolerance  : 0.05
 
 Exit 0 = BUG REPRODUCED  |  Exit 1 = not reproduced  |  Exit 2 = missing deps
@@ -31,44 +32,20 @@ np.random.seed(42)
 B, C, H, W = 1, 3, 32, 32
 H2, W2 = H * 2, W * 2
 
-# cRMS-norm learned scales (non-trivial to make the output interesting)
-crms_g1 = np.ones(C * H * W // (C * H * W // C), dtype=np.float32)  # identity scale
-crms_g1 = np.ones(C, dtype=np.float32)
-# Per-channel second scale (from v4_078 initializer, rounded)
-crms_g2 = np.array([1.013, 0.987, 1.064], dtype=np.float32)
-crms_eps = np.array([1e-6], dtype=np.float32)
-
-# ── build model ──────────────────────────────────────────────────────────────
-# cRMS-norm reduces over last dim (width), then Resize×2 with nearest+ceil
+# ── minimal model: a single Resize with nearest_mode=ceil ────────────────────
 nodes = [
-    helper.make_node("Mul",        ["x", "x"],             ["sq"]),
-    # opset 17: axes as attribute (int list)
-    helper.make_node("ReduceMean", ["sq"],                  ["ms"],
-                     axes=[-1], keepdims=1),
-    helper.make_node("Add",        ["ms", "crms_eps"],      ["add"]),
-    helper.make_node("Sqrt",       ["add"],                 ["rt"]),
-    helper.make_node("Div",        ["x", "rt"],             ["norm"]),
-    helper.make_node("Mul",        ["norm", "crms_g1"],     ["sc"]),
-    helper.make_node("Mul",        ["sc", "crms_g2"],       ["out"]),
-    # Resize: half_pixel + nearest_mode=ceil is the tricky combination
     helper.make_node("Resize",
-                     ["out", "roi", "scales"],
+                     ["x", "roi", "scales"],
                      ["y"],
                      coordinate_transformation_mode="half_pixel",
                      mode="nearest",
                      nearest_mode="ceil"),
 ]
-
 inits = [
-    numpy_helper.from_array(crms_g1.reshape(C, 1, 1),            "crms_g1"),
-    numpy_helper.from_array(crms_g2.reshape(C, 1, 1),            "crms_g2"),
-    numpy_helper.from_array(crms_eps,                             "crms_eps"),
-    numpy_helper.from_array(np.array([], dtype=np.float32),       "roi"),
-    numpy_helper.from_array(np.array([1., 1., 2., 2.],
-                                     dtype=np.float32),           "scales"),
+    numpy_helper.from_array(np.array([], dtype=np.float32), "roi"),
+    numpy_helper.from_array(np.array([1., 1., 2., 2.], dtype=np.float32), "scales"),
 ]
-
-graph = helper.make_graph(nodes, "crms_resize_ceil",
+graph = helper.make_graph(nodes, "resize_ceil",
     [helper.make_tensor_value_info("x", TensorProto.FLOAT, [B, C, H, W])],
     [helper.make_tensor_value_info("y", TensorProto.FLOAT, [B, C, H2, W2])],
     initializer=inits)
@@ -91,15 +68,12 @@ results = {}
 # ORT_opt
 so_opt = ort.SessionOptions()
 so_opt.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-try:
-    ort_opt = ort.InferenceSession(model_bytes, so_opt,
-               providers=["CPUExecutionProvider"]).run(None, feed)[0]
-    d = float(np.abs(ref.astype(np.float64) - ort_opt.astype(np.float64)).max())
-    results["ORT_opt"] = d
-    if d > TOL:
-        any_bug = True
-except Exception as e:
-    results["ORT_opt"] = f"ERR: {e}"
+ort_opt = ort.InferenceSession(model_bytes, so_opt,
+          providers=["CPUExecutionProvider"]).run(None, feed)[0]
+d = float(np.abs(ref.astype(np.float64) - ort_opt.astype(np.float64)).max())
+results["ORT_opt"] = d
+if d > TOL:
+    any_bug = True
 
 # OpenVINO
 try:
@@ -114,7 +88,7 @@ try:
 except Exception as e:
     results["OpenVINO"] = f"ERR: {str(e)[:80]}"
 
-# TorchScript via onnx2torch — ignores nearest_mode="ceil", uses floor instead
+# TorchScript via onnx2torch — ignores nearest_mode="ceil", always uses floor
 try:
     import torch, onnx2torch
     import warnings
@@ -131,7 +105,7 @@ try:
 except Exception as e:
     results["TorchScript"] = f"ERR: {str(e)[:80]}"
 
-print(f"Input shape: [{B},{C},{H},{W}]  →  Resize(×2) nearest+ceil  →  [{B},{C},{H2},{W2}]")
+print(f"Resize(nearest, half_pixel, nearest_mode=ceil, scale=2)  [{B},{C},{H},{W}]→[{B},{C},{H2},{W2}]")
 print(f"ORT_ref (first 4 flat): {ref.ravel()[:4]}")
 print()
 print(f"{'Compiler':<14}  {'max_abs_diff':>14}  {'bug?'}")
@@ -147,8 +121,8 @@ PASS = not any_bug
 print(f"PASS={PASS}")
 if not PASS:
     bugs = [k for k, v in results.items() if isinstance(v, float) and v > TOL]
-    print(f"BUG REPRODUCED on {bugs}: Resize(nearest_mode=ceil) — "
-          f"onnx2torch uses floor instead of ceil, causing large pixel-selection errors")
+    print(f"BUG REPRODUCED on {bugs}: onnx2torch Resize ignores nearest_mode=ceil, "
+          f"uses floor instead — wrong source pixel at every other destination pixel")
     _sys.exit(0)
 print("not reproduced")
 _sys.exit(1)

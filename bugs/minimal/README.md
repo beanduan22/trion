@@ -225,9 +225,9 @@ that reproduces on multiple distinct backends (beyond its originally-discovered 
 
 | # | Bug ID | Failing compilers | max_diff | Root cause |
 |---|---|---|---:|---|
-| 69 | [cross_bitshift_shift64_ov_ort](cross_bitshift_shift64_ov_ort.py) | ORT (RIGHT+LEFT), OpenVINO (LEFT) | 2147483648 | BitShift by 64 on uint64: C UB — x86 SHRQ masks shift count to 6 bits, so `x>>64` = `x>>0` = x; LEFT shift by 64 overflows to 2^31 on OV |
-| 70 | [cross_crms_resize_nearest_ceil](cross_crms_resize_nearest_ceil.py) | TorchScript (onnx2torch) | 5.33 | `Resize(nearest, half_pixel, nearest_mode=ceil)`: onnx2torch ignores `nearest_mode=ceil` and uses PyTorch's floor-based nearest, choosing wrong source pixel at every other destination pixel |
-| 71 | [cross_cumsum_kvcache_multicompiler](cross_cumsum_kvcache_multicompiler.py) | OpenVINO 2026.0 | 0.16 | CumSum(axis=2) + SE-block + self-attention: OV's optimized kernel path for CumSum+ReduceMean accumulates fp32 in a different order than ORT, error amplified by softmax attention |
+| 69 | [cross_bitshift_shift64_ov_ort](cross_bitshift_shift64_ov_ort.py) | ORT (RIGHT+LEFT), OpenVINO (LEFT) | 2147483648 | `BitShift(uint64, shift=64)`: C UB — x86 SHRQ masks shift count mod 64, so `x>>64` = `x>>0` = x; OV LEFT shift overflows to 2^31 instead of 0 |
+| 70 | [cross_crms_resize_nearest_ceil](cross_crms_resize_nearest_ceil.py) | TorchScript (onnx2torch) | 6.01 | `Resize(nearest, half_pixel, nearest_mode=ceil)`: onnx2torch ignores `nearest_mode=ceil`, always uses PyTorch floor-nearest; for half_pixel coords with scale=2 every other destination pixel gets the wrong source pixel |
+| 71 | [cross_cumsum_kvcache_multicompiler](cross_cumsum_kvcache_multicompiler.py) | OpenVINO 2026.0 | 0.13 | `CumSum(axis=2) → Q×K^T Softmax ×V` (self-attention on running sums): OV tiled-GEMM accumulates large CumSum-inflated dot products in a different fp32 summation order than ORT, Softmax amplifies the error |
 
 ### Notes on extreme divergence (bugs 61, 62)
 
