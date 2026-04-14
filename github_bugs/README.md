@@ -1,6 +1,6 @@
 # GitHub-Sourced Compiler Bug Reproducers
 
-**68 confirmed upstream bugs** found across 5 compiler ecosystems, organized into minimum reproducible Python scripts.
+**72 confirmed upstream bugs** found across 5 compiler ecosystems, organized into minimum reproducible Python scripts.
 Each script is self-contained and prints its output + a `PASS`/`FAIL` verdict.
 
 - `PASS=True` — bug is fixed in current framework version, or test documents expected behavior.
@@ -77,6 +77,13 @@ Each script is self-contained and prints its output + a `PASS`/`FAIL` verdict.
 | 63 | OpenVINO | `openvino/bug_ov_012_prelu_arm_emitter.py` | [PR#28223](https://github.com/openvinotoolkit/openvino/pull/28223) | prelu ARM JIT wrong register | Fixed |
 | 64 | OpenVINO | `openvino/bug_ov_013_convtranspose_autopad_output_shape.py` | [#30798](https://github.com/openvinotoolkit/openvino/issues/30798) | convtranspose SAME_LOWER formula | **OPEN** |
 | 65 | OpenVINO | `openvino/bug_ov_014_einsum_scalar_input_parse.py` | [PR#30189](https://github.com/openvinotoolkit/openvino/pull/30189) | einsum scalar operand parser crash | Fixed |
+| 66 | ORT | `ort/bug_ort_019_graph_optlevel_fp16_divergence.py` | [#23284](https://github.com/microsoft/onnxruntime/issues/23284) | fp16 MatMul+Add fusion diverges at ORT_ENABLE_ALL | **ACTIVE** (1.19.2, 1.20.1) |
+| 67 | ORT | `ort/bug_ort_020_input_output_same_name.py` | [#26339](https://github.com/microsoft/onnxruntime/issues/26339) | pass-through output zeroed (no Identity node) | **ACTIVE** (1.23.1) |
+| 68 | Inductor | `inductor/bug_inductor_006_gumbel_softmax_softshrink.py` | [#148838](https://github.com/pytorch/pytorch/issues/148838) | gumbel_softmax+softshrink fused kernel wrong result | **ACTIVE** |
+| 69 | TVM | `tvm/bug_tvm_010_simplifyexpr_rsqrt_precision.py` | [#16211](https://github.com/apache/tvm/issues/16211) | SimplifyExpr sqrt/y → rsqrt*y precision loss | **ACTIVE** |
+| 70 | TVM | `tvm/bug_tvm_011_lifttransformparams_wrong_inference.py` | [#17207](https://github.com/apache/tvm/issues/17207) | LiftTransformParams corrupts constant binding | **ACTIVE** (Relax 2024) |
+| 71 | OpenVINO | `openvino/bug_ov_015_matmul_gpu_dim_gt2048.py` | [#22613](https://github.com/openvinotoolkit/openvino/issues/22613) | MatMul GPU tile overflow when dim > 2048 | **ACTIVE** (GPU 2023.x) |
+| 72 | OpenVINO | `openvino/bug_ov_016_reducesum_add_cpu_plugin.py` | [#23616](https://github.com/openvinotoolkit/openvino/issues/23616) | ReduceSum+Add CPU fusion wrong broadcast | **ACTIVE** |
 
 ---
 
