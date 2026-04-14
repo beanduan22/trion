@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
 Bug ID     : bug_000245
-Source     : Trion campaign v3 (fuzzing)
+Source     : Trion campaign v3 (minimized via delta-debug)
 Compiler   : tensorflow
-Patterns   : power-norm stacked
-Root cause : manual LayerNorm + power-norm (Pow/Div/Mul) + MatMul + edge-Pad + Reshape
+Patterns   : ReduceMean, Sub, Mul, ReduceMean, Add, Sqrt, Div, Mul...
+Root cause : tensorflow rel_L2=0.493
+Minimal ops: ReduceMean -> Sub -> Mul -> ReduceMean -> Add -> Sqrt -> Div -> Mul -> ReduceMean -> Add -> Pow -> Div -> Mul -> MatMul -> Pad (15 ops, down from 17)
 Tolerance  : 0.1
 
 Exit 0 = BUG REPRODUCED  |  Exit 1 = not reproduced  |  Exit 2 = missing deps
@@ -24,17 +25,14 @@ except ImportError as e:
 
 TOLERANCE = 0.1
 BACKENDS = ['tensorflow']
+INPUT_NAME = 'model_input'
+INPUT_SHAPE = [1, 64, 16, 16]
+OUTPUT_NAME = 'n300_pem_out'
 OPSET = 17
 IR_VERSION = 8
-INPUT_NAME = 'model_input'
-OUTPUT_NAME = 'n400_rfr_out'
-INPUT_SHAPE = [1, 64, 16, 16]
-OUTPUT_SHAPE = [1, 64, 18, 18]
 
-# ------------------------------------------------------------------
-# Initializers (weights/constants from the fuzzer-discovered model)
-# ------------------------------------------------------------------
-def _inits() -> list:
+
+def _inits():
     i_0 = numpy_helper.from_array(np.array([9.999999747378752e-06], dtype=np.float32).reshape([1]), 'n0_mln_eps')
     i_1 = numpy_helper.from_array(np.array([0.5], dtype=np.float32).reshape([1]), 'n100_pnm_half')
     i_2 = numpy_helper.from_array(np.array([9.999999974752427e-07], dtype=np.float32).reshape([1]), 'n100_pnm_eps')
@@ -1211,14 +1209,10 @@ def _inits() -> list:
         "zkk++t7Ovl/5AT8TlT8+uzSpvJ+DCL9D5UU9qadlv6T8RD/2qJo+KdSBvpkr7z36dHE+U1Kdvg=="
     ), dtype=np.float32).copy().reshape([1, 1, 16, 16]), 'n200_mm4d_w')
     i_5 = numpy_helper.from_array(np.array([0, 0, 1, 1, 0, 0, 1, 1], dtype=np.int64).reshape([8]), 'n300_pem_pads')
-    i_6 = numpy_helper.from_array(np.array([1, -1], dtype=np.int64).reshape([2]), 'n400_rfr_fl')
-    i_7 = numpy_helper.from_array(np.array([1, 64, 18, 18], dtype=np.int64).reshape([4]), 'n400_rfr_bk')
-    return [i_0, i_1, i_2, i_3, i_4, i_5, i_6, i_7]
+    return [i_0, i_1, i_2, i_3, i_4, i_5]
 
-# ------------------------------------------------------------------
-# Graph nodes
-# ------------------------------------------------------------------
-def _nodes() -> list:
+
+def _nodes():
     return [
         helper.make_node('ReduceMean', inputs=['model_input'], outputs=['n0_mln_m'], axes=[-1], keepdims=1),
         helper.make_node('Sub', inputs=['model_input', 'n0_mln_m'], outputs=['n0_mln_sub']),
@@ -1235,25 +1229,18 @@ def _nodes() -> list:
         helper.make_node('Mul', inputs=['n100_pnm_div', 'n100_pnm_scale'], outputs=['n100_pnm_out']),
         helper.make_node('MatMul', inputs=['n100_pnm_out', 'n200_mm4d_w'], outputs=['n200_mm4d_out']),
         helper.make_node('Pad', inputs=['n200_mm4d_out', 'n300_pem_pads'], outputs=['n300_pem_out'], mode='edge'),
-        helper.make_node('Reshape', inputs=['n300_pem_out', 'n400_rfr_fl'], outputs=['n400_rfr_r1']),
-        helper.make_node('Reshape', inputs=['n400_rfr_r1', 'n400_rfr_bk'], outputs=['n400_rfr_out']),
     ]
 
-# ------------------------------------------------------------------
-# Model builder
-# ------------------------------------------------------------------
+
 def build_model() -> bytes:
     inputs_info  = [helper.make_tensor_value_info(INPUT_NAME, TensorProto.FLOAT, INPUT_SHAPE)]
-    outputs_info = [helper.make_tensor_value_info(OUTPUT_NAME, TensorProto.FLOAT, OUTPUT_SHAPE)]
-    graph = helper.make_graph(_nodes(), "bug_000245", inputs_info, outputs_info, initializer=_inits())
-    model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", OPSET)])
-    model.ir_version = IR_VERSION
-    return model.SerializeToString()
+    outputs_info = [helper.make_tensor_value_info(OUTPUT_NAME, TensorProto.FLOAT, None)]
+    g = helper.make_graph(_nodes(), "bug_000245_min", inputs_info, outputs_info, initializer=_inits())
+    m = helper.make_model(g, opset_imports=[helper.make_opsetid("", OPSET)])
+    m.ir_version = IR_VERSION
+    return m.SerializeToString()
 
 
-# ------------------------------------------------------------------
-# Input tensor (from the failing fuzzer sample)
-# ------------------------------------------------------------------
 def _input() -> np.ndarray:
     return np.frombuffer(base64.b64decode(
         "0TbZvh/zmL+AaE4/quanv2ffXT/qeo49l0icvwZBsL9nMX8+K2V6vwcAUr8kTB0/iFTsv+l60b9/"
@@ -2409,129 +2396,86 @@ def _input() -> np.ndarray:
     ), dtype=np.float32).copy().reshape([1, 64, 16, 16])
 
 
-# ------------------------------------------------------------------
-# Reference: pure PyTorch eager via onnx2torch
-# ------------------------------------------------------------------
-def _ref_pytorch(model_bytes: bytes, x: np.ndarray) -> np.ndarray:
+def _ref_pytorch(mb, x):
     import torch, onnx2torch
-    m = onnx2torch.convert(onnx.load_from_string(model_bytes)).eval()
+    m = onnx2torch.convert(onnx.load_from_string(mb)).eval()
     with torch.no_grad():
         out = m(torch.from_numpy(x))
     if isinstance(out, (list, tuple)): out = out[0]
     return out.detach().cpu().float().numpy().ravel()
 
 
-def _rel_l2(a: np.ndarray, b: np.ndarray) -> float:
-    a = np.asarray(a, np.float64).ravel(); b = np.asarray(b, np.float64).ravel()
+def _rel_l2(a, b):
+    a = a.astype(np.float64).ravel(); b = b.astype(np.float64).ravel()
     return float(np.linalg.norm(a - b) / max(np.linalg.norm(a), np.linalg.norm(b), 1e-12))
 
 
-# ------------------------------------------------------------------
-# Backend drivers
-# ------------------------------------------------------------------
-def _run_onnxruntime(model_bytes, x):
-    import onnxruntime as ort
-    opts = ort.SessionOptions()
-    opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+def _run(backend, mb, x):
     try:
-        sess = ort.InferenceSession(model_bytes, opts, providers=["CPUExecutionProvider"])
-        return np.asarray(sess.run(None, {INPUT_NAME: x})[0]).ravel(), None
+        if backend == "onnxruntime":
+            import onnxruntime as ort
+            opts = ort.SessionOptions()
+            opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            sess = ort.InferenceSession(mb, opts, providers=["CPUExecutionProvider"])
+            return np.asarray(sess.run(None, {INPUT_NAME: x})[0]).ravel(), None
+        if backend == "openvino":
+            import openvino as ov
+            core = ov.Core()
+            compiled = core.compile_model(core.read_model(io.BytesIO(mb)), "CPU")
+            out = compiled([x])
+            return np.asarray(list(out.values())[0]).ravel(), None
+        if backend in ("tensorflow", "xla"):
+            sys.path.insert(0, "/home/binduan/myspace/trion")
+            from trion.oracle.tf_backend import TFBackend
+            r = TFBackend().run(onnx.load_from_string(mb), {INPUT_NAME: x}, optimized=(backend == "xla"))
+            return (r.output.ravel(), None) if r.output is not None else (None, r.error or "fail")
+        if backend == "tvm":
+            sys.path.insert(0, "/home/binduan/myspace/trion")
+            from trion.oracle.tvm_backend import TVMBackend
+            r = TVMBackend().run(onnx.load_from_string(mb), {INPUT_NAME: x}, optimized=True)
+            return (r.output.ravel(), None) if r.output is not None else (None, r.error or "fail")
+        if backend == "torchscript":
+            import torch, onnx2torch
+            m = onnx2torch.convert(onnx.load_from_string(mb)).eval()
+            t = torch.from_numpy(x)
+            scripted = torch.jit.trace(m, (t,))
+            frozen = torch.jit.optimize_for_inference(torch.jit.freeze(scripted))
+            with torch.no_grad():
+                out = frozen(t)
+            if isinstance(out, (list, tuple)): out = out[0]
+            return out.detach().numpy().ravel(), None
+        if backend == "torch_compile":
+            import torch, onnx2torch
+            m = onnx2torch.convert(onnx.load_from_string(mb)).eval()
+            compiled = torch.compile(m, mode="reduce-overhead", fullgraph=False)
+            with torch.no_grad():
+                out = compiled(torch.from_numpy(x))
+            if isinstance(out, (list, tuple)): out = out[0]
+            return out.detach().numpy().ravel(), None
     except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
+        return None, f"{type(e).__name__}: {str(e)[:100]}"
+    return None, "no driver"
 
 
-def _run_openvino(model_bytes, x):
+def main():
+    mb = build_model()
+    x = _input()
     try:
-        import openvino as ov
-        core = ov.Core()
-        compiled = core.compile_model(core.read_model(io.BytesIO(model_bytes)), "CPU")
-        out = compiled([x])
-        return np.asarray(list(out.values())[0]).ravel(), None
+        ref = _ref_pytorch(mb, x)
     except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
-
-
-def _run_tensorflow(model_bytes, x, *, jit=False):
-    try:
-        sys.path.insert(0, "/home/binduan/myspace/trion")
-        from trion.oracle.tf_backend import TFBackend
-        r = TFBackend().run(onnx.load_from_string(model_bytes), {INPUT_NAME: x}, optimized=jit)
-        if r.output is None: return None, (r.error or "run returned None")[:120]
-        return r.output.ravel(), None
-    except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
-
-
-def _run_xla(model_bytes, x):
-    return _run_tensorflow(model_bytes, x, jit=True)
-
-
-def _run_torchscript(model_bytes, x):
-    try:
-        import torch, onnx2torch
-        m = onnx2torch.convert(onnx.load_from_string(model_bytes)).eval()
-        t = torch.from_numpy(x)
-        scripted = torch.jit.trace(m, (t,))
-        frozen = torch.jit.optimize_for_inference(torch.jit.freeze(scripted))
-        with torch.no_grad():
-            out = frozen(t)
-        if isinstance(out, (list, tuple)): out = out[0]
-        return out.detach().cpu().float().numpy().ravel(), None
-    except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
-
-
-def _run_torch_compile(model_bytes, x):
-    try:
-        import torch, onnx2torch
-        m = onnx2torch.convert(onnx.load_from_string(model_bytes)).eval()
-        compiled = torch.compile(m, mode="reduce-overhead", fullgraph=False)
-        with torch.no_grad():
-            out = compiled(torch.from_numpy(x))
-        if isinstance(out, (list, tuple)): out = out[0]
-        return out.detach().cpu().float().numpy().ravel(), None
-    except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
-
-
-RUNNERS = {
-    "onnxruntime":   _run_onnxruntime,
-    "openvino":      _run_openvino,
-    "tensorflow":    _run_tensorflow,
-    "xla":           _run_xla,
-    "torchscript":   _run_torchscript,
-    "torch_compile": _run_torch_compile,
-}
-
-
-def main() -> int:
-    try:
-        model_bytes = build_model()
-        x = _input()
-        ref = _ref_pytorch(model_bytes, x)
-    except Exception as e:
-        print(f"setup failed: {type(e).__name__}: {e}"); return 2
-
-    print(f"Bug ID:    {__doc__.splitlines()[2].split(':',1)[1].strip()}")
-    print(f"Backends:  {BACKENDS}")
-    print(f"Tolerance: {TOLERANCE}")
-
+        print(f"ref failed: {e}"); return 2
     any_bug = False
-    for backend in BACKENDS:
-        run = RUNNERS.get(backend)
-        if run is None:
-            print(f"  [{backend}] no driver"); continue
-        out, err = run(model_bytes, x)
-        if err is not None:
-            print(f"  [{backend}] CRASH: {err}   →   BUG REPRODUCED")
-            any_bug = True
-            continue
-        diff = _rel_l2(out, ref)
-        verdict = "REPRODUCED" if diff > TOLERANCE else "ok"
-        print(f"  [{backend}] rel_L2 vs pytorch_ref = {diff:.4e}   →   {verdict}")
-        if diff > TOLERANCE:
-            any_bug = True
-
+    print(f"Bug ID: minimized")
+    print(f"Backends: {BACKENDS}  Tolerance: {TOLERANCE}")
+    for b in BACKENDS:
+        out, err = _run(b, mb, x)
+        if err:
+            print(f"  [{b}] CRASH: {err}   -> BUG REPRODUCED")
+            any_bug = True; continue
+        d = _rel_l2(out, ref)
+        verdict = "REPRODUCED" if d > TOLERANCE else "ok"
+        print(f"  [{b}] rel_L2 vs pytorch_ref = {d:.4e}   -> {verdict}")
+        if d > TOLERANCE: any_bug = True
     PASS = not any_bug
     print(f"PASS={PASS}")
     if not PASS:

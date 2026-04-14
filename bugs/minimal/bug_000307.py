@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
 Bug ID     : bug_000307
-Source     : Trion campaign v3 (fuzzing)
+Source     : Trion campaign v3 (minimized via delta-debug)
 Compiler   : tensorflow
-Patterns   : reshape-flatten + BN + LeakyRelu
-Root cause : reflect-Pad + Reshape-flatten + Conv(s=2) + BN + LeakyRelu + MatMul + Relu+Add+Relu
+Patterns   : Pad
+Root cause : tensorflow rel_L2=0.339
+Minimal ops: Pad (1 ops, down from 10)
 Tolerance  : 0.1
 
 Exit 0 = BUG REPRODUCED  |  Exit 1 = not reproduced  |  Exit 2 = missing deps
@@ -24,128 +25,33 @@ except ImportError as e:
 
 TOLERANCE = 0.1
 BACKENDS = ['tensorflow']
+INPUT_NAME = 'model_input'
+INPUT_SHAPE = [1, 3, 32, 32]
+OUTPUT_NAME = 'n0_prma_out'
 OPSET = 17
 IR_VERSION = 8
-INPUT_NAME = 'model_input'
-OUTPUT_NAME = 'n400_rar_out'
-INPUT_SHAPE = [1, 3, 32, 32]
-OUTPUT_SHAPE = [1, 64, 17, 17]
 
-# ------------------------------------------------------------------
-# Initializers (weights/constants from the fuzzer-discovered model)
-# ------------------------------------------------------------------
-def _inits() -> list:
+
+def _inits():
     i_0 = numpy_helper.from_array(np.array([0, 0, 2, 0, 0, 0, 0, 2], dtype=np.int64).reshape([8]), 'n0_prma_pads')
-    i_1 = numpy_helper.from_array(np.array([1, -1], dtype=np.int64).reshape([2]), 'n100_rfr_fl')
-    i_2 = numpy_helper.from_array(np.array([1, 3, 34, 34], dtype=np.int64).reshape([4]), 'n100_rfr_bk')
-    i_3 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
-        "B7WLPxQYhL+0lqm6+i61P6os5D6vaAK/XtkmP4BjzzzaPXE+mjgevhdFGD5LMnm/z6wqvxMpFD4U"
-        "Qhm/JygiP0Opdb/dY5C/6OyrvrXekz92pZw+CsDNPtLDhT8mM9+/41gzvhIZYT/Yx+w882NRv5ae"
-        "1T8jxQ0/OQiVP4sepz6sShe+GuMiPwWNmj9FYiC/WOGZPzgoPT/rooY+mRCSv2Stu776LbU9agor"
-        "v01Cjr/JcQa/ECoAv/rvb7+NzVI+JaRMv7i0RD74VTW+A6TFvsf5mj+jexi+TncSvX1iQb5ikLI+"
-        "GzxpPyXAQz5DSbA/wjNwP6iQAb9bk/M9L/rbvfMkkD5LJ2W/Nxw3QDYptb6XJ+Q+mYLhvg0L4z6b"
-        "njS+edr7v4w5Sr6mJLY/IwGov0xWoT9fUry+5eNLPpb70D3iKjE/q6wPPkUrDz8WULg9a/sVvyb5"
-        "cz8eO+O+CrkKP2zgOL++of0+eaXEPujwlT7TOS+/f0Rpvy0uOj/o9+s9Ax8pP2HFjL7HISq+ARKN"
-        "v7Arnr87nYe/CbX0vsUrQj//kAO/AI6hvVgrhb5+Cj2/vxcGvyev9j7F9le/KJGDvhVTVD+jYiq/"
-        "aFuGPlEAP70b1zu9wjaEPypt0j939uu7JNM2P3IHuT5prYi9gbssv249vb6G6S4/a1Icv7g5j75Y"
-        "jzu/RiQEvmiPgb9AM629bfBJPxW3FT6P8JC/bpwQPdx3Kb/jUVY/jlPYPtI0iL6Su2Q/Yak0P3kG"
-        "fT4D+ui/Cl3NPf7Smr7ls6Y/oHmcvzcZSb+mXWK/VP6PP6uJRL7/M72+Wi8DPxV9Vb+4R4G/tWbj"
-        "vjAwyr0KYl2+H0iSP0QXmT928kS+uES2vr3vJr6VAKS/tAyFPsUsVD/m/AE/0HdQPh50kj1lXPA9"
-        "W2uMPnnGA79t1Oq+iqXsPm5lfr8hMZe/0yxOP+sp7r0+ur4/u4lTvtJvSb5ULBi/Qm5ovb+St799"
-        "f4k/P9kJvhZnyz4gS98+8RMRPyCdQ70jloi+"
-    ), dtype=np.float32).copy().reshape([64, 3, 1, 1]), 'n200_cblrelu_w')
-    i_4 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
-    ), dtype=np.float32).copy().reshape([64]), 'n200_cblrelu_b')
-    i_5 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
-        "AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8A"
-        "AIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAA"
-        "gD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACA"
-        "PwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/"
-        "AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPw=="
-    ), dtype=np.float32).copy().reshape([64]), 'n200_cblrelu_bn_scale')
-    i_6 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
-    ), dtype=np.float32).copy().reshape([64]), 'n200_cblrelu_bn_bias')
-    i_7 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
-    ), dtype=np.float32).copy().reshape([64]), 'n200_cblrelu_bn_mean')
-    i_8 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
-        "AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8A"
-        "AIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAA"
-        "gD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACA"
-        "PwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/"
-        "AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPw=="
-    ), dtype=np.float32).copy().reshape([64]), 'n200_cblrelu_bn_var')
-    i_9 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
-        "X68Xv/Eytz7S7RA9OGCgvvX8qD4eRN8+wghePjMO+r7liJe+fQVfPj1lk77EIhw+O2Q/vrwTMr7k"
-        "wca+9ciYvhYltr7yNty8K+gIvm4izb0gMaM9zMxRPoZzyj6YcJs+AGV6vlSqAj4lXha/a/WyvTyH"
-        "Xz7iG+W+BhkyvZ+Knbua2o0+BNgrvgxACD5ZG5g+BybLPiIh/L50PiA+CE6nPDce1j5EGA6+fAEH"
-        "PgfCP77yPSK9t/BNPvnlNL46rpy+9+POviQWAj//Jrm+xK16vU7GXTzNR3k+UY2mvrDT+D6QXSE/"
-        "P0u5vrnlAD5zXQ4/DyUbvuwdI7768qM+qFcJPiQH9L01niG/41YOPj6O8z65nao8hISGPuVFqb5x"
-        "BcA+M2Wuvk0eGz9bMEc8BBdvvquggL72zqm+UOOSPiYLmj5zeLC+YFWyvWUxkj7pzmA8h/nKPn6X"
-        "wj7/jtm+AgswPq7Qtr2Iz0Q9XHd4vnci1b2gZoS9eVh6PkD7yL5mw6y+Oq9dPtioFj/GAA2/7I67"
-        "vQg+qL4U6vo6fdSKvmtTj76AAKm+whqPPgA8rr4fgEG+tqUBvnBphL4eAbY+V9ATP+wqkzxP3cQ9"
-        "kVPAvqT0BL5kFSg+vXHoPB17Mr5Qqku/OD9Av0Gdqr0j20a/qrhOPz39077GYPu9g4rjvIUzAj+b"
-        "yom8ilpdvneM1D3vwOE+lKTjPLe11D7fE8E96YHEvBY4lD7fhXM+yHviPbWaOz/6fLI+4eqcPrku"
-        "sj7zYtU+d0G3vmLEgj7MGik//U23vm5Pjb0HMuI9l0YBvwGfRL72wTk/+0dbP5rrIL4M97O9yFaW"
-        "PtlKib4Jth6/khIJP3erub6xjwU9+csJP3SCkD4e6ae+gQ4gPpSOzD46oU4+jTsTPYD9Ub4DswE+"
-        "EXbTPqD/0j7nxai+CSKQvr7hmr67VvM9JYrEvmPLrL6pV3M+vHZsvt4oYL4KqWC+/LnIPs+fvDuw"
-        "nK+8NRpKvYP/Cb+Uwt29kpgJPWGg5r0S7da+ambkvX9XmL4vCxQ9AYmMPMOZK73L7gk+dtMKPvql"
-        "8j2bW6i9pMTRvhJtAj+vteG+YRqZPjPKgD4RAou+qpS4vq7IwTweeN8+Px62vnwV1z3eDSo7Q9C7"
-        "Pjyshj4yTzm+Z587vhdR5L52OgA+mr6lvZ9q7DvSVTy+9f0HP0qUlz6pJay+JZUGv46zFj/eyuG+"
-        "uVw7vt87/j5Q0/I9fVhYv2b5gzs1uIi+t9bRPebVvD5y36e+HoiqvVMbiD5RFMu+tuk5P5Q0U77l"
-        "bpi8GHT7PK0oxT72l9U+JiyFPXAjNb5VVQm86OGqPZQayr0IgY2+/ua+vu0Ugr6Dbr6+jhjTvsT/"
-        "Cb2+Mh0+2HW9vgbtlT60v6o+I6xSPwyFwz0V1uu9xXJnvj750j4wu6c9guAnPz5jGb6G94G+3Xwd"
-        "Pwiq7rwhIV6+Sbq4vtQ3kT6FAg6/tcNcPVIlsb1fqec+pNYuv4g2LT5QUlw+InimPoQLcT7+bYy+"
-        "upCMPhJgHz3rCse+jNKEPg=="
-    ), dtype=np.float32).copy().reshape([1, 1, 17, 17]), 'n300_mm4d_w')
-    return [i_0, i_1, i_2, i_3, i_4, i_5, i_6, i_7, i_8, i_9]
+    return [i_0]
 
-# ------------------------------------------------------------------
-# Graph nodes
-# ------------------------------------------------------------------
-def _nodes() -> list:
+
+def _nodes():
     return [
         helper.make_node('Pad', inputs=['model_input', 'n0_prma_pads'], outputs=['n0_prma_out'], mode='reflect'),
-        helper.make_node('Reshape', inputs=['n0_prma_out', 'n100_rfr_fl'], outputs=['n100_rfr_r1']),
-        helper.make_node('Reshape', inputs=['n100_rfr_r1', 'n100_rfr_bk'], outputs=['n100_rfr_out']),
-        helper.make_node('Conv', inputs=['n100_rfr_out', 'n200_cblrelu_w', 'n200_cblrelu_b'], outputs=['n200_cblrelu_cv'], kernel_shape=[1, 1], pads=[0, 0, 0, 0], strides=[2, 2]),
-        helper.make_node('BatchNormalization', inputs=['n200_cblrelu_cv', 'n200_cblrelu_bn_scale', 'n200_cblrelu_bn_bias', 'n200_cblrelu_bn_mean', 'n200_cblrelu_bn_var'], outputs=['n200_cblrelu_bn'], epsilon=9.999999747378752e-06),
-        helper.make_node('LeakyRelu', inputs=['n200_cblrelu_bn'], outputs=['n200_cblrelu_out'], alpha=0.10000000149011612),
-        helper.make_node('MatMul', inputs=['n200_cblrelu_out', 'n300_mm4d_w'], outputs=['n300_mm4d_out']),
-        helper.make_node('Relu', inputs=['n300_mm4d_out'], outputs=['n400_rar_r1']),
-        helper.make_node('Add', inputs=['n400_rar_r1', 'n300_mm4d_out'], outputs=['n400_rar_ad']),
-        helper.make_node('Relu', inputs=['n400_rar_ad'], outputs=['n400_rar_out']),
     ]
 
-# ------------------------------------------------------------------
-# Model builder
-# ------------------------------------------------------------------
+
 def build_model() -> bytes:
     inputs_info  = [helper.make_tensor_value_info(INPUT_NAME, TensorProto.FLOAT, INPUT_SHAPE)]
-    outputs_info = [helper.make_tensor_value_info(OUTPUT_NAME, TensorProto.FLOAT, OUTPUT_SHAPE)]
-    graph = helper.make_graph(_nodes(), "bug_000307", inputs_info, outputs_info, initializer=_inits())
-    model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", OPSET)])
-    model.ir_version = IR_VERSION
-    return model.SerializeToString()
+    outputs_info = [helper.make_tensor_value_info(OUTPUT_NAME, TensorProto.FLOAT, None)]
+    g = helper.make_graph(_nodes(), "bug_000307_min", inputs_info, outputs_info, initializer=_inits())
+    m = helper.make_model(g, opset_imports=[helper.make_opsetid("", OPSET)])
+    m.ir_version = IR_VERSION
+    return m.SerializeToString()
 
 
-# ------------------------------------------------------------------
-# Input tensor (from the failing fuzzer sample)
-# ------------------------------------------------------------------
 def _input() -> np.ndarray:
     return np.frombuffer(base64.b64decode(
         "IKz0PQnnvr0QyG89l14MPm8p2LzYHZW8i+bePcWaRL0PiZO8F3ElvlrtyL3Uxy+9nGqIvUVkK72v"
@@ -367,129 +273,86 @@ def _input() -> np.ndarray:
     ), dtype=np.float32).copy().reshape([1, 3, 32, 32])
 
 
-# ------------------------------------------------------------------
-# Reference: pure PyTorch eager via onnx2torch
-# ------------------------------------------------------------------
-def _ref_pytorch(model_bytes: bytes, x: np.ndarray) -> np.ndarray:
+def _ref_pytorch(mb, x):
     import torch, onnx2torch
-    m = onnx2torch.convert(onnx.load_from_string(model_bytes)).eval()
+    m = onnx2torch.convert(onnx.load_from_string(mb)).eval()
     with torch.no_grad():
         out = m(torch.from_numpy(x))
     if isinstance(out, (list, tuple)): out = out[0]
     return out.detach().cpu().float().numpy().ravel()
 
 
-def _rel_l2(a: np.ndarray, b: np.ndarray) -> float:
-    a = np.asarray(a, np.float64).ravel(); b = np.asarray(b, np.float64).ravel()
+def _rel_l2(a, b):
+    a = a.astype(np.float64).ravel(); b = b.astype(np.float64).ravel()
     return float(np.linalg.norm(a - b) / max(np.linalg.norm(a), np.linalg.norm(b), 1e-12))
 
 
-# ------------------------------------------------------------------
-# Backend drivers
-# ------------------------------------------------------------------
-def _run_onnxruntime(model_bytes, x):
-    import onnxruntime as ort
-    opts = ort.SessionOptions()
-    opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+def _run(backend, mb, x):
     try:
-        sess = ort.InferenceSession(model_bytes, opts, providers=["CPUExecutionProvider"])
-        return np.asarray(sess.run(None, {INPUT_NAME: x})[0]).ravel(), None
+        if backend == "onnxruntime":
+            import onnxruntime as ort
+            opts = ort.SessionOptions()
+            opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            sess = ort.InferenceSession(mb, opts, providers=["CPUExecutionProvider"])
+            return np.asarray(sess.run(None, {INPUT_NAME: x})[0]).ravel(), None
+        if backend == "openvino":
+            import openvino as ov
+            core = ov.Core()
+            compiled = core.compile_model(core.read_model(io.BytesIO(mb)), "CPU")
+            out = compiled([x])
+            return np.asarray(list(out.values())[0]).ravel(), None
+        if backend in ("tensorflow", "xla"):
+            sys.path.insert(0, "/home/binduan/myspace/trion")
+            from trion.oracle.tf_backend import TFBackend
+            r = TFBackend().run(onnx.load_from_string(mb), {INPUT_NAME: x}, optimized=(backend == "xla"))
+            return (r.output.ravel(), None) if r.output is not None else (None, r.error or "fail")
+        if backend == "tvm":
+            sys.path.insert(0, "/home/binduan/myspace/trion")
+            from trion.oracle.tvm_backend import TVMBackend
+            r = TVMBackend().run(onnx.load_from_string(mb), {INPUT_NAME: x}, optimized=True)
+            return (r.output.ravel(), None) if r.output is not None else (None, r.error or "fail")
+        if backend == "torchscript":
+            import torch, onnx2torch
+            m = onnx2torch.convert(onnx.load_from_string(mb)).eval()
+            t = torch.from_numpy(x)
+            scripted = torch.jit.trace(m, (t,))
+            frozen = torch.jit.optimize_for_inference(torch.jit.freeze(scripted))
+            with torch.no_grad():
+                out = frozen(t)
+            if isinstance(out, (list, tuple)): out = out[0]
+            return out.detach().numpy().ravel(), None
+        if backend == "torch_compile":
+            import torch, onnx2torch
+            m = onnx2torch.convert(onnx.load_from_string(mb)).eval()
+            compiled = torch.compile(m, mode="reduce-overhead", fullgraph=False)
+            with torch.no_grad():
+                out = compiled(torch.from_numpy(x))
+            if isinstance(out, (list, tuple)): out = out[0]
+            return out.detach().numpy().ravel(), None
     except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
+        return None, f"{type(e).__name__}: {str(e)[:100]}"
+    return None, "no driver"
 
 
-def _run_openvino(model_bytes, x):
+def main():
+    mb = build_model()
+    x = _input()
     try:
-        import openvino as ov
-        core = ov.Core()
-        compiled = core.compile_model(core.read_model(io.BytesIO(model_bytes)), "CPU")
-        out = compiled([x])
-        return np.asarray(list(out.values())[0]).ravel(), None
+        ref = _ref_pytorch(mb, x)
     except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
-
-
-def _run_tensorflow(model_bytes, x, *, jit=False):
-    try:
-        sys.path.insert(0, "/home/binduan/myspace/trion")
-        from trion.oracle.tf_backend import TFBackend
-        r = TFBackend().run(onnx.load_from_string(model_bytes), {INPUT_NAME: x}, optimized=jit)
-        if r.output is None: return None, (r.error or "run returned None")[:120]
-        return r.output.ravel(), None
-    except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
-
-
-def _run_xla(model_bytes, x):
-    return _run_tensorflow(model_bytes, x, jit=True)
-
-
-def _run_torchscript(model_bytes, x):
-    try:
-        import torch, onnx2torch
-        m = onnx2torch.convert(onnx.load_from_string(model_bytes)).eval()
-        t = torch.from_numpy(x)
-        scripted = torch.jit.trace(m, (t,))
-        frozen = torch.jit.optimize_for_inference(torch.jit.freeze(scripted))
-        with torch.no_grad():
-            out = frozen(t)
-        if isinstance(out, (list, tuple)): out = out[0]
-        return out.detach().cpu().float().numpy().ravel(), None
-    except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
-
-
-def _run_torch_compile(model_bytes, x):
-    try:
-        import torch, onnx2torch
-        m = onnx2torch.convert(onnx.load_from_string(model_bytes)).eval()
-        compiled = torch.compile(m, mode="reduce-overhead", fullgraph=False)
-        with torch.no_grad():
-            out = compiled(torch.from_numpy(x))
-        if isinstance(out, (list, tuple)): out = out[0]
-        return out.detach().cpu().float().numpy().ravel(), None
-    except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
-
-
-RUNNERS = {
-    "onnxruntime":   _run_onnxruntime,
-    "openvino":      _run_openvino,
-    "tensorflow":    _run_tensorflow,
-    "xla":           _run_xla,
-    "torchscript":   _run_torchscript,
-    "torch_compile": _run_torch_compile,
-}
-
-
-def main() -> int:
-    try:
-        model_bytes = build_model()
-        x = _input()
-        ref = _ref_pytorch(model_bytes, x)
-    except Exception as e:
-        print(f"setup failed: {type(e).__name__}: {e}"); return 2
-
-    print(f"Bug ID:    {__doc__.splitlines()[2].split(':',1)[1].strip()}")
-    print(f"Backends:  {BACKENDS}")
-    print(f"Tolerance: {TOLERANCE}")
-
+        print(f"ref failed: {e}"); return 2
     any_bug = False
-    for backend in BACKENDS:
-        run = RUNNERS.get(backend)
-        if run is None:
-            print(f"  [{backend}] no driver"); continue
-        out, err = run(model_bytes, x)
-        if err is not None:
-            print(f"  [{backend}] CRASH: {err}   →   BUG REPRODUCED")
-            any_bug = True
-            continue
-        diff = _rel_l2(out, ref)
-        verdict = "REPRODUCED" if diff > TOLERANCE else "ok"
-        print(f"  [{backend}] rel_L2 vs pytorch_ref = {diff:.4e}   →   {verdict}")
-        if diff > TOLERANCE:
-            any_bug = True
-
+    print(f"Bug ID: minimized")
+    print(f"Backends: {BACKENDS}  Tolerance: {TOLERANCE}")
+    for b in BACKENDS:
+        out, err = _run(b, mb, x)
+        if err:
+            print(f"  [{b}] CRASH: {err}   -> BUG REPRODUCED")
+            any_bug = True; continue
+        d = _rel_l2(out, ref)
+        verdict = "REPRODUCED" if d > TOLERANCE else "ok"
+        print(f"  [{b}] rel_L2 vs pytorch_ref = {d:.4e}   -> {verdict}")
+        if d > TOLERANCE: any_bug = True
     PASS = not any_bug
     print(f"PASS={PASS}")
     if not PASS:

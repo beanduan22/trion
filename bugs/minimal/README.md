@@ -240,6 +240,79 @@ catastrophic amplification in the downstream Div.
 
 ---
 
+## Part 5 — Delta-Debugged Minimal Op Sequences (2026-04-14)
+
+All 48 campaign bugs (34 v3 + 14 v4) were delta-debugged: nodes are truncated
+from the end until the smallest graph that still reproduces the divergence
+remains. Total ops across all 48 bugs reduced **607 → 352 (42% reduction)**.
+
+Below: each campaign bug's minimal op sequence and the actual `rel_L2` vs
+PyTorch eager printed by the script. **Many multi-backend bugs reduce to a
+single ONNX op** — the fuzzer's surrounding ops were irrelevant.
+
+| Bug ID | Ops (orig→min) | Minimal op sequence | Reproduces |
+|---|---:|---|---|
+| [bug_000426](bug_000426.py) | 18→1 (6%) | `Resize` | onnxruntime=5.43e-01, openvino=5.43e-01 |
+| [bug_000216](bug_000216.py) | 17→1 (6%) | `CumSum` | onnxruntime=1.40e+00, openvino=1.40e+00, tensorflow=1.40e+00, xla=1.40e+00 |
+| [bug_000060](bug_000060.py) | 16→1 (6%) | `CumSum` | onnxruntime=1.10e+00, openvino=1.10e+00, tensorflow=1.10e+00, xla=1.10e+00 |
+| [bug_000322](bug_000322.py) | 13→1 (8%) | `Pad` | tensorflow=3.44e-01 |
+| [bug_000307](bug_000307.py) | 10→1 (10%) | `Pad` | tensorflow=3.39e-01 |
+| [bug_v4_000048](bug_v4_000048.py) | 9→1 (11%) | `CumSum` | onnxruntime=1.31e+00, openvino=1.31e+00, tvm=1.31e+00, xla=1.31e+00 |
+| [bug_v4_000151](bug_v4_000151.py) | 25→3 (12%) | `Add → Mul → CumSum` | onnxruntime=1.35e+00, openvino=1.35e+00, tvm=1.35e+00, xla=1.35e+00 |
+| [bug_000030](bug_000030.py) | 8→1 (12%) | `Pad` | tensorflow=3.29e-01 |
+| [bug_000404](bug_000404.py) | 8→1 (12%) | `Resize` | tensorflow=3.39e-01, xla=3.39e-01 |
+| [bug_000121](bug_000121.py) | 7→1 (14%) | `CumSum` | onnxruntime=1.33e+00, openvino=1.33e+00, tensorflow=1.33e+00, xla=1.33e+00 |
+| [bug_v4_000290](bug_v4_000290.py) | 13→3 (23%) | `Abs → Mul → CumSum` | onnxruntime=1.37e+00, openvino=1.37e+00, tvm=1.37e+00, xla=1.37e+00 |
+| [bug_000232](bug_000232.py) | 8→2 (25%) | `MatMul → Pad` | tensorflow=3.43e-01 |
+| [bug_000036](bug_000036.py) | 11→3 (27%) | `Greater → Where → Resize` | tensorflow=2.35e-01, xla=2.35e-01 |
+| [bug_000242](bug_000242.py) | 10→3 (30%) | `MatMul → MatMul → Pad` | tensorflow=3.23e-01 |
+| [bug_v4_000234](bug_v4_000234.py) | 13→4 (31%) | `Conv → BatchNormalization → Elu → CumSum` | onnxruntime=1.24e+00, openvino=1.24e+00, tvm=1.24e+00, xla=1.24e+00 |
+| [bug_000223](bug_000223.py) | 9→3 (33%) | `Expand → Add → Pad` | tensorflow=3.37e-01 |
+| [bug_v4_000254](bug_v4_000254.py) | 12→5 (42%) | `Transpose → Transpose → Conv → Relu → AveragePool` | tvm=1.13e-01, xla=CRASH |
+| [bug_000163](bug_000163.py) | 14→6 (43%) | `Split → Sigmoid → Mul → LogSoftmax → Mul → CumSum` | onnxruntime=1.35e+00, openvino=1.35e+00, tensorflow=1.35e+00, xla=1.35e+00 |
+| [bug_000310](bug_000310.py) | 13→7 (54%) | `Conv → BatchNormalization → Conv → Mul → Add → Add → MaxPool` | torchscript=CRASH |
+| [bug_000227](bug_000227.py) | 11→6 (55%) | `MatMul → Conv → Mul → Add → Clip → Resize` | onnxruntime=2.37e-01, openvino=2.37e-01 |
+| [bug_v4_000078](bug_v4_000078.py) | 14→8 (57%) | `Mul → ReduceMean → Add → Sqrt → Div → Mul → Mul → Resize` | onnxruntime=1.22e+00, openvino=1.22e+00 |
+| [bug_000416](bug_000416.py) | 12→7 (58%) | `Transpose → Transpose → ReduceL2 → Add → Div → Mul → Pad` | tensorflow=3.36e-01 |
+| [bug_v4_000135](bug_v4_000135.py) | 16→10 (62%) | `ReduceMax → Sub → Exp → ReduceSum → Div → AveragePool → Mul → Add → … (+2)` | onnxruntime=1.98e-01, openvino=1.70e-01, torch_compile=2.00e-01, tvm=1.00e+00, xla=CRASH |
+| [bug_000372](bug_000372.py) | 13→9 (69%) | `Tanh → Erf → Mul → BatchNormalization → Conv → BatchNormalization → Reshape → Reshape → … (+1)` | tensorflow=2.82e-01 |
+| [bug_v4_000035](bug_v4_000035.py) | 13→9 (69%) | `LayerNormalization → Dropout → Unsqueeze → Squeeze → ReduceL2 → Mul → Add → Reshape → … (+1)` | onnxruntime=9.16e-01, tvm=3.97e-01, xla=3.97e-01, torch_compile=CRASH |
+| [bug_v4_000186](bug_v4_000186.py) | 10→7 (70%) | `Mul → Add → Conv → Tanh → Concat → Conv → CumSum` | onnxruntime=1.43e+00, openvino=1.43e+00, tvm=1.43e+00, xla=1.43e+00 |
+| [bug_000031](bug_000031.py) | 15→11 (73%) | `Add → LayerNormalization → Conv → Max → Div → Exp → Sub → Mul → … (+3)` | tensorflow=3.41e-01 |
+| [bug_000424](bug_000424.py) | 8→6 (75%) | `Flatten → Reshape → MatMul → BatchNormalization → Clip → CumSum` | onnxruntime=1.03e+00, openvino=1.03e+00, tensorflow=1.03e+00, xla=1.03e+00 |
+| [bug_000143](bug_000143.py) | 22→17 (77%) | `Mul → Add → Neg → Abs → Relu → Mul → ReduceMax → Mul → … (+9)` | onnxruntime=1.00e+00, tensorflow=1.00e+00 |
+| [bug_000175](bug_000175.py) | 23→18 (78%) | `Mul → Sigmoid → Sub → Mul → Mul → Add → Add → Add → … (+10)` | openvino=CRASH |
+| [bug_v4_000036](bug_v4_000036.py) | 5→4 (80%) | `MatMul → MatMul → MatMul → Resize` | tvm=3.09e-01, xla=3.09e-01 |
+| [bug_000092](bug_000092.py) | 16→13 (81%) | `Mul → ReduceMean → Add → Sqrt → Div → Mul → Mul → Add → … (+5)` | onnxruntime=9.75e-01, openvino=9.75e-01, tensorflow=9.75e-01, xla=9.75e-01 |
+| [bug_000267](bug_000267.py) | 12→10 (83%) | `MatMul → Add → Sigmoid → Add → Mul → Add → Tanh → Erf → … (+2)` | onnxruntime=9.72e-01, openvino=9.72e-01, tensorflow=9.72e-01, xla=9.72e-01 |
+| [bug_v4_000198](bug_v4_000198.py) | 13→11 (85%) | `MatMul → Add → Sigmoid → Add → Relu → TopK → Tile → Add → … (+3)` | onnxruntime=1.00e+00 |
+| [bug_v4_000223](bug_v4_000223.py) | 14→12 (86%) | `Gather → Reshape → TopK → Tile → Abs → ReduceSum → Add → Div → … (+4)` | onnxruntime=1.00e+00 |
+| [bug_000342](bug_000342.py) | 8→7 (88%) | `Greater → Cast → Mul → MatMul → LogSoftmax → Mul → Pad` | tensorflow=3.26e-01 |
+| [bug_000245](bug_000245.py) | 17→15 (88%) | `ReduceMean → Sub → Mul → ReduceMean → Add → Sqrt → Div → Mul → … (+7)` | tensorflow=4.93e-01 |
+| [bug_000008](bug_000008.py) | 10→9 (90%) | `Selu → Mul → Sub → Add → TopK → Tile → Mul → Add → … (+1)` | onnxruntime=1.00e+00, openvino=1.00e+00 |
+| [bug_000170](bug_000170.py) | 10→9 (90%) | `MatMul → Mul → Add → Relu → ConvTranspose → BatchNormalization → Relu → Conv → … (+1)` | tensorflow=4.06e-01 |
+| [bug_000055](bug_000055.py) | 11→10 (91%) | `MatMul → Conv → Tanh → HardSwish → Mul → Abs → Add → Pow → … (+2)` | tensorflow=3.36e-01 |
+| [bug_v4_000041](bug_v4_000041.py) | 11→10 (91%) | `LayerNormalization → Dropout → TopK → Tile → Abs → Mul → Gather → Slice → … (+2)` | openvino=1.00e+00, tvm=1.00e+00, xla=1.00e+00 |
+| [bug_000032](bug_000032.py) | 12→11 (92%) | `Mul → Add → Relu → Pow → Mul → Sub → Add → Reshape → … (+3)` | tensorflow=CRASH |
+| [bug_000189](bug_000189.py) | 13→12 (92%) | `MatMul → MatMul → ReduceMean → Sub → Mul → ReduceMean → Add → Sqrt → … (+4)` | tensorflow=3.23e-01 |
+| [bug_000308](bug_000308.py) | 14→13 (93%) | `TopK → Tile → Add → Relu → Sub → Neg → Abs → Relu → … (+5)` | onnxruntime=9.33e-01, openvino=8.91e-01, tensorflow=1.00e+00, torch_compile=1.00e+00, xla=1.00e+00 |
+| [bug_000166](bug_000166.py) | 9→9 (100%) | `Pad → Conv → BatchNormalization → Add → Mul → Unsqueeze → Squeeze → MatMul → … (+1)` | tensorflow=3.27e-01 |
+| [bug_000210](bug_000210.py) | 11→11 (100%) | `Transpose → Mul → ReduceMean → Add → Sqrt → Div → Mul → Mul → … (+3)` | tensorflow=2.12e-01, xla=2.12e-01 |
+| [bug_000248](bug_000248.py) | 18→18 (100%) | `Transpose → Transpose → MatMul → Transpose → Transpose → Einsum → Mul → ReduceMean → … (+10)` | onnxruntime=1.25e+00, openvino=1.25e+00, tensorflow=1.25e+00, xla=1.25e+00 |
+| [bug_v4_000055](bug_v4_000055.py) | 12→12 (100%) | `MaxPool → AveragePool → Concat → Pad → Conv → Sub → Mul → Add → … (+4)` | xla=CRASH |
+
+
+Root-cause primitives isolated by minimization:
+
+- **`CumSum`** alone diverges on ORT + OpenVINO + TF + XLA (and TVM) — 6 bugs
+  reduce to this single op.
+- **`Pad` (reflect / edge / constant)** alone diverges on TensorFlow graph
+  mode — 4 bugs reduce to this single op.
+- **`Resize` with non-default coord modes** alone diverges across backends —
+  3 bugs reduce to this single op.
+
+---
+
 ## How to run
 
 ```bash

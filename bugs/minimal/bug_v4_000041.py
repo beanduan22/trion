@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Bug ID     : bug_000143
-Source     : Trion campaign v3 (minimized via delta-debug)
-Compiler   : onnxruntime, tensorflow, torch_compile, xla
-Patterns   : Mul, Add, Neg, Abs, Relu, Mul, ReduceMax, Mul...
-Root cause : onnxruntime rel_L2=1.000
-Minimal ops: Mul -> Add -> Neg -> Abs -> Relu -> Mul -> ReduceMax -> Mul -> Add -> Mul -> Sigmoid -> Sub -> Mul -> Mul -> Add -> ReduceMean -> Sub (17 ops, down from 22)
+Bug ID     : bug_000041
+Source     : Trion campaign v4 (minimized via delta-debug)
+Compiler   : openvino, tvm, xla
+Patterns   : LayerNormalization, Dropout, TopK, Tile, Abs, Mul, Gather, Slice...
+Root cause : openvino rel_L2=1.000
+Minimal ops: LayerNormalization -> Dropout -> TopK -> Tile -> Abs -> Mul -> Gather -> Slice -> Expand -> LayerNormalization (10 ops, down from 11)
 Tolerance  : 0.1
 
 Exit 0 = BUG REPRODUCED  |  Exit 1 = not reproduced  |  Exit 2 = missing deps
@@ -24,16 +24,26 @@ except ImportError as e:
     print(f"missing deps: {e}"); sys.exit(2)
 
 TOLERANCE = 0.1
-BACKENDS = ['onnxruntime', 'tensorflow', 'torch_compile', 'xla']
+BACKENDS = ['openvino', 'tvm', 'xla']
 INPUT_NAME = 'model_input'
 INPUT_SHAPE = [1, 128]
-OUTPUT_NAME = 'n400_mln_sub'
+OUTPUT_NAME = 'n400_lnr_ln'
 OPSET = 17
 IR_VERSION = 8
 
 
 def _inits():
-    i_0 = numpy_helper.from_array(np.array([0.19801978766918182], dtype=np.float32).reshape([1]), 'n0_mbr_rc')
+    i_0 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
+        "AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8A"
+        "AIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAA"
+        "gD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACA"
+        "PwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/"
+        "AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8A"
+        "AIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAA"
+        "gD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACA"
+        "PwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/"
+        "AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8="
+    ), dtype=np.float32).copy().reshape([128]), 'n0_lnd_sc')
     i_1 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -44,31 +54,15 @@ def _inits():
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-    ), dtype=np.float32).copy().reshape([1, 128]), 'n0_mbr_bias')
-    i_2 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
-        "AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8A"
-        "AAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAA"
-        "AD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAA"
-        "PwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/"
-        "AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8A"
-        "AAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAA"
-        "AD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAA"
-        "PwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/"
-        "AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8="
-    ), dtype=np.float32).copy().reshape([1, 128]), 'n100_anr_alpha')
-    i_3 = numpy_helper.from_array(np.array([0.0], dtype=np.float32).reshape([1]), 'n200_redu_zero')
-    i_4 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
-        "AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8A"
-        "AAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAA"
-        "AD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAA"
-        "PwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/"
-        "AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8A"
-        "AAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAA"
-        "AD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAA"
-        "PwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/"
-        "AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8="
-    ), dtype=np.float32).copy().reshape([1, 128]), 'n300_gr_wg')
-    i_5 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
+    ), dtype=np.float32).copy().reshape([128]), 'n0_lnd_b')
+    i_2 = numpy_helper.from_array(np.array([0.0], dtype=np.float32).reshape([]), 'n0_lnd_ratio')
+    i_3 = numpy_helper.from_array(np.array([1], dtype=np.int64).reshape([1]), 'n100_tk_k')
+    i_4 = numpy_helper.from_array(np.array([1, 128], dtype=np.int64).reshape([2]), 'n100_tk_rep')
+    i_5 = numpy_helper.from_array(np.array([0], dtype=np.int64).reshape([1]), 'n300_gsc_idx')
+    i_6 = numpy_helper.from_array(np.array([0], dtype=np.int64).reshape([1]), 'n300_gsc_st')
+    i_7 = numpy_helper.from_array(np.array([128], dtype=np.int64).reshape([1]), 'n300_gsc_en')
+    i_8 = numpy_helper.from_array(np.array([1, 128], dtype=np.int64).reshape([2]), 'n300_gsc_exp')
+    i_9 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
         "AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8A"
         "AIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAA"
         "gD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACA"
@@ -78,47 +72,40 @@ def _inits():
         "gD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACA"
         "PwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/"
         "AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8AAIA/AACAPwAAgD8="
-    ), dtype=np.float32).copy().reshape([1, 128]), 'n300_gr_one')
-    i_6 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
-        "ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9m"
-        "ZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zm"
-        "hj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaG"
-        "P2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/"
-        "ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9m"
-        "ZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zm"
-        "hj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaG"
-        "P2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/"
-        "ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj9mZoY/ZmaGP2Zmhj8="
-    ), dtype=np.float32).copy().reshape([1, 128]), 'n300_gr_scale')
-    return [i_0, i_1, i_2, i_3, i_4, i_5, i_6]
+    ), dtype=np.float32).copy().reshape([128]), 'n400_lnr_sc')
+    i_10 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    ), dtype=np.float32).copy().reshape([128]), 'n400_lnr_b')
+    return [i_0, i_1, i_2, i_3, i_4, i_5, i_6, i_7, i_8, i_9, i_10]
 
 
 def _nodes():
     return [
-        helper.make_node('Mul', inputs=['model_input', 'n0_mbr_rc'], outputs=['n0_mbr_mul']),
-        helper.make_node('Add', inputs=['n0_mbr_mul', 'n0_mbr_bias'], outputs=['n0_mbr_out']),
-        helper.make_node('Neg', inputs=['n0_mbr_out'], outputs=['n100_anr_neg']),
-        helper.make_node('Abs', inputs=['n100_anr_neg'], outputs=['n100_anr_abs']),
-        helper.make_node('Relu', inputs=['n100_anr_abs'], outputs=['n100_anr_relu']),
-        helper.make_node('Mul', inputs=['n100_anr_relu', 'n100_anr_alpha'], outputs=['n100_anr_out']),
-        helper.make_node('ReduceMax', inputs=['n100_anr_out'], outputs=['n200_redu_red'], axes=[-1], keepdims=1),
-        helper.make_node('Mul', inputs=['n100_anr_out', 'n200_redu_zero'], outputs=['n200_redu_z']),
-        helper.make_node('Add', inputs=['n200_redu_z', 'n200_redu_red'], outputs=['n200_redu_out']),
-        helper.make_node('Mul', inputs=['n200_redu_out', 'n300_gr_scale'], outputs=['n300_gr_sc']),
-        helper.make_node('Sigmoid', inputs=['n300_gr_wg'], outputs=['n300_gr_gate']),
-        helper.make_node('Sub', inputs=['n300_gr_one', 'n300_gr_gate'], outputs=['n300_gr_inv']),
-        helper.make_node('Mul', inputs=['n300_gr_sc', 'n300_gr_gate'], outputs=['n300_gr_lhs']),
-        helper.make_node('Mul', inputs=['n200_redu_out', 'n300_gr_inv'], outputs=['n300_gr_rhs']),
-        helper.make_node('Add', inputs=['n300_gr_lhs', 'n300_gr_rhs'], outputs=['n300_gr_out']),
-        helper.make_node('ReduceMean', inputs=['n300_gr_out'], outputs=['n400_mln_m'], axes=[-1], keepdims=1),
-        helper.make_node('Sub', inputs=['n300_gr_out', 'n400_mln_m'], outputs=['n400_mln_sub']),
+        helper.make_node('LayerNormalization', inputs=['model_input', 'n0_lnd_sc', 'n0_lnd_b'], outputs=['n0_lnd_ln'], axis=-1, epsilon=9.999999747378752e-06),
+        helper.make_node('Dropout', inputs=['n0_lnd_ln', 'n0_lnd_ratio'], outputs=['n0_lnd_out']),
+        helper.make_node('TopK', inputs=['n0_lnd_out', 'n100_tk_k'], outputs=['n100_tk_vals', 'n100_tk_idx'], axis=-1, largest=1, sorted=1),
+        helper.make_node('Tile', inputs=['n100_tk_vals', 'n100_tk_rep'], outputs=['n100_tk_out']),
+        helper.make_node('Abs', inputs=['n100_tk_out'], outputs=['n200_abs__a']),
+        helper.make_node('Mul', inputs=['n200_abs__a', 'n100_tk_out'], outputs=['n200_abs__out']),
+        helper.make_node('Gather', inputs=['n200_abs__out', 'n300_gsc_idx'], outputs=['n300_gsc_g'], axis=0),
+        helper.make_node('Slice', inputs=['n300_gsc_g', 'n300_gsc_st', 'n300_gsc_en'], outputs=['n300_gsc_sl']),
+        helper.make_node('Expand', inputs=['n300_gsc_sl', 'n300_gsc_exp'], outputs=['n300_gsc_out']),
+        helper.make_node('LayerNormalization', inputs=['n300_gsc_out', 'n400_lnr_sc', 'n400_lnr_b'], outputs=['n400_lnr_ln'], axis=-1, epsilon=9.999999747378752e-06),
     ]
 
 
 def build_model() -> bytes:
     inputs_info  = [helper.make_tensor_value_info(INPUT_NAME, TensorProto.FLOAT, INPUT_SHAPE)]
     outputs_info = [helper.make_tensor_value_info(OUTPUT_NAME, TensorProto.FLOAT, None)]
-    g = helper.make_graph(_nodes(), "bug_000143_min", inputs_info, outputs_info, initializer=_inits())
+    g = helper.make_graph(_nodes(), "bug_000041_min", inputs_info, outputs_info, initializer=_inits())
     m = helper.make_model(g, opset_imports=[helper.make_opsetid("", OPSET)])
     m.ir_version = IR_VERSION
     return m.SerializeToString()
@@ -126,15 +113,15 @@ def build_model() -> bytes:
 
 def _input() -> np.ndarray:
     return np.frombuffer(base64.b64decode(
-        "GHuEvWXwTkDuk6Q+YbHEvxZkFT8mtmS/1hUYvxySU77TUry+lz+3PyXS/r48na68LUkLP9E/bL6m"
-        "mS8+EU+av/bXU70YXBE/tIdnvsvMNr+TZ6E/xvvEPkeH+T5IvfS+1C2Ev8aNZD+4pq2/bOvePJm4"
-        "Sz/ynme/+CAfP5Fp/j82iI++acfNPyX6wb1rfS6/hp2HP9YQH7+TYZc9WLIPP3ODK798RJk+5XY8"
-        "P9iU6r4B2Ka/KYVmP4Mmfj7px2K+B+0rP1RiDL3WuRtAeH24vYqGgL06p7q/2O2Mv3Q/CT9aOIw/"
-        "QAQivlFyxz5/oQI/vKFnPwXLBj+YMam/xWwLQKyPnL4D4Yu+kzDlvqLYl7yB2tY/dSWHv3EiNb9n"
-        "fXu/E5NDPyF2lz4hZDE/NWePv1ywpD6ojq4/acKyP+3ZHT/fZtM+7kctv/u7az+MXVy/IfIXP5le"
-        "/r/b7iW/e9aAPo0rZr9Psqq//EIZwDVpxj+3Kw+/cAbYP6NGWj/3lX4/1+hOv0KDnz+Vnuw/Z3mf"
-        "PzrSpb+PeU4/tHcnv/kpeL9eLI8+UI9SPwNynL9PJ9o8RMzPPqIII8BM+PE+xp7vvpQ0kD2p1Qw+"
-        "On1ev1+0I7/BeNG+FocwP3kltD6q4829xrhPP2jE9L88Oli/T/EtP0X47b4mXGQ+qfN/PxWwo78="
+        "uDjjP1nkPr/kOIS/SYksQCc72b9u8ZPANGm6Pgd3pL8yVue//JnlvS8g7r60vvw/R9diP8Vhs74d"
+        "rQPAfBInP2DFg7/xuv6+Q3X6Pju6vb/kLPm+xKuzPytErz8ldxXAZqvQv3OspD/YJzG/x1y/Ps8S"
+        "xj/JKjk/MPY1QCzZbED9XgfAEEqiwBZ1Sb/VD7e/uXQ+wJfJi8BstCHAqit9PyrzFcAmoH9A/1ZO"
+        "v/isR8AaSMC/SO3xv+5mm78sqynA4/L3Pxq5or63jqlA409nv05x0j+9BaY/mtxiQKBVPD/OOFlA"
+        "qaKLQO7AOECw/Yy+2s9rPlnNRj/N7bI+Yu28P51vBL+Pb7E/p/Zxv6XPkT4bDRQ/Ig+yvyx0EkB6"
+        "kBu/yNRLP6TaxD8ty+E/cAI9wPERrj/BYdc+NqzEPe7p/T/qp/W+wckgwEfRwECybIlAH1MgvabF"
+        "CsA8xNy/ehcmP3ZRjD8hjgrAUSc+P6p4wj5Tm+2/N8eJQIVDcj8/1wc/sAeEQOGdpT9iF+49W7+R"
+        "P0d1RL8Odti/3ZRvPzZmBEBgeorA04jiP7pX4r5jPmLA9GFXQAjIlT/xqlRAkwOMwOij8D6gyQ5A"
+        "8SXEv2ZZL8AK6SPAEPSzv3p+Kb8tgmK/C8ImP8LV7z6nX2W/pgWivydtCT9XiKvAc+NZQL2bxr8="
     ), dtype=np.float32).copy().reshape([1, 128])
 
 

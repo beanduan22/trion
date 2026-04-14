@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
 Bug ID     : bug_000424
-Source     : Trion campaign v3 (fuzzing)
+Source     : Trion campaign v3 (minimized via delta-debug)
 Compiler   : onnxruntime, openvino, tensorflow, xla
-Patterns   : Flatten + Relu6 + CumSum
-Root cause : Flatten(axis=2)+MatMul+BN+Clip(Relu6)+CumSum+Conv+Elu
+Patterns   : Flatten, Reshape, MatMul, BatchNormalization, Clip, CumSum
+Root cause : onnxruntime rel_L2=1.030
+Minimal ops: Flatten -> Reshape -> MatMul -> BatchNormalization -> Clip -> CumSum (6 ops, down from 8)
 Tolerance  : 0.1
 
 Exit 0 = BUG REPRODUCED  |  Exit 1 = not reproduced  |  Exit 2 = missing deps
@@ -24,17 +25,14 @@ except ImportError as e:
 
 TOLERANCE = 0.1
 BACKENDS = ['onnxruntime', 'openvino', 'tensorflow', 'xla']
+INPUT_NAME = 'model_input'
+INPUT_SHAPE = [1, 3, 32, 32]
+OUTPUT_NAME = 'n300_cs_out'
 OPSET = 17
 IR_VERSION = 8
-INPUT_NAME = 'model_input'
-OUTPUT_NAME = 'n400_conv_out'
-INPUT_SHAPE = [1, 3, 32, 32]
-OUTPUT_SHAPE = [1, 128, 32, 32]
 
-# ------------------------------------------------------------------
-# Initializers (weights/constants from the fuzzer-discovered model)
-# ------------------------------------------------------------------
-def _inits() -> list:
+
+def _inits():
     i_0 = numpy_helper.from_array(np.array([1, 3, 32, 32], dtype=np.int64).reshape([4]), 'n0_far_b')
     i_1 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
         "uEFyvmXtsTzV89o+tC4OPSdpCT+aSdA+JLPTPcAxKL41r9s+Dl7gPTiEqr75KpW8desXPfFR4L0R"
@@ -117,268 +115,10 @@ def _inits() -> list:
     i_6 = numpy_helper.from_array(np.array([0.0], dtype=np.float32).reshape([1]), 'n200_bnr6_zero')
     i_7 = numpy_helper.from_array(np.array([6.0], dtype=np.float32).reshape([1]), 'n200_bnr6_six')
     i_8 = numpy_helper.from_array(np.array([3], dtype=np.int64).reshape([]), 'n300_cs_ax')
-    i_9 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
-        "s5iWPU5atbyl9om+HoMlv1vmUb5+cSO/LmddPY6/lj4jBqo+GkXOvlRg+j5F7gY/tFzVPs+rkj0x"
-        "H/092NXDPMvLTT0ZnzI/m7rAvmoZX77+PWm97weQPi6nlT5PHY2+b+FkvbRNVb101K++zM1PPT3o"
-        "g72XM4S+4XzKPRYxGLuC8fu+ZFW5vY9mG75BR/o90PuYO2kCx7pW88K9poDjvDbLcb2qgja+03aO"
-        "vs6NrL57hIQ+HvKVPUOHsb5oHS8+KxyoPevBJj7cwMo9ViRpvkjyiz0rjai+7kITPnVp5L62F728"
-        "YcG8vtrHJD0HCvs+1MravazMuL41dri+0TTSPaPhsj5b3Eq9E2sKvhqNZj5dIkE+lqB5Piq1zj5X"
-        "ZTa+RQU1Ptfufr244g+9V3m/O5GC3r4bZa+9g0+FvgzWjr6q+k6+xk0pvvVwe70ycPA9BJIVPkfa"
-        "7b4Om86+o7+EvASCTT4GSY09qsDBPp7Khzx/H9E81nimvplgMb8APay+/xuPuoxuYL7OHaW+vvpT"
-        "PvC7nT48sSG+PZrYvgvvpL70ToC+5BOQPYQr4b3Hxi4+8SPPvXamLL9t/Sm+o4Q9vnlZVT4yggG+"
-        "CckDvoFFxb4GTu6+SUTXvi2c4j08voQ+y3aUvhqwYb6G0SO+EgD8vUNHz71qIne+mmhlPfDIzL4z"
-        "RUU+swX7vZRcGD1P9249pRE1vgfQrL50SJ4+eKr1vFbqpD7l1jy8/14+voSU2zkGdng91L50vHli"
-        "zz5iNom+eHEyPmB61z0G2Zm9Q8gAvijmhLsOZui8jlOdvbFngL6G5qc7SqOTPjcTIr6VCca9h6yu"
-        "vAdYrz3c9Iq+wr8av4aPZb5wx8I+IcyiPttgbr7308y9yAycvq0rFb7sTia+B8D8PsgqNT67KPe9"
-        "NSHyvjHhEz3o5XI+wUAMP0i+sD5vU7q+GgYfvbKrsr4AFoq+FXAJv9EPIj7YPVo+H12RvigUGD7l"
-        "PSg+pNG4vp3VAb5NH7s+93BoPpR8db72n+i+hFA4PT12r73OyiW+ycbgvd5Y3776QJ09MMmHPs+E"
-        "4r47vuu97sKDvj0J6L5z/Bi9fxLxPsaN8z7mnXq+cmEivnaYZD7MZFa+zheavgh+MD58vS++n0M6"
-        "Plzbcr7RRpq+YT3rvdWN6r7a6wQ9602Pvn1brL3hY3U+SpmUvkStCT0xsBs+1ZMePhCnob7jJoq+"
-        "Ehu9vcr7u72Myao9R9aIvmA4fb6Mw/Q919/lPeXxzL4ates+yYrsO3795TwTFMC9/e8cPjCb5L3B"
-        "9P2+YuQgvaIrYzwRlB894cwkv/O5XL1KHOO+UJzQvY/zWr6VMj29ycMhv9OLhzxHis893HC1vtRW"
-        "LT6cFQI+pCVcvusPbr1nUpc87qHrPZhfxL160Ic+ZGH1vokETb43Kmi+ax82vXXibb5+Zrc9GH+N"
-        "PpLu0T10F+y9JtUpPtGZgr4dOL0+/aofvi6srT4oAWU8PIJWvsUmpzvyJwm+RhOWvnNqbz0c1BS8"
-        "FOqDPrsIxb41Tbq+yji6PAcdGL/YTYA+ml0GvlvQoj5lDJO+XX08PBYmij6Lfn6+l878vVCBxT6H"
-        "y9684f3jPuN0Zz3LzGi+PC0Avu6Ngr4IArg++NIkv76JTL8kYBw+1edmvNWWeb3x5rG+J316vRI1"
-        "zj36UKQ8qk4FPnDmnL61Pk4+Qw4zPjv82D2t2W29saaNPqtXuT7uR5u+rhZFPqqRjL47FAE/x2ct"
-        "vJse775CQ8c84eawPqvztr5mijC+CESevtLZyT6+4LA+1Yp8Prxj6730oso9Yb2GPjDcozzv1Nm+"
-        "J+x2vh9+Gb7s1CK9r8nKPlf6OruAkEE/GEI6PdSVjr7gXc0+vx7CPlM0Qz5jGDQ+ASBsPZsDqT4z"
-        "0sG9Qa7UPWMChj5wSMC+cOYRvp3lVD7RYnk+ebS1PcSBwz4BeJ4+6gArPpW+kb79yFE+dtaaPuXn"
-        "sT0zSxW9C+EcPs4R1T6I+iS+aLlAvtzwYr10k+W+TlDNPbLzur4S1KK+HKSVProixb7xccY+Tkzx"
-        "PWY4ZT6+aJQ+JTFWPpvRSr6G9i6+ywgCvjsLfbydTHK+lVLPPnWHbb7RLRE/UtIhPvcuhj4ysV++"
-        "6/lOvkMryD1f0Wy+86hgvqMVDL6qEcQ+v6YsPhkIQzwod8c9iq42PjP2Br9OkCQ/uc8kvp6WN76j"
-        "TPq99Lelvk2Wkr7c++W9hBKKPcRwEz5Y6iA+EyiSvi7YBr8mFp49iSMAPgpdJz+ZMI69G8ACPrX2"
-        "pL64pAU/juI5vv/TXT66OG+9nvy1vqecGz8TBjg+ZcKLPewdurx2obE9SPENvVBn8j3BhRK+crBe"
-        "Pt3Kl7zUzYk+ZzGJPS2PnT1pb26+FYJHuzV3nTvODGe+ytg7PoyQ7b6c1o69sOL/PSbGCz1ZxEw9"
-        "GVIBvhCeiz0MzQq/VypnPjxtAD6kzoM9wf9CvWY1h7578LQ9lur0vTrQyD4Sy5Y+VPMGP6gkob4O"
-        "QyM+DcxAP2i0obxsiw0+EemwPVDPFr6jw/w+XaG7PI6kxjxA+/k8Ok+KvasdSD6B1PK9GL89P7wZ"
-        "uD42HJC+QrBKvZqjFL6IFoi+p+ZePlOlMT05xko+1wSovnySo778TBA+jrZMv2UU7r5/cBe/Y0m6"
-        "vtK2sz4uNL694ZatPBJPz74Z0kK9VTm3PUuSyb1ihgS/moiUvvy3I77snsK+ijIZvrjmiL5wqmO+"
-        "2INJvo+KJb2t4sc+z2M5PtIdmr4dUi4+A6Muv8OTtj0kfMO9KRNBPkx7jr5TYY89xSDHvbePXzvp"
-        "UOS8Pwx2vR3Tv765CkM++Zm/vcogUj6A7Vs+o22MPWe9ir2FNVo+vSZJvoxfYD5c1Wk+95AEPhv7"
-        "d75YbbQ+0raDvbzYdT6OLVU9naMZP3lJ5D4XOlw+uohPvEKInD7+DKi9Svnivh9ciz4YKj4+NLjj"
-        "vpz9ob7s4Ou8eyliPsNHNj1RSOY+VHwyvjxryz5rYCW+hri5viDIeT5PhHq+1hGVvdPQEj/Cf0c+"
-        "ovyjvUSxQj6QcrC+AGe0PsOMSr3gkTs+MJg+vvmtwb5hmP6+MZCBPUNhG72hEge+HHrXPKk6sT46"
-        "wb+9breGvseQPb6wl0C+Dd1bvqQQ6b5LZCw+9dpavv9glr3e4V0+LS4EPoCSN74bPYc9HY9IPv58"
-        "sD7aaxA97KKUPpHQ1b1UDMg+3oUAP+z/iL63v3I+PZmSvsjfpD7lxAY/10anPbJEST5LKhc/+dOn"
-        "vucxMr/KLvG+YsPRvcCwdr5Q4yK/VzblPoNdlz5xf/49VLyrvb7LI75peju+rTIRvbH83b687T8+"
-        "LZtMvNerCj6ryTY+EXEtvYVXrT3GdLe+pee9PgoPqz48efA+4cwDvfiZlD2vhwO+szmBvd8IHr00"
-        "teI9VMkMPvcez7zeWUu+io28PtzQ9z2KQkc+1BemvWlJn7xMBJ++E7Y+vvg0qL26b327z5wXPpXZ"
-        "Y77EDW+9fi0VvjDFBz+CyKk+alixPh/qwL4FZ869LG6vPt4Ybj5s8U2+tGHBPDFSmT50QO87VMXO"
-        "PuSQkL7oSLG9XXDsPsWelz6xlUo+xDdMPf8GBr4xw2G+9CvdPtKrX76DuV8+we8TP34x/T6SF0e+"
-        "2+ntvgYHCD2b14o+QJ0iPiZDCL8mpIG9tw2TOeJ1Vz61Mxw/QUSiPvx9qT3/H3y+8ADKvcftQL2/"
-        "e2S+a1ssvvtFG77f+YG+SIPAPuikwT6Ni4C+jbBzvhFEBj7PACy98zK1PgjnNz4d+mA+cbxwPfIr"
-        "DL5r4Du938VuveiArj6bogE/K14aP65STT4/2ku94pyWvVQsX74mSrU+EaWEvbeSgr1dDNq9upzb"
-        "PjybUD2rOQW99l7VPocecb4uGey8JO1yPkVj3L6cq54+GcIOv8cobr0EoNe9U2YMvzDKwD7Q0wo+"
-        "EjbhvVYTQb2UsOq9ZPWhPswE4r4q2zE9OEj5vZsywL0Meq290lTOPZVx/L4eGuE9x4OBvhdVjr5J"
-        "fIS97SFoPlkdKr7Rg2894XMRPwDtmz5VaXK+0BSQvYZmAr6Oq+G+G7UMv879FT7lRcY+aPcEv3do"
-        "4z6TcJM+keAKvuKz4T6fPoy+R8Savpkeiz03CIa+WdYDP//9Nb5dRFO9FfqQPqH4gb658Oc+b42o"
-        "PUzpmT5YuOG+Hn0dvQZC5D7olCS+GLI0vv2E0L2E5eo+GPj8u9RdGj7018Q+uWkhPqCpRLwANz8/"
-        "c8ykvoPrrr1P8y++dcvWvRUZir4skQM++TFdvooV/T0SJY8+JlkTP8QCoz6wvg09ghqIPj+hBj9Y"
-        "XEc+gbX6PofIQzxYsHE+6QwRv6gHUz7w/MA8pintPmUAkb607Wc+e6y0vicVVz1USak9H8gCP7wu"
-        "/D5aKl29m/QPPRpmcT3fecY+Pt4GvwwDfz5OHDe+3xdjvOKQWr5KrDi9Bvlgvq2wET/Gqn0+Aajb"
-        "PuqCB76uBH099H8XPgNbUD4vV0c+D8eeO5Q0Q76u2Ce+jae+vUKB/j0n/5u+WlUQvkPxND9pYl0+"
-        "C23PPV6kqb0y4zw+6+qmvvppCb4jlHM+WhOyvhMajb2LGh8+eC/Wvtm4sz60Cs4+Lm9GvyOJfL0O"
-        "vhi/awRDPWjaFL5BlPq9RFHJvRrcSz1o4d4+xMjkvjKMgz30BZg9555hveUgLb692Fi+TWJyvoRY"
-        "/j7lRHy+wyIUPsdIxL5gs3y+GbFsPlC+2juHWD4+XskhPf9aBb1JtO695J1Avu81ST5OqQq+g5I1"
-        "Ptmu7L6JfFO+cnoCPr66XD5r0E6+peydvqHvCz71eLU91bI5uxhVYz7dmDy+MNrIPoFpJL7AL5G9"
-        "iD12Pm1bY773b32+66iuvjHb075BRmi6MotvPsAUHbyqz2y9I/iKPhbQHb7GEvu+/7BWvpsqKz6N"
-        "qaw+rixxvr+6LL6G4L69/y8xvb2RAT45PCE9gNefvqvIi765x5W+tEKPPedUg775BUm+RbANvq+Q"
-        "Cbw8gbQ86/CVPvrNBb5byBs/5c8AP1ROMj4mkuy9kqrIPrEePD5zrkw+PSFZvlUr8z3WC8S+itJO"
-        "Pll9JTrWy4U+GijDvde+ZDwcgz++rwYjPxrGpb4P5Lk9ROsuPt141j3xgYw+t7ZPvY6tTr0H6A0+"
-        "lmWnPU91g74VP4u9cmziPhMaBj4cnYs+Ew9JPsuC2j2avQY+l47LPoYRhT4MLrM+jkMNvkCJvT5F"
-        "ggS/ckWRvUQzSb39Xxo/JayJPhQNhz2D5DS7SGmRPnY0FT8pmQE/m+qoPSus5j4k4HG+/stJvcoQ"
-        "Sr0RX1c+obEOu4krYz5vDom9h/QTP2iaCD/9gAi+Zf+OvNPfiz6D6Xa9yng+v2glqzzIZkI+Ru9e"
-        "vhxzT76gwgC+sAGYvg4NiD6BBhe9nr8Cv3YvsT4SEbm+uvvFvrlshD3IhKu+ZuVDvQv0Sr6JDdW9"
-        "2demvo2PsDzqCJy+Idi1PRT4Yz6lsrq+VcDCPqMDDz70uI++5KePvg+kH767ts89Yn3bPo9B0L5h"
-        "P3a+iYh5vqi/6j6bJSK+RollvbtZLr4jq3U+cceIPmvrHT3trcU+xIQNPo3Ezbye+y89Cxw2vgwl"
-        "1T4Zye2+0MF6PrughD56Cz6+J5UPPjksSj03KWA+wNqIPtdOQz8wsJS+NO19vY1VsT3TawO+oWtT"
-        "vV9nob32kgY9nYpRvi8karyrQXg+CeiUPr3j2D6y6wK/aQyOPS5Vwz46kti+lQYhvrL7Hb6ytDS7"
-        "6ZQAPytFK76jFBu9b/mUPqFxy742PHA+UgeuPIP6Jz6l75i9v+XQPVxaVD6eTHs+F9eivm6oJb9w"
-        "j3e+xuOTvux/xr7AioM+B0XOPtElxD4E14i9ra5nvk3lGDtJDgU+/g7xPvx76j5R31Q+c9FwPZ1W"
-        "Ej3QTBG+nGAdv99HWb5mDE++tmZ6PrkyF7ySmBU9IcC6PWmjCz7sJhy/k1GiPmSzhr2aJaA+yj/T"
-        "vMSpqjyH8C++Ny58vmYHGL8OP4Y+npeAvaM1Ej+4qIG+JgeWvXuH+b33d3a+6tPpPnRoWT692fA9"
-        "h7gRvrkwCz7OF04+AD2SvJksDL4HmEc+FnCCvpdsWLw1/As/syupPQ0n4T4dD0s+7JSDPI7cXb7G"
-        "rzC8lK7Lu3DxOT4mMc6+zm0ovQs2Nz7z7x++exPdPXPasT6ExFa9MsWtveB6w70zzfq9SU6VPrV7"
-        "lj2v/N27Vn5gPMo+XD3cVzI+DJm3Pee+2L3/wis+regmvpoB3L6Ni2o+2Lp5Pp0Jkr5O6fs9xE++"
-        "PhphwL6382U+m9wZPga0w729sRO+GK7APuTfAD/RZEI+4Jt+vjmRcrxmykg+uPQ+vMdbDj0FMgW+"
-        "L1sxvkOOTT7Iejy9iWplvoGBFT/FU6w9uNuPvkT0FL5yoUg+VOKnPi3mCz4MhNK+5MOkPvg2lz1e"
-        "Lne87D4ePhOHGb3OJBe+6gK7vGjwQ74vStA9ms0LPpyjSz2e2a4+FrkUPqYepr67usw80hymvZBT"
-        "0T4NSBQ+6XsVPPx3EL+I5OA9X6L3vU3RlL6US4g+UZWtvFo+HD2l+Dq7RdzHvKTs1b4UQsK+7Sx9"
-        "vmrBer0aFEA9uWZrPQptIj5bk168H8EJvpnMmr2sj7i9pynxPSNmBL4WCmC+7ih+PQQ6KL33U4Y8"
-        "Wn7ZvnmdE76vE2G+/IXevuZHGz5w62k+TIFCvkCLEj936PK7bhQAv0ZNzr5Mu6I+uYtfPqNCEj/L"
-        "nXe+ZMkmvtwfCr5lHr+8bJOBvWWR6733uzG8e8SPPZqlr70olTi+6kGlvh0Ds7xuYYw+v2UYv18l"
-        "hD7LwgY/udvRvfuA8D0Kbcc+N0k6PiuUD70wg6Y9tFMUPi4DXj7FmF6+4OclvoclvDxsamE+hUSg"
-        "OxU7t7uCshI/unOaPkulmD6QNxA9gGAUPRpdEj94QHW+ze5jvl2Uh773E6e9L2RuPYiBXD6ejQq9"
-        "G276vva3Mz5AYd2+jrHHvlquTj6WMGo+y2MmPlpzYj5Pk0W9fLsyvixOlb4c3e89vwyVvvHPLb6w"
-        "YoW9muzNPYYlCr1tGeQ+SngEvvh5kD6HJtS9A/bQPLrOGb2COwU+8STivhrVv741gdU+rVcWPgsT"
-        "F75qSju/U+01PjbJjj01X989iqk1vX8+973el1Q+qShMPXvGDT+6JoI9YmAZPr3Q3r5ZOxS+pM1V"
-        "vg1vyT0CKU8+i1tDvWFPJT7wjd06+YSEvtK9Bb8klLs+x4QYv8Pn577U7pa93OlbPm8+kbyqMbY9"
-        "w5avvZnx/r2znvm9MXF7PbvlGD4MJFQ9+7bXvtAyhr5sdVI+5pwqPOd1Sr5TAhI+4/4IPt7Wwj6Q"
-        "MWm9NVYqvo0Z171C6hS9xSt2vea4H70f+zI8RzwcPv3ZCb4xN7G+hr3BPd5jZzyl1tQ+wWk3vqgF"
-        "tj63fei+njKKvpLfoL4H1oU+LVOqvT+66L1Z6DQ/GT2Kvpm2xT51Klg+dhSMPr8GlL55Nxc99PKm"
-        "PZwi6r2Tipo+d8sEPnI7Kr1efl4+uO5CvrLvk75HVQK99mkeP2H75jy61fe8pb2KPqlkbT1Voaq+"
-        "9eRGvrNAuz1T0TM/uVxXvg9rcz5YBEe94NVmvudY7j1Qfas95zPvvu2L6jxc5oq+NuysPmzyDz5l"
-        "TYg+rThMvNWVir7RJdO9kTINP/Y1IL6BkQQ+HZBEvtrK4b7Eshg/o1inPE4b0r0X4qY+irh5PH2f"
-        "Jb6zqIK99u6IviZojT51CQS/yoWtPstgjj5tk8Y+WzoCvrcN3z3HPdG+vqmaPVzZmL7+jmk+HRXT"
-        "vCAGLz6PPgW/lZOTPfhvSL5/YnQ9hd+PPp37FL4Wwya++KqLPiiF5D7MrMe+HaMSvlm3fb7cLjO+"
-        "7ZM9vjUNg70mrhM/mv8mvmQba7vVE0K+GXPAPZAoeD1mxAe+b78rPsfO0LxRL8e+9fswvpvrgT76"
-        "oT++BiCTvcSOpT7OijI+4Mu7PlAEvr4RRRE+f3q8vT7Rbj3s6Uo+qQeKPH4bcb5CSnM+0lxbvHQ5"
-        "071ITMo+gveDPnsvPr51oqI+25XhPAe4hjw7yd08E0xPPkF3Ej5ECLO8j5EavwxJDz9k0Om9jRtr"
-        "Pri/yzyFZOC9lz1CvS8X6zz+40W+eFOrPW17pT66EQm+TuAsvZHuFT4h46O9r3ZUvfICFj+Rltw+"
-        "I6eRvokyib6lXGW9mmCdPspCp75RS56++WEJvzq7574gHQA+cGJJPepBvL56iVu9mZdEPX1Yk74b"
-        "AgU/KssIP9V5Or5Zg5i+zFPXvEmWv74+wyy+2uXUPU9bEr51lFu+zxolvv4F1bsMtVo+RQDKvjzn"
-        "z76VWXU9MCjgviGi7j4+5YU+RVvFPkZS+77SAP69txkbvN81bTxPL1e+QfWtPoyr5D30apQ+HbLB"
-        "vTqTHb7kAhG+oqAevg5++L6yXTk8b/BePYOmlD1joL+94QS+u6WdBD6q4FA+oShWvdrBPb45f+M+"
-        "JmSAvivbpjx/AAI+E1Q4vnXckr7UPRs+BWnMvLmMhL6ctom+gPzEvgFbWD4M3NS+JTKIvru1iz4C"
-        "0FM+F+jIvPUXcj2OOQq+x5sgvbk3h72GkAQ+KNRLPUAfWr7SgWS+5IVhvRgIFz4VwA8/TQxOvgT1"
-        "Ijxzrh4/lZS/Pi9ahj4Qph6+e1O1PtoZFb7fDSc+/SyTvmHYJz9wsjK+6w+SPhCnZr7+9ho/eDVc"
-        "vgsPfT3KgNc985MDPzC+R76b2YO8yEyrPtck2z78jTi+VymvPVfGuL7eimi9kbrnvuBiPz7EBFM+"
-        "eLfDPfOYh75t3sg7+KotPq6pp70pPem+FBaRPqfpPT5ESRo/JhWEPdywq752R0C+fZP3vABGrj5W"
-        "1aO+x/JAPpx1ET1v2Ek+c3AVvotj8D3HCRg/JVtSvUiMED51rCq/QdxBveeeJD6xfBA/q1OLP+P/"
-        "+7wkExS+urpkPmzIb75FwBq+HQh+vq4Yv743jJa+Uaa2PuiWDL5UUtW9XbQ1Prs1Qz6uNfQ+P2HP"
-        "vVEtmj4eCnU9PeURPg046r0Ze98+0liIvsxb2D4z1tY9/UHRPQBasz4Ws2m9UPd6veGtnr1gvMm+"
-        "ARKqPnt5Eb4i/xY9mD/nviHXpr3JG44+0h4XPWnPiT50lbs+7CK9vv8x1Tz/OgC/OX5wPlnamz7C"
-        "USy/1geLvWWvszwr52e9TubWvklSDT4dM/c7DFwAvkT9g71cHYC+13TsPR7sArwaTck+BbXPPsmb"
-        "vz6D/BY+OLG7vSsGJL8xK949JuGdPcQw3b65X1e+6ZXiPm3w173x/wA/Xm6ZPnT8UT5Rk2U+qrau"
-        "vZtgzD5HBiY+FIMvPqbNwT6vyAg+UQdKPgTEqr2l+kS+7O1NPgVaWz4E0Rq+xDirvbsltj39HCu9"
-        "522LvLYhkL6nHDC/UG0QPvta0j61SVI8Bi/mOz3xTb6akyQ+cCLvPZGZGb4slBw8dLigvnTkMj4P"
-        "YR4+l1sGPEhvCr6w1X89FemmPnA4Uz6WHu6++gyTPS5Y9TxMsi8/R13JPo14ML5CcHG+C+dXvqfo"
-        "iD5F48E+Q+gNvsNnvDw2lA4/W1G6vQoWaLx0BwY/gKNLvpKNwb6c8qg+eTOxPePq4z046HE+0R6G"
-        "vnqDh774rc+9PK3XvpLLr71F3bC9RnNFvhdcfD4O/ZC+ITTwPW4CRzx1R849F+gwPqdmvL7qtAA+"
-        "UtAmPS+uFLxkkkO9mJPhvWZRr7xxDwg+vkONvm6Ws71Uuqi+4d3UPXwrHz9swhq+znSZvjIIhz6v"
-        "zss96IWHvksVqz6jxf+9x/GxPoqTXT6zG6U9BAKcvi4QvDz/JCi9sS2QPvuxOr4rjrE+MAUtPjKO"
-        "yD7KJnw+ybKSPhPsdL7b9UU9elzRPgG7Pz3GAVS/SvmDvEQRmD47PBo+kwQIPx7Xnj44+gQ9VkV6"
-        "Pq7PGj2b5aa9lY4Hvj8eKz5K1wm/68h9PfJjlD0HWsm+4nBzPlbIoT5do0K+S46+vjL9Iz43wyQ+"
-        "hlcuvjHqrr5ChVG+Usy+PdpyIj561IM+Q9YMPtqgCj9abKa+KVVvv70mKLsJk209WcDPvdEF8r3i"
-        "kK498tmUPXSZJj254Fk+HrpVvnOAqT5cVWQ++A6wvqvm2720wpC82grevfkYDT/jDfY9MY0zPoqU"
-        "zL3VZrW+KiUIv7o42b1dH9q+JmSZPp4oJz/gcS89DRoYvu1xBDymA3S+SOSKvlu35T1r4SG9hM4o"
-        "PQ7Rij0+dZU8moTvuvrwsb4i9wQ+esRdvhhzS76NiK4+zkWLPrrKqD4GjJa+xzD4PgOvqb66nU0+"
-        "QDOWPi4irr0Z7WY+eCJDvp6rXD6iAgs85cZHPu+rhL4URJQ9BXmnu6xE1j7vUGC+hfRMO4H6Dj5E"
-        "vbK+O4rxvH8ngb6VCiC+hSPUvSdFKb705D8+gUxHPZi5BL+E2o29t8d6PtYBXz69zXW+yu/MPg7c"
-        "t76rqK0+JSJWvtpzpb2cW6a74SXivTK6GT7D3dI9+Ne3PZ944L5/VyQ+6iWVvl3oj76U3mq9bnEP"
-        "vaRn7D04JKq+W7SkPejenr10egg+lUhSvhvN6z2/gAK9g5flvRD/CrzdHVU+b1XgPiAZdT4YgE4+"
-        "uo2+PUvCQj5M9IG+5ovZPpH54L1aPFM+AMykPnPgmD7FBFM+SUDAPQr9ST0qqJs8M9yRvpPtHb3E"
-        "G/0+Ir2xvsN3q7wHi/y+FOwQvzEcWj42eQK/N9jxPUcjE76H5B2+2aShPgImN70K1jQ+GUgOviyj"
-        "wT5w24Y+s2xVvvw+Mr1Heok+799xvPaifL5YcDm+Ni7fPl5kQj0ZYVm+7CmcPqq6UT63XwA+BzOa"
-        "vb9hMr5D4IY9BVHDPbpKHz8JDJE+0ie2PsijbD0naZO+ZN/NvlSSXz7NkPe+c0tyPZbvrr6uolG9"
-        "eFVbvqBB6L1qBGk+su90vkcFHj4jHrU8R0sSPlpFjz6G+p089zY7PrZjDTx5cM8+zx8pviYMCr86"
-        "hdy+Z/CGPnlqiz7cUfC9EHc0voj3rj1s8R8+ooQQPtV2HD1YogK+gvbiPQMYCL4fPB0+FLA8u0Kp"
-        "Gr4OZ5S+kUkTPl1Mj77QaXy+F13fvRUGQT19PRk+Sez1PSl4Ir5HLrS+obzePhPrtT6Dnvq89ROK"
-        "vizoGL1XKsy9HfX1vpv+pL2cGJq978cFPcDXgD0MPj8++gnNPvH0Sr4xrMM+tjROvlfBUj7p8dQ+"
-        "Q3+tvqIyHz96C5i8OO/WvoC+Sr/WKnw+q5EnPa4hA77AeN0++k7jPTNlpr5O/wk8KUgMPbbdWj6L"
-        "t6a+IjlCvt5YCb2prC0+at6aPnfsMr1T/jM+zdApPmikZz4Di4a+haocvTBE971gZwi9hiBDvlDN"
-        "Ar8ZRMK+R0idvuJjEj5UU0s9tCXcPvWpmD56EwI/4uTovd8ywj60l6k81rYkvy6FiT4CBpC+/ljl"
-        "vk28Fj36dhS/PmFbvR9ZWr6uJdm85h+jPg3NgL7nt5S+0W7uPhyJHD6wtgA+Angbv+WqxL1rH6W9"
-        "UcOqPnJjQT6MOie+GEAEvQQWrD5l8W6+Bf4cPnJVn774fuK+NOggPp9aZj43FdY+Z0coPuDYar3k"
-        "QqG+aRZcvu9fiD0B5z0+rbnJPbohtr1HVoG9yh99Pqo0eb7Pc0s+BucmvYIq/j3RS5o+XVO5vv9h"
-        "U75uRSc+vwtGvYiEgb59IKk8gEHwPuS9s77VlCu9+EvevXyzZr6dads+YE2ivg3hxryppWc++RGS"
-        "Ppqno71q4bS97ZDMPnptSb55GZo+xhiSPqmm3L0RTIW+a+TPva3wCr/nuUC+N2WnPdZpGr9CX8C+"
-        "NhOHPpnlj77kTbA9lajKPnkHLj6tbcs9YPVRPncOg77AYwk/Ar1FPPcgvL5K4Ec+4Y6OPuWtQT6T"
-        "v4E+CS0LPzoxEb2k/wY/BzmPPeBuNb9e8Va8LvCwvTZcqz15SmO+qGQhPcTpmT4nI/q+j1VyPPYc"
-        "A76VXUu+mqzqOzYTpj7kPhg+7h4tPbkzrLw1E9O9V7iPvnsyvTw42JK8OWWSvrloNL4ZvQq+8t61"
-        "PRwBAT/W07k9lFCEvidCg76r9/S+PbG+vlaRhz7TUqw+w/CdPhYAhD5blTY+cwNNva0JLD7xmLe+"
-        "EED+vecKrj0Gz8e9hd6fvDXsxT6EjcC+YAIsPBr5jr7T/mk9QWKIPkOMBzz/pyo+6xZvPp9Mkj0U"
-        "t9i9rQuvPgxSBj55X/W9SI9LPqXGJT5sChK9KEXNvR5bqj7Hy/k+NRS0PjeWxb6iy8w8Tkonvjzm"
-        "yL7AdKW+wc9wvXMO9j7zZQI+UYsJPjG5rjwjzWq9bhJNPT7zYT5MCgs+1Fc4vnCYxb4PiKq8B9+4"
-        "vqt3tT5JHqo8ODmyPHhfUr7YEXM+ybgPPh6Sjb6DXJA+aAjBO+1znz61Nd4+AjO2via/db055sS+"
-        "m+5zvgktV74ulJI+YclkPl61hrsaWqu+i87bPU8cCb84m6a+91p8vrfZpL7SDe467hnOvmjNzr4z"
-        "9SU+gdbFvaCloj16D3Q+FMwcPvI7Yb2T67w+K/vdvtLzAr855he96VnKPa936zs1UWG9nvmUvhJ5"
-        "RT7fLqI8srMbvmLWg70dKbQ+3D/EPg8nxz5ipXy9ac0kP9ttNj1AOu28Fzg5vkqjSb4yOQc+u2wh"
-        "PR0bGr6L8PG+RmkTvpqalb35dG0++zAhvhZkET9mahe93TUNPgkh1b1/GRc9o7sSvT7zsz2WUVc+"
-        "TNiFPqR0sL7SfNe92JZ7PtKVIz8J0dG+ST9hvr5DhL4U6gw+37h+PmX65b30Rps+T/65vrV8Fj7r"
-        "mIi+VX5avsIhgb1Er54+2HyOPuPmGL4m0bE+JSPWveHd174PwsG+3G/Evmfebb6lfQW/djcMP82h"
-        "/b1jnxI/S/I6vnX7A70CPBA/uolbPfglNT2zsOs7uECZPvyMcb0Jn+M+gOPbvk9xNz7XGuO+2Yrb"
-        "PsgPAj1IRr0+xwJEvpRkTL6ZDiO/884TPyu06r7bNwO+uOq1Pr5TfT7hlVG+NkCwPugQRj6Mnnq+"
-        "zP4PPtCxqz2iNGK+9b30PY2xNj802QM9Rr8jP0M+LL3HtCo+U9HHu0UW1L0EhwC+mieRPVEroL4f"
-        "GjO+yj5ZPkJNOL1lp1s+VwMjPqOtoD22okC/+vjbvoY7Kr+1/N09pm+YPIbO6r7pl6Y9lXaAPpx7"
-        "lD3oI36+gCwHPg6gUT4fZEC+aVv6PnWG7L5ZVg695PRDvm2ILj7KTCO+4o3XveWc27yp54E+mfjP"
-        "vVomDj5tU/a+bSKlvjyPNz6cb6A+NC2nPpuciT4pkK6+rYIXv9ckcD5Tm4Q+k0mGvgzTDb0g84K+"
-        "QzMLvk0GiL5brs09tWydvnXqpb0t1zY+WTSvPiauab6Epow+cPkDv+9zWT7dOJA5PoN1PjA6yzwb"
-        "6AY/YDMzvv7uVD4QUoC9YYPwPoF+Bj97Ne0+8U9evm2jZb60zRC/JQoKP5z0kr5KCDi9naaMPo3p"
-        "Hz4YQxg/aP0BPRtJrL0kRb++oe0bvY8yhj7JG3Y9sW/GPninpzs8Qka7ROKavPToFD76sRq/Dhe+"
-        "vn9c1jyr1N4+TI3PvZwevL6ODO8+0aGtvuasi75kDLS8paoVvnqnTT5JfaG99uDOPgnOir5o02S+"
-        "cqqhPv2BKL7Ytbk89ATjPWor2L7xcFm+8k8bPns+fb4sDgs+3Nvcvk6l8T66BQ0/T0kBPlTOAj6/"
-        "VTY+HJTgvUwsjb0Jtgy/OZ/Dvpq3hj7OqEo7k46avVFgmD1xyYm+JukpP7L9Lb6XkYc+FJ6dPeAS"
-        "jb4tevI9zurVPSoGjD3gfQs9gBF+PlpYTr6daVw+3AHBvY3Wfb41z4W+18CRvATcD74V2qs+11Yu"
-        "P0GFSb6VhTW/0f2JvvvHCz7dC2Y9hdODvi6f4bzGKbu8bK+YPBwQBD6q0sY99NNovoCKcb6wjtO9"
-        "+oN9vVSzX75rxKQ+TVeLPsVbC716KAs/qj4PPd6KPr59gUc+N9pEvkTkBb2ViSk+t1z1PreGxb7z"
-        "fVe/6pQTP+hj3L7vpsw+CPfAPYhM376Gqmg+gdCKPpb4Hb8GCY8+XMhjvtc5ej4OQhc8bwG8vTKi"
-        "ybxYxak9D2mQPWdtcL4FhBU/GAn0uwzPbz0hZlM+adr6PfbaBL71OFO+RdV9vmehFL6JgQy/CG8H"
-        "PwivYr1+izk/TfAaPsfdzb4Wem8+tTI3vW06Br3tFci+Ov8TPQHRFz4ApCC+z9e+vurVcD3HrB89"
-        "1Ty/vsm3pr6HtLO9IBGPvtfV1b3jh549atfEvvWfvD2tMbg9GrlJPs+3f73V9OK81H3mvdk4cr2y"
-        "2am+RwPMPbhW1z7j0Uw+/LsfP+hFaTwU5+q94WDovi2OgD653ZI8W261vtCkqD7GZlQ+pNSEPvQI"
-        "Er0I00M+qo7PPrL++z20x9u9Fx+3vjqPAb51MT09Ys3/PbeiDT9USl6+sDxKPr4Jt74kcja/fJWz"
-        "OwObMr+Ou3u85IktvnQvbL59uyu9OZcbvkT0I78n39g9yPAKvmaWOr7r+8a9d2+4PU23Jr0wPdA+"
-        "/k6RPuIUBT7Rmxy9P78Sv/kE9r5p+mm+ZwduvhQ3sT4nr+c9fKZ7PivLyL2lgzi+EUXtPVLClDzA"
-        "Rvk9xCZdvvtAYj1V+PA+Ilo6PReYWr5AYVa8saC3Pi17J76VG927XudGvb0pd7xqzQM+pyUPP8Rd"
-        "Nb79xUC9MYCDPbDG/70ES44+q1QbvtJFGT4SzHG+fgWbPu8asr7e7SU/mU1JvvNqWD60vx09f3Oj"
-        "vkKhxD4k2wm/nytMvt0vMb76fdW9Pg9kvq5plr6y8kc+4f3uveTrEj64tQA+LkjevYeRLj12x3E+"
-        "XLjsPhl7kj6vqCa+SdWqPq4wBz9A7Zo+HmahvmAukL3vvVW9LW7DPVbckr4uXgE/224Gv76fIT1+"
-        "+8K9EKsjvl74lTz+i0k9MwnbPq51ID/UDQG/prcoPjp6Ab8M9ZI9HvNnvjinmT0H8om+0ts2veVx"
-        "h747P6Q+DdIXP5A90T0F7o8+sGucvkJ4TD0dy4m91OXwvdva/j3KF6y+DTbhPEGqKb+0x5u89Jkw"
-        "Pv1Mdj7rff8+GcFOPux4lD6rKIm+nG/8vrKNM7wspbM9pU4nP7GJAr98T8C+Eo92vRGWmL6KIuG+"
-        "ywqCPQsP3D7gZiY9c95OPtgzjr4sR8Q99BgIvg8vrT2uBTu+JImZPvGRkz5HLzy+XEqLvnuYED40"
-        "ALm+VqAdvx92ZT4MnI0+XxFRPt/h+T7EpZE+TA6VPQhC1j0mZIk9r8wSv3LGA74fO40+kFjlPSWg"
-        "tT2Tm429IJhjvchAEj6CDPG+2AlAvpx91j68cAw9g3nnvtVgCD8UrBk+2xM5PuqSfb2hmIE+4lH4"
-        "vGn6SL2xRwO96GiFvnMTjz7+c24+Y+NLvg0qhr7OJyY94efsPGJZrr7Oh/69KmIhPqJcRr30//y+"
-        "7wAYvpOPIL7MlT+9pPSMvof8nL6bXL8+JjLqPsoVdD7/+mQ94Evkvrf2wDvHDGo+Rqa+PjiGVb4f"
-        "xaG9GL+yvsyw2j6KkaO9UUP1Pd82j7004gO9WV60uiLYQz67SbG+1xoIP+i3Pj41fw27keiQPmwU"
-        "Cj7mBAu9p3ibPpC35b1fN9a9h7WNvgzd8z41CWo+5084Pl4syT4kLgk/MKMGP8MbKT8Ccuc7s/5z"
-        "veE8yb08NKs9RpMWP9D6Vr2vG5a9s3qOvpKw/j2EwQ49M0hiPuVilD0yH4k9GGHDvGMJI7w4B4a9"
-        "Id4Hvkemkj1XqGs9OF5JvfgOjT4EaDi+pHiRPk+AFb+QUtc9U0rOPqtwC74o7kc/GGq6vZvTOL50"
-        "RZG+27opvmYqhT1arAO+twC8veTKirxhcys+1WQuPNM0Db/3CTm9fuaDvXmYaj4k9GE+6RJ2PnOU"
-        "rz59LYA9Ijkxv6ay5b5eJto9JTy5PUUEvjx1thI/2YKbPY4LRD/bHNU5qdi5PuHMnbxB8Ls+bNLW"
-        "Ph4/y72Lu7G+2QaGPkbyqj13Kde9EQBAPmP9rT5bwcO+2UQKvc/YY77JPsg9PQZcPkif+77/Jmc+"
-        "ae89vnvDCr9V7749p+WiviraIL0mFPo97MHCvD2Grb5PE3g9SN3wPX441r5uJ7A96g1GvKGEWD61"
-        "emw9OlmWvT7lED6eGyC+kHDkvULqvb4wySY/ZrINvnaGDb1NIe49TvsevqiNfT7x6r6+HdoUvrkZ"
-        "RL4zjrK+06wTP/rkxT2gggC/oRytPrO0GT7yvU29edCBvWVOlj6aMQk+XTZIvvKZjD0NdQM+CbSH"
-        "vU6Mvr73JKM+xFYKP6zr0bz+24u+siikvdM6Eb6oGj+9VXySPXqxVT60hY2+93YgPH4viT5k2pA+"
-        "IsKWPQC/lr1M5oa+W9GWveN8uT5CjUm9JaGJvplSNz4Nvyq5bJQLvxs+xz598MI+Y08dvhSnn75k"
-        "7Ak9ZgA3Ps/KA757Hau9/aQQv1xnRD6/Lno+hppWvjGg5r2l6f8+VrV1PYx6xj5mVwo+xtQivhcn"
-        "JLyNu7g9dRf/vYgx8j6ca7y8e8G3vUTqGj4frQU/8DGZvizxG73WpaY+8pAVPTJJHb3IaiU+9s0J"
-        "P7/D8T6zNRO+ojQRPm0Arz1ni127yC74vSKlBb49gbo+swoBP6BzgjymM7I9G+83Pqiczr3Q0wg8"
-        "w3jdPaSfXz5C2+E+XjmgvnSjHz6nIIq9+r+tOxXLb73flkm+ivCOPn+0jT6oBqI+tmtGPpng0T7j"
-        "FTe+4P/wPqdmZjxuOxy9b5cAvru6BD8LMr4+oaasvnnTXT3dHp29I/VdPtzZVj2YMIa+qwaDPmJh"
-        "Gj8Kt4K+Iu1HPnxoGz8G2LC9Lg8HvzIPsr2QU98+js1PPjSKnD7sKry9WMouPH7nsTtaAwo/l46c"
-        "PljnuL3NDf++OQMtPne3HL1qtIw+DzFkvjIH4DwKoP493IvHvtOCVjzdVzk+Ij8Kvimem75Ijjc8"
-        "XlqvPXYTj77u2I69ru74PWGcvj3cHyo9vZLUO6BDQz40CAa/G+c7PlMVUr1wJus+4BhGPsr0tT5c"
-        "URq+JZwWvu4rdD6wz5S+La6lvg7S8j7bTmU91B2cviY8vT5ZPGk9Il7Wvkc6/bzxW5O+ldyXvuSs"
-        "7T7Ur24+hx2Fvb0txj4vYq89g4fLPtRCtz5fi+c8B1i5PEukar0dHQw+07LbPsBiwzzSqN6+iiGj"
-        "u0LAij4EbC2+lCjaPqi0/L0CnHM+pUUgPj32Zb45xYe+YwnEvds4hL30i1M90ny1PsCqHj9HloM9"
-        "mu2xvuZqpz5WfE09EvrCvl6/Cb7szMo9UAKIPbrZDb+7tui9IHm6PL97rj5XHpY+6dmnvmORHr3T"
-        "Sai5sy3xPl27mz1StZU+aF4ovvR2Ej4qlHc8dgQhvxXzTT2UFH4++qw5PNGToj1LodC8zgrxPqaM"
-        "oL5Ihwq+HGBAvty4qb69HUS+Yx/5u15D9T5Dpjc+Od2gPnhh0b2G/Be+0iUVPISks75yJb2+s1Ep"
-        "PcjuPj22R4G+N8G5vWYsxL68tSu+xGsFPmDwi75ukRs+cii8vr2eyj3glIE90M1vvKQqZr44iBy+"
-        "KcsTvho8hL5eUhG81pdNvUG5Db8oML89upMovdzG/T1ZUle+vR8iv1Bg8DxSBBW+Z2krP74VmT6Y"
-        "Fqw+NYFUPG3gA74IBKC9ZGWfPd6Cvr6wQ0g+rKhCvqP62T2YG2C+6xeYvsRMVr286I8+zLRBPibF"
-        "Yj4+/6S+g1i1Pm47ID7Cr/8+iRjZPR1foj4YYT08A6f+PBDzkj5KW6O+4k8WviZlxD7dlLe9B5CO"
-        "PjhPjD7Vl2G95PB3vtbU9T43qrM9IGABPgdMpzuqryo9A/XTPJjJWb4+WLu9JDQoP8SAZ76SEZO8"
-        "a7CCPn7Nab7Z0Vw+0N73vQKTmj1v0ne9pmyGveklbT78dcQ972iMvfBhK7/Bc92+AupRvnCuRj5o"
-        "mf09ERikvv5Hpj5Eo6a+MdQgv452/j3ecLQ+DOOfvu8KpT7x97I+D80EPnTIEz6gO1y+1ZzhPejR"
-        "Y75p+bo9oW8RPkbKdb7W7jw+wqDcPej0KL8Ewe+9kSbHvnrUL701s9e+xVckPrNMgzx+vry+9V53"
-        "PupPkr0wISw+hxERPQhjGzzzI1i+JswMPr9KQjyHWpO9UXffvWnbJD4xQDa++hpQvhwEkD25JD0+"
-        "qpcxvvfEG74O1yM/YN8EPppa/D0LCBg/ojB1Pn5bPD0Ccb+7E2TzPZBPxj4LCMm+sFEMvyktmb50"
-        "YA6/OPx0vZr9O70GMbs9HhyBPry7hL5D9ki+D5JkvhrgcD0NcJ88Jo8LvuqNmb0Sj809I1Lavmx6"
-        "Z75mhKu9HL5APlQInr6F6z8+6diDPu0Qkz6odZW+"
-    ), dtype=np.float32).copy().reshape([128, 3, 3, 3]), 'n400_conv_w')
-    i_10 = numpy_helper.from_array(np.frombuffer(base64.b64decode(
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-    ), dtype=np.float32).copy().reshape([128]), 'n400_conv_b')
-    return [i_0, i_1, i_2, i_3, i_4, i_5, i_6, i_7, i_8, i_9, i_10]
+    return [i_0, i_1, i_2, i_3, i_4, i_5, i_6, i_7, i_8]
 
-# ------------------------------------------------------------------
-# Graph nodes
-# ------------------------------------------------------------------
-def _nodes() -> list:
+
+def _nodes():
     return [
         helper.make_node('Flatten', inputs=['model_input'], outputs=['n0_far_fl'], axis=2),
         helper.make_node('Reshape', inputs=['n0_far_fl', 'n0_far_b'], outputs=['n0_far_out']),
@@ -386,25 +126,18 @@ def _nodes() -> list:
         helper.make_node('BatchNormalization', inputs=['n100_mm4d_out', 'n200_bnr6_sc', 'n200_bnr6_b', 'n200_bnr6_m', 'n200_bnr6_v'], outputs=['n200_bnr6_bn'], epsilon=9.999999747378752e-06),
         helper.make_node('Clip', inputs=['n200_bnr6_bn', 'n200_bnr6_zero', 'n200_bnr6_six'], outputs=['n200_bnr6_out']),
         helper.make_node('CumSum', inputs=['n200_bnr6_out', 'n300_cs_ax'], outputs=['n300_cs_out']),
-        helper.make_node('Conv', inputs=['n300_cs_out', 'n400_conv_w', 'n400_conv_b'], outputs=['n400_conv_cv'], kernel_shape=[3, 3], pads=[1, 1, 1, 1]),
-        helper.make_node('Elu', inputs=['n400_conv_cv'], outputs=['n400_conv_out'], alpha=1.0),
     ]
 
-# ------------------------------------------------------------------
-# Model builder
-# ------------------------------------------------------------------
+
 def build_model() -> bytes:
     inputs_info  = [helper.make_tensor_value_info(INPUT_NAME, TensorProto.FLOAT, INPUT_SHAPE)]
-    outputs_info = [helper.make_tensor_value_info(OUTPUT_NAME, TensorProto.FLOAT, OUTPUT_SHAPE)]
-    graph = helper.make_graph(_nodes(), "bug_000424", inputs_info, outputs_info, initializer=_inits())
-    model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", OPSET)])
-    model.ir_version = IR_VERSION
-    return model.SerializeToString()
+    outputs_info = [helper.make_tensor_value_info(OUTPUT_NAME, TensorProto.FLOAT, None)]
+    g = helper.make_graph(_nodes(), "bug_000424_min", inputs_info, outputs_info, initializer=_inits())
+    m = helper.make_model(g, opset_imports=[helper.make_opsetid("", OPSET)])
+    m.ir_version = IR_VERSION
+    return m.SerializeToString()
 
 
-# ------------------------------------------------------------------
-# Input tensor (from the failing fuzzer sample)
-# ------------------------------------------------------------------
 def _input() -> np.ndarray:
     return np.frombuffer(base64.b64decode(
         "WucLPsL7tr/WUm6+Id/uvhdavb/ZP68+izeIPzHKqr445VG+nQvDvkIOlz+JKwRA3vxvvyIayj/q"
@@ -626,129 +359,86 @@ def _input() -> np.ndarray:
     ), dtype=np.float32).copy().reshape([1, 3, 32, 32])
 
 
-# ------------------------------------------------------------------
-# Reference: pure PyTorch eager via onnx2torch
-# ------------------------------------------------------------------
-def _ref_pytorch(model_bytes: bytes, x: np.ndarray) -> np.ndarray:
+def _ref_pytorch(mb, x):
     import torch, onnx2torch
-    m = onnx2torch.convert(onnx.load_from_string(model_bytes)).eval()
+    m = onnx2torch.convert(onnx.load_from_string(mb)).eval()
     with torch.no_grad():
         out = m(torch.from_numpy(x))
     if isinstance(out, (list, tuple)): out = out[0]
     return out.detach().cpu().float().numpy().ravel()
 
 
-def _rel_l2(a: np.ndarray, b: np.ndarray) -> float:
-    a = np.asarray(a, np.float64).ravel(); b = np.asarray(b, np.float64).ravel()
+def _rel_l2(a, b):
+    a = a.astype(np.float64).ravel(); b = b.astype(np.float64).ravel()
     return float(np.linalg.norm(a - b) / max(np.linalg.norm(a), np.linalg.norm(b), 1e-12))
 
 
-# ------------------------------------------------------------------
-# Backend drivers
-# ------------------------------------------------------------------
-def _run_onnxruntime(model_bytes, x):
-    import onnxruntime as ort
-    opts = ort.SessionOptions()
-    opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+def _run(backend, mb, x):
     try:
-        sess = ort.InferenceSession(model_bytes, opts, providers=["CPUExecutionProvider"])
-        return np.asarray(sess.run(None, {INPUT_NAME: x})[0]).ravel(), None
+        if backend == "onnxruntime":
+            import onnxruntime as ort
+            opts = ort.SessionOptions()
+            opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            sess = ort.InferenceSession(mb, opts, providers=["CPUExecutionProvider"])
+            return np.asarray(sess.run(None, {INPUT_NAME: x})[0]).ravel(), None
+        if backend == "openvino":
+            import openvino as ov
+            core = ov.Core()
+            compiled = core.compile_model(core.read_model(io.BytesIO(mb)), "CPU")
+            out = compiled([x])
+            return np.asarray(list(out.values())[0]).ravel(), None
+        if backend in ("tensorflow", "xla"):
+            sys.path.insert(0, "/home/binduan/myspace/trion")
+            from trion.oracle.tf_backend import TFBackend
+            r = TFBackend().run(onnx.load_from_string(mb), {INPUT_NAME: x}, optimized=(backend == "xla"))
+            return (r.output.ravel(), None) if r.output is not None else (None, r.error or "fail")
+        if backend == "tvm":
+            sys.path.insert(0, "/home/binduan/myspace/trion")
+            from trion.oracle.tvm_backend import TVMBackend
+            r = TVMBackend().run(onnx.load_from_string(mb), {INPUT_NAME: x}, optimized=True)
+            return (r.output.ravel(), None) if r.output is not None else (None, r.error or "fail")
+        if backend == "torchscript":
+            import torch, onnx2torch
+            m = onnx2torch.convert(onnx.load_from_string(mb)).eval()
+            t = torch.from_numpy(x)
+            scripted = torch.jit.trace(m, (t,))
+            frozen = torch.jit.optimize_for_inference(torch.jit.freeze(scripted))
+            with torch.no_grad():
+                out = frozen(t)
+            if isinstance(out, (list, tuple)): out = out[0]
+            return out.detach().numpy().ravel(), None
+        if backend == "torch_compile":
+            import torch, onnx2torch
+            m = onnx2torch.convert(onnx.load_from_string(mb)).eval()
+            compiled = torch.compile(m, mode="reduce-overhead", fullgraph=False)
+            with torch.no_grad():
+                out = compiled(torch.from_numpy(x))
+            if isinstance(out, (list, tuple)): out = out[0]
+            return out.detach().numpy().ravel(), None
     except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
+        return None, f"{type(e).__name__}: {str(e)[:100]}"
+    return None, "no driver"
 
 
-def _run_openvino(model_bytes, x):
+def main():
+    mb = build_model()
+    x = _input()
     try:
-        import openvino as ov
-        core = ov.Core()
-        compiled = core.compile_model(core.read_model(io.BytesIO(model_bytes)), "CPU")
-        out = compiled([x])
-        return np.asarray(list(out.values())[0]).ravel(), None
+        ref = _ref_pytorch(mb, x)
     except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
-
-
-def _run_tensorflow(model_bytes, x, *, jit=False):
-    try:
-        sys.path.insert(0, "/home/binduan/myspace/trion")
-        from trion.oracle.tf_backend import TFBackend
-        r = TFBackend().run(onnx.load_from_string(model_bytes), {INPUT_NAME: x}, optimized=jit)
-        if r.output is None: return None, (r.error or "run returned None")[:120]
-        return r.output.ravel(), None
-    except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
-
-
-def _run_xla(model_bytes, x):
-    return _run_tensorflow(model_bytes, x, jit=True)
-
-
-def _run_torchscript(model_bytes, x):
-    try:
-        import torch, onnx2torch
-        m = onnx2torch.convert(onnx.load_from_string(model_bytes)).eval()
-        t = torch.from_numpy(x)
-        scripted = torch.jit.trace(m, (t,))
-        frozen = torch.jit.optimize_for_inference(torch.jit.freeze(scripted))
-        with torch.no_grad():
-            out = frozen(t)
-        if isinstance(out, (list, tuple)): out = out[0]
-        return out.detach().cpu().float().numpy().ravel(), None
-    except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
-
-
-def _run_torch_compile(model_bytes, x):
-    try:
-        import torch, onnx2torch
-        m = onnx2torch.convert(onnx.load_from_string(model_bytes)).eval()
-        compiled = torch.compile(m, mode="reduce-overhead", fullgraph=False)
-        with torch.no_grad():
-            out = compiled(torch.from_numpy(x))
-        if isinstance(out, (list, tuple)): out = out[0]
-        return out.detach().cpu().float().numpy().ravel(), None
-    except Exception as e:
-        return None, f"{type(e).__name__}: {str(e)[:120]}"
-
-
-RUNNERS = {
-    "onnxruntime":   _run_onnxruntime,
-    "openvino":      _run_openvino,
-    "tensorflow":    _run_tensorflow,
-    "xla":           _run_xla,
-    "torchscript":   _run_torchscript,
-    "torch_compile": _run_torch_compile,
-}
-
-
-def main() -> int:
-    try:
-        model_bytes = build_model()
-        x = _input()
-        ref = _ref_pytorch(model_bytes, x)
-    except Exception as e:
-        print(f"setup failed: {type(e).__name__}: {e}"); return 2
-
-    print(f"Bug ID:    {__doc__.splitlines()[2].split(':',1)[1].strip()}")
-    print(f"Backends:  {BACKENDS}")
-    print(f"Tolerance: {TOLERANCE}")
-
+        print(f"ref failed: {e}"); return 2
     any_bug = False
-    for backend in BACKENDS:
-        run = RUNNERS.get(backend)
-        if run is None:
-            print(f"  [{backend}] no driver"); continue
-        out, err = run(model_bytes, x)
-        if err is not None:
-            print(f"  [{backend}] CRASH: {err}   →   BUG REPRODUCED")
-            any_bug = True
-            continue
-        diff = _rel_l2(out, ref)
-        verdict = "REPRODUCED" if diff > TOLERANCE else "ok"
-        print(f"  [{backend}] rel_L2 vs pytorch_ref = {diff:.4e}   →   {verdict}")
-        if diff > TOLERANCE:
-            any_bug = True
-
+    print(f"Bug ID: minimized")
+    print(f"Backends: {BACKENDS}  Tolerance: {TOLERANCE}")
+    for b in BACKENDS:
+        out, err = _run(b, mb, x)
+        if err:
+            print(f"  [{b}] CRASH: {err}   -> BUG REPRODUCED")
+            any_bug = True; continue
+        d = _rel_l2(out, ref)
+        verdict = "REPRODUCED" if d > TOLERANCE else "ok"
+        print(f"  [{b}] rel_L2 vs pytorch_ref = {d:.4e}   -> {verdict}")
+        if d > TOLERANCE: any_bug = True
     PASS = not any_bug
     print(f"PASS={PASS}")
     if not PASS:
