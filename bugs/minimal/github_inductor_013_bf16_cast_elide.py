@@ -3,6 +3,16 @@
 Bug ID     : github_inductor_013_bf16_cast_elide
 Source     : GitHub — pytorch/pytorch#179561 + independent verification 2026-04-14
 Compiler   : PyTorch Inductor (torch.compile, backend=inductor)
+Related    : Cross-compiler study 2026-04-14 found the SAME algebraic error in
+             two other JIT compilers (TF-XLA, JAX-jit) — see sibling scripts
+             github_tfxla_001_bf16_cast_elide.py and
+             github_jax_001_bf16_cast_elide.py; see cross_bf16_cast_jit_elide.py
+             for unified multi-compiler test.  All three apply
+                 Cast(T→U) ∘ Cast(U→T)  =  Identity(T)
+             without verifying precision(U) ≥ precision(T).  TF-XLA and JAX-jit
+             share the openxla/xla AlgebraicSimplifier (one XLA fix resolves
+             both).  PyTorch Inductor has an independent simplifier that
+             re-implemented the same incorrect rule.
 Patterns   : bfloat16→float32 cast round-trip precision
 Root cause : Inductor's constant-folding / cast-elimination pass treats the chain
              x.to(bfloat16).to(float32) as a no-op identity and strips both Cast

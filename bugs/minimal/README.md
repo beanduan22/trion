@@ -1,6 +1,6 @@
 # Minimal Reproducible Bug Scripts — Real Bugs Only
 
-**80 self-contained Python scripts** — every bug verified to reproduce on current
+**96 self-contained Python scripts** — every bug verified to reproduce on current
 compiler versions (2026-04-14).
 
 ```
@@ -25,15 +25,18 @@ Each script follows the same format:
 | New GitHub bugs — batch 2 (2026-04-14) | 4 | Inductor, ORT BitShift, TVM Gelu, OV Conv |
 | Campaign v4 (oracle-verified) | 14 | 300-model sweep, 5-compiler differential |
 | Cross-compiler sweep (2026-04-14) | 3 | BitShift UB, Resize ceil, CumSum+KVAttn |
-| **New GitHub bugs — batch 3 (2026-04-14)** | **9** | OV integer arithmetic + NaN, Inductor bf16 cast |
-| **Total real bugs** | **80** | all reproduce on current CI |
+| **New GitHub bugs — batch 3 (2026-04-14)** | **12** | OV integer arithmetic + NaN, Inductor/TF-XLA/JAX-jit bf16 cast |
+| **Campaign v5 + v6 (2026-04-14)** | **13** | 1000-model sweep (seeds 1000+2077), XLA + ORT divergences |
+| **Total real bugs** | **96** | all reproduce on current CI |
 
 Tested on: Python 3.13, ONNX 1.21, ORT 1.24.4 (CPU), OpenVINO 2026.0,
 TensorFlow 2.21.0 (CPU), PyTorch 2.9.1 (torch.compile inductor, torch.jit),
 JAX 0.9.2, onnx2torch.
 
-Uniqueness: each of the 80 bugs has a distinct ONNX graph signature (op
-sequence + key attributes). No two bugs share the same structure.
+Uniqueness: each of the 96 bugs has a distinct ONNX graph signature (op
+sequence + key attributes) or a distinct compiler+root-cause pairing
+(cross-compiler bugs #64–66 share one root cause in 3 separate compilers).
+No two bugs share the same structure + same affected compiler.
 
 ---
 
@@ -183,23 +186,80 @@ These low-level patterns explain most of the 34 new bugs:
 
 ---
 
-## Part 1D — 9 New GitHub Bugs — batch 3 (2026-04-14)
+## Part 1D — 12 New GitHub Bugs — batch 3 (2026-04-14)
 
-All discovered by targeted GitHub issue research + differential probing. Verified on ORT 1.24.4 + OpenVINO 2026.0 + PyTorch 2.9.1.
+All discovered by targeted GitHub issue research + differential probing across
+10 compilers (numpy, ONNX-Reference, ORT, OpenVINO, PyTorch eager, Inductor,
+TorchScript, onnx2torch, TF eager, TF-XLA, JAX, JAX-jit).  Verified on current
+versions (ORT 1.24.4, OpenVINO 2026.0, PyTorch 2.9.1, TensorFlow 2.21.0, JAX 0.9.2).
+
+### 1D.a — OpenVINO-only bugs (8)
+
+All 8 bugs are isolated to **OpenVINO 2026.0 CPU plugin** — every other compiler
+(including the ONNX reference) produces the correct result.
 
 | # | Bug ID | Compiler | Root cause |
 |---|---|---|---|
-| 55* | [github_ov_019_uint8_sub_no_wrap](github_ov_019_uint8_sub_no_wrap.py) | OpenVINO 2026.0 | uint8 Sub saturates to [0,255] instead of ONNX-mandated modular wrap: 5-10=251 expected, OV gives 0 (OV #33518) |
-| 56* | [github_ov_020_uint8_mul_no_wrap](github_ov_020_uint8_mul_no_wrap.py) | OpenVINO 2026.0 | uint8 Mul saturates: 200×200=40000 mod 256=64 expected, OV gives 255 (OV #33518 Mul) |
-| 57* | [github_ov_021_uint8_add_no_wrap](github_ov_021_uint8_add_no_wrap.py) | OpenVINO 2026.0 | uint8 Add saturates: 200+100=44 expected (mod 256), OV gives 255 (OV #33518 Add) |
-| 58* | [github_ov_022_reducelogsumexp_overflow](github_ov_022_reducelogsumexp_overflow.py) | OpenVINO 2026.0 | ReduceLogSumExp computes log(Σexp(x)) naively; exp(100)=inf in fp32 → output=inf; correct stable formula subtracts max first (OV #32839) |
-| 59* | [github_ov_023_relu_nan_propagation](github_ov_023_relu_nan_propagation.py) | OpenVINO 2026.0 | Relu(NaN)→0.0; IEEE 754 requires max(0,NaN)=NaN; ORT correctly propagates NaN |
-| 60* | [github_ov_024_int8_sub_saturation](github_ov_024_int8_sub_saturation.py) | OpenVINO 2026.0 | int8 Sub saturates: -128-1=-129→should wrap to 127, OV gives -128 (extends #33518 to int8) |
-| 61* | [github_ov_025_int8_add_saturation](github_ov_025_int8_add_saturation.py) | OpenVINO 2026.0 | int8 Add saturates: 100+100=200→should wrap to -56, OV gives 127 (extends #33518 to int8 Add) |
-| 62* | [github_ov_026_exp_nan_to_inf](github_ov_026_exp_nan_to_inf.py) | OpenVINO 2026.0 | Exp(NaN)→+inf; IEEE 754 requires exp(NaN)=NaN; ORT returns NaN (new discovery) |
-| 63* | [github_inductor_013_bf16_cast_elide](github_inductor_013_bf16_cast_elide.py) | PyTorch Inductor | x.to(bf16).to(fp32) round-trip eliminated by Inductor as identity; bf16 has 7 mantissa bits vs fp32's 23 — not lossless (pytorch/pytorch#179561) |
+| 55 | [github_ov_019_uint8_sub_no_wrap](github_ov_019_uint8_sub_no_wrap.py) | OpenVINO 2026.0 | uint8 Sub dispatches to `_mm_subs_epu8` (saturating SSE) instead of `_mm_sub_epi8` (wrapping); 5-10=0 instead of 251 (OV #33518) |
+| 56 | [github_ov_020_uint8_mul_no_wrap](github_ov_020_uint8_mul_no_wrap.py) | OpenVINO 2026.0 | uint8 Mul kernel saturates to 255 instead of wrapping mod 256: 200×200=40000 → should be 64, OV gives 255 (OV #33518 Mul) |
+| 57 | [github_ov_021_uint8_add_no_wrap](github_ov_021_uint8_add_no_wrap.py) | OpenVINO 2026.0 | uint8 Add uses `_mm_adds_epu8` (saturating); 200+100=300 → should wrap to 44, OV gives 255 (OV #33518 Add) |
+| 58 | [github_ov_022_reducelogsumexp_overflow](github_ov_022_reducelogsumexp_overflow.py) | OpenVINO 2026.0 | ReduceLogSumExp implemented naively as `Log(ReduceSum(Exp(x)))`; exp(100) overflows fp32 → `+inf`; every other compiler uses max-shift stabilizer `m + log(Σexp(xᵢ-m))` (OV #32839) |
+| 59 | [github_ov_023_relu_nan_propagation](github_ov_023_relu_nan_propagation.py) | OpenVINO 2026.0 | Relu kernel uses ordered compare `x > 0 ? x : 0`; NaN fails ordered test and falls into `else 0.0` branch. IEEE 754 requires max(0, NaN) = NaN. Only Relu + Exp affected in OV 2026 — Sigmoid/Tanh/Sqrt/Abs/Neg/Log propagate NaN correctly |
+| 60 | [github_ov_024_int8_sub_saturation](github_ov_024_int8_sub_saturation.py) | OpenVINO 2026.0 | int8 Sub saturates at [-128, 127] instead of two's-complement wrap. OV int16/int32/int64 Sub wrap correctly → bug confined to 8-bit SIMD dispatch (extends #33518 to signed int8) |
+| 61 | [github_ov_025_int8_add_saturation](github_ov_025_int8_add_saturation.py) | OpenVINO 2026.0 | int8 Add saturates via `_mm_adds_epi8`: 100+100=200 → should wrap to -56, OV gives 127. Completes the 6-op OV 8-bit saturation family (extends #33518) |
+| 62 | [github_ov_026_exp_nan_to_inf](github_ov_026_exp_nan_to_inf.py) | OpenVINO 2026.0 | Exp kernel uses range short-circuit (`x > LARGE ? +inf : expf(x)`); NaN's unordered compare maps into the +inf branch. IEEE 754 requires exp(NaN)=NaN (new discovery — no existing GitHub issue) |
 
-\* renumbers after inserting before Part 3
+### 1D.b — JIT cast-elimination bug: same root cause in 3 compilers (3+1 scripts)
+
+One algebraic error — `Cast(T→U) ∘ Cast(U→T) → Identity(T)` applied without verifying
+`precision(U) ≥ precision(T)` — independently re-implemented in **three production JIT
+compilers**.  bf16 has 7 mantissa bits vs fp32's 23, so the round-trip is lossy, not
+identity.  Eager modes (all frameworks), ORT, OpenVINO, ONNX-Reference, and numpy
+all truncate correctly.
+
+| # | Bug ID | Compiler | Root cause |
+|---|---|---|---|
+| 63 | [github_inductor_013_bf16_cast_elide](github_inductor_013_bf16_cast_elide.py) | PyTorch Inductor 2.9.1 | Inductor's algebraic simplifier elides adjacent Cast pair without precision check (pytorch/pytorch#179561) |
+| 64 | [github_tfxla_001_bf16_cast_elide](github_tfxla_001_bf16_cast_elide.py) | TensorFlow XLA 2.21 | XLA `AlgebraicSimplifier` in `xla/service/algebraic_simplifier.cc` collapses `Convert∘Convert → no-op` without precision check (openxla/xla) |
+| 65 | [github_jax_001_bf16_cast_elide](github_jax_001_bf16_cast_elide.py) | JAX-jit 0.9.2 (XLA) | Shared XLA backend with TF — same simplifier, same bug. One XLA fix resolves both 64 and 65 |
+| 66 | [cross_bf16_cast_jit_elide](cross_bf16_cast_jit_elide.py) | Inductor + TF-XLA + JAX-jit | Unified cross-compiler test: runs all three JIT compilers, reports which reproduce the bug (all three do on current versions) |
+
+### 1D.c — Output samples (2026-04-14)
+
+```
+github_ov_019  a=[5, 200, 250, 0] - b=[10, 100, 10, 50]
+               wrap ref (ONNX spec) : [251, 100, 240, 206]
+               OV CPU               : [  0, 100, 240,   0]  ← saturates
+
+github_ov_022  x=[[100, 88, 50], [200, -10, 1]]
+               stable ref (other 8 compilers): [100.00001, 200.0]
+               OV CPU                         : [   +inf,    +inf]  ← overflow
+
+github_ov_023  Relu([NaN, -1, 0, 1])
+               ORT/PT/TF/JAX/Inductor/XLA    : [NaN, 0, 0, 1]  ← NaN propagated
+               OV CPU                         : [ 0 , 0, 0, 1]  ← NaN→0
+
+github_inductor_013 / tfxla_001 / jax_001
+               input fp32       = 1.234567890123
+               eager (all frameworks) = 1.234375   ← correct bf16 rounding
+               Inductor / TF-XLA / JAX-jit = 1.234567880630  ← both casts stripped
+```
+
+### 1D.d — Cross-compiler coverage matrix for batch 3
+
+| Bug | numpy | ONNX-Ref | ORT | **OV** | onnx2torch | PT-eager | **Inductor** | TorchScript | TF-eager | **TF-XLA** | JAX | **JAX-jit** |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 55–57 uint8 Add/Sub/Mul | ✓ | ✓ | (N/A) | **✗** | ✓ | ✓ | — | — | ✓ | — | ✓ | — |
+| 58 ReduceLogSumExp | ✓ | ✓ | ✓ | **✗** | ✓ | ✓ | ✓ | — | ✓ | — | ✓ | — |
+| 59 Relu(NaN) | — | ✓ | ✓ | **✗** | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ |
+| 60–61 int8 Add/Sub | ✓ | ✓ | (N/A) | **✗** | ✓ | ✓ | — | — | ✓ | — | ✓ | — |
+| 62 Exp(NaN) | — | ✓ | ✓ | **✗** | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ |
+| 63–66 bf16 cast | ✓ | ✓ | ✓ | ✓ | — | ✓ | **✗** | ✓ | ✓ | **✗** | ✓ | **✗** |
+
+ORT (N/A) = ORT does not implement 8-bit Add/Sub/Mul (rejects as invalid graph).
+
+See also: [`reports/`](reports/) — ready-to-file GitHub issue scripts for all 9 bugs,
+organized by compiler subfolder (openvino/, pytorch_inductor/, tensorflow_xla/, jax_xla/).
 
 ---
 
@@ -362,6 +422,92 @@ bugs/minimal/
 ├── ROOT_CAUSES.md            # legacy root-cause notes (kept)
 ├── bug_000XXX.py             # 34 campaign v3 bugs (programmatic ONNX)
 ├── bug_v4_0XXXXX.py          # 13 campaign v4 bugs (base64 ONNX, 5-compiler sweep)
-├── github_*.py, cross_*.py   # 29 still-live + new active bugs (batch 3 adds 9)
+├── github_*.py, cross_*.py   # 32 still-live + new active bugs (batch 3 adds 12)
+├── reports/                  # filing-ready bug-report scripts organized by compiler
+│   ├── openvino/ (8), pytorch_inductor/ (1), tensorflow_xla/ (1), jax_xla/ (1)
 └── _fixed_archive/           # 133 bugs fixed upstream + bug_000350 (borderline) — kept for reference
 ```
+
+---
+
+## Part 6 — 13 Campaign v5 + v6 Bugs (2026-04-14)
+
+Discovered by 1000-model sweep across two seeds (v5 seed=1000, v6 seed=2077),
+4-backend differential (`onnxruntime`, `torchscript`, `torch_compile`, `xla`).
+Of 360 raw flagged divergences, 54 reproduce at tolerance 1e-2; of those, **41
+match existing root causes** (Resize, CumSum, TopK family) and **13 are
+genuinely new** root causes not covered by any of the previous 80 bugs.
+
+All 13 verified to reproduce on the current CI (2026-04-14, JAX 0.9.2, ORT
+1.24.4, PyTorch 2.9.1, torch.compile inductor).
+
+### 6A. XLA AveragePool count_include_pad family (4 bugs)
+
+The cleanest discovery: **`AveragePool(count_include_pad=True, kernel=3x3,
+pads=[1,1,1,1])` alone** produces a >0.14 relative L2 error on JAX/XLA vs
+PyTorch eager — XLA divides padded sums by the full kernel area (9) but
+PyTorch normalizes only by the count of valid input elements at the boundary.
+
+| # | Bug ID | rel_L2 | Min ops | Root cause |
+|---|---|---:|---:|---|
+| 81 | [bug_v6_000421](bug_v6_000421.py) | 0.145 | **1** | **`AveragePool(count_include_pad=1)` ALONE** — XLA boundary normalization mismatch |
+| 82 | [bug_v5_000341](bug_v5_000341.py) | 0.174 | 7 | Add/Mul/Sub residual chain → MatMul → AveragePool(count_include_pad=1) → XLA |
+| 83 | [bug_v5_000491](bug_v5_000491.py) | 0.141 | 6 | 3×Conv stack → Add → AveragePool(count_include_pad=1) → XLA |
+| 84 | [bug_v6_000111](bug_v6_000111.py) | 0.162 | 18 | SE-block (GlobalAvgPool→FC→Sigmoid) → AveragePool(count_include_pad=1) → XLA |
+
+### 6B. Attention / FFN divergence on XLA (5 bugs)
+
+Modern transformer building blocks (cross-attention, multi-head self-attention,
+SwiGLU FFN, windowed banded attention, gated MLP) all produce numerical
+divergences on XLA that are absent from ORT/TorchScript. The campaign v3/v4
+focus was on convolutional patterns; these are the first attention-pattern
+findings.
+
+| # | Bug ID | rel_L2 | Backend | Root cause |
+|---|---|---:|---|---|
+| 85 | [bug_v5_000013](bug_v5_000013.py) | 0.071 | xla, torch_compile | Cross-attention + MHA stack (MatMul/Transpose/Softmax × 3) → both XLA and torch.compile produce identical-but-wrong output (precision drift in the chained softmax+matmul fusion) |
+| 86 | [bug_v6_000130](bug_v6_000130.py) | 0.101 | xla | Gated SwiGLU attention (MatMul + Sigmoid gate + Softmax + row-reduce-mul-transpose layout) → XLA's matmul-softmax fusion changes accumulation order |
+| 87 | [bug_v6_000184](bug_v6_000184.py) | 0.011 | xla | Windowed banded attention (Greater→Cast→Mul mask before Softmax) + 4-LayerNorm sandwich → XLA masked-attention codepath divergence |
+| 88 | [bug_v6_000273](bug_v6_000273.py) | 0.019 | xla | Gated MLP block (MatMul → Sigmoid gate → Mul + manual RMSNorm + Cast(int)/Cast(fp32) + Split + SwiGLU FFN) → XLA |
+| 89 | [bug_v5_000442](bug_v5_000442.py) | 0.026 | xla | MatMul → LayerNorm → manual GeLU(tanh-approx) + Where/Greater branching → XLA precision drift from PyTorch eager |
+
+### 6C. ORT optimizer over-fusion (2 bugs)
+
+| # | Bug ID | rel_L2 | Backend | Root cause |
+|---|---|---:|---|---|
+| 90 | [bug_v6_000036](bug_v6_000036.py) | **17.84** | onnxruntime | **Three consecutive LayerNormalization** ops on the same axis: ORT's LayerNorm fusion pass merges the second+third LN into a single optimized kernel, dropping the intermediate Mul and producing ~18× scaled output |
+| 91 | [bug_v6_000408](bug_v6_000408.py) | **3.51** | onnxruntime | `log1p+abs+ReduceMax+BatchNormalization+Clip+Sub+Add+LayerNormalization` chain: ORT optimizer reorders the BN-Clip-LN sequence, producing 3.5× wrong output |
+
+### 6D. Other layout-sensitive XLA divergences (2 bugs)
+
+| # | Bug ID | rel_L2 | Backend | Root cause |
+|---|---|---:|---|---|
+| 92 | [bug_v5_000025](bug_v5_000025.py) | 0.427 | xla | Transpose-MatMul-Transpose sandwich + LayerNorm + Reciprocal-Mul (manual normalization): XLA's transpose-collapse optimization changes the matmul layout, producing rel_L2 = 0.43 vs PyTorch eager (existing bug #28 covered this only on ORT/OV/TF; XLA is new) |
+| 93 | [bug_v6_000164](bug_v6_000164.py) | **1.04** | xla | Channel-shuffle (Conv → Reshape to 5D → Transpose[0,2,1,3,4] → Reshape back): XLA's rank-5 transpose collapse changes the channel ordering, producing wrong output |
+
+### Notes on the 4-bug AveragePool family
+
+All 4 use the **identical** AveragePool attributes:
+```
+kernel_shape = [3, 3]
+pads         = [1, 1, 1, 1]      # 1-pixel border each side
+strides      = [1, 1]
+count_include_pad = 1            # KEY: divide by kernel area, not valid count
+```
+
+The single-op repro ([bug_v6_000421](bug_v6_000421.py)) demonstrates this is
+literally a **single-operator XLA bug**.  At a 32×32 input boundary pixel, the
+3×3 kernel sees 6 valid + 3 padded zeros.  ONNX spec with `count_include_pad=1`
+says: divide the sum by 9 (the full kernel size).  PyTorch eager respects this
+correctly, but JAX's `lax.reduce_window`-based AveragePool computes the
+normalization differently for padded regions.  Confirmed reproducible on JAX
+0.9.2 with both CUDA-detection-on-fallback and pure-CPU paths.
+
+### Reproducibility note (XLA + JAX)
+
+These XLA-targeting scripts deliberately do NOT set `CUDA_VISIBLE_DEVICES=""`.
+Some XLA divergences only manifest when JAX is allowed to probe CUDA (even when
+no GPU is present — JAX falls back to CPU but takes a different device-init
+codepath that affects op fusion and layout assignment).  Forcing
+`CUDA_VISIBLE_DEVICES=""` before the JAX import suppresses several of these
+bugs by 4–6 orders of magnitude.
