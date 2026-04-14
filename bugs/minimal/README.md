@@ -1,6 +1,6 @@
 # Minimal Reproducible Bug Scripts — Real Bugs Only
 
-**67 self-contained Python scripts** — every bug verified to reproduce on current
+**71 self-contained Python scripts** — every bug verified to reproduce on current
 compiler versions (2026-04-14).
 
 ```
@@ -23,14 +23,15 @@ Each script follows the same format:
 | Campaign v3 (oracle-verified) | 34 | newly discovered |
 | New GitHub bugs — batch 1 (2026-04-14) | 4 | TVM, OV GPU, OV fp16 matmul |
 | New GitHub bugs — batch 2 (2026-04-14) | 4 | Inductor, ORT BitShift, TVM Gelu, OV Conv |
-| Campaign v4 (oracle-verified) | 13 | 300-model sweep, 5-compiler differential |
-| **Total real bugs** | **67** | all reproduce on current CI |
+| Campaign v4 (oracle-verified) | 14 | 300-model sweep, 5-compiler differential |
+| Cross-compiler sweep (2026-04-14) | 3 | BitShift UB, Resize ceil, CumSum+KVAttn |
+| **Total real bugs** | **71** | all reproduce on current CI |
 
 Tested on: Python 3.13, ONNX 1.21, ORT 1.24.4 (CPU), OpenVINO 2026.0,
 TensorFlow 2.21.0 (CPU), PyTorch 2.9.1 (torch.compile inductor, torch.jit),
 JAX 0.9.2, onnx2torch.
 
-Uniqueness: each of the 67 bugs has a distinct ONNX graph signature (op
+Uniqueness: each of the 71 bugs has a distinct ONNX graph signature (op
 sequence + key attributes). No two bugs share the same structure.
 
 ---
@@ -181,7 +182,7 @@ These low-level patterns explain most of the 34 new bugs:
 
 ---
 
-## Part 3 — 13 Campaign v4 Bugs (2026-04-14)
+## Part 3 — 14 Campaign v4 Bugs (2026-04-14)
 
 Oracle-verified by 300-model 5-compiler differential sweep (seed 900).
 All use `pytorch_eager` (via onnx2torch) as reference; failure = `rel_L2 > 0.01`.
@@ -208,6 +209,25 @@ All use `pytorch_eager` (via onnx2torch) as reference; failure = `rel_L2 > 0.01`
 | 65 | [bug_v4_000055](bug_v4_000055.py) | 0.07 | Parallel MaxPool+AvgPool + reflect-Pad+Conv + Sub-Mul-Add + Resize(cubic,half_pixel) + Unsqueeze-Expand-Mul |
 | 66 | [bug_v4_000234](bug_v4_000234.py) | 0.94 | Conv+BN+Elu + CumSum + padded-grouped-Conv + ASPP dilated branches + Swish(explicit Sigmoid) |
 | 67 | [bug_v4_000254](bug_v4_000254.py) | 0.18 | Transpose-Conv(NHWC) + AvgPool(count_include_pad) + Pow(canonical) + ceil-mode-AvgPool+Conv + batched-MatMul |
+
+### 3C. OpenVINO + TVM + XLA divergence (1)
+
+| # | Bug ID | rel_L2 | Failing | Patterns |
+|---|---|---:|---|---|
+| 68 | [bug_v4_000041](bug_v4_000041.py) | 1.00 | OpenVINO, TVM, XLA | LayerNorm+Dropout + TopK(k=1)+Tile + Abs/Mul + Gather/Slice/Expand + LayerNorm+Relu (sparse one-hot propagation through normalization) |
+
+---
+
+## Part 4 — 3 Cross-Compiler Sweep Bugs (2026-04-14)
+
+Derived from the campaign v4 cross-compiler sweep: each script demonstrates a bug
+that reproduces on multiple distinct backends (beyond its originally-discovered compiler).
+
+| # | Bug ID | Failing compilers | max_diff | Root cause |
+|---|---|---|---:|---|
+| 69 | [cross_bitshift_shift64_ov_ort](cross_bitshift_shift64_ov_ort.py) | ORT (RIGHT+LEFT), OpenVINO (LEFT) | 2147483648 | BitShift by 64 on uint64: C UB — x86 SHRQ masks shift count to 6 bits, so `x>>64` = `x>>0` = x; LEFT shift by 64 overflows to 2^31 on OV |
+| 70 | [cross_crms_resize_nearest_ceil](cross_crms_resize_nearest_ceil.py) | TorchScript (onnx2torch) | 5.33 | `Resize(nearest, half_pixel, nearest_mode=ceil)`: onnx2torch ignores `nearest_mode=ceil` and uses PyTorch's floor-based nearest, choosing wrong source pixel at every other destination pixel |
+| 71 | [cross_cumsum_kvcache_multicompiler](cross_cumsum_kvcache_multicompiler.py) | OpenVINO 2026.0 | 0.16 | CumSum(axis=2) + SE-block + self-attention: OV's optimized kernel path for CumSum+ReduceMean accumulates fp32 in a different order than ORT, error amplified by softmax attention |
 
 ### Notes on extreme divergence (bugs 61, 62)
 
