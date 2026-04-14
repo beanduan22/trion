@@ -1,6 +1,6 @@
 # Minimal Reproducible Bug Scripts — Real Bugs Only
 
-**50 self-contained Python scripts** — every bug verified to reproduce on current
+**67 self-contained Python scripts** — every bug verified to reproduce on current
 compiler versions (2026-04-14).
 
 ```
@@ -21,14 +21,16 @@ Each script follows the same format:
 |---|---:|---|
 | Still-live GitHub / cross-compiler bugs | 12 | carried over from prior campaigns |
 | Campaign v3 (oracle-verified) | 34 | newly discovered |
-| New GitHub bugs (2026-04-14) | 4 | from github_bugs search + cross-compiler sweep |
-| **Total real bugs** | **50** | all reproduce on current CI |
+| New GitHub bugs — batch 1 (2026-04-14) | 4 | TVM, OV GPU, OV fp16 matmul |
+| New GitHub bugs — batch 2 (2026-04-14) | 4 | Inductor, ORT BitShift, TVM Gelu, OV Conv |
+| Campaign v4 (oracle-verified) | 13 | 300-model sweep, 5-compiler differential |
+| **Total real bugs** | **67** | all reproduce on current CI |
 
 Tested on: Python 3.13, ONNX 1.21, ORT 1.24.4 (CPU), OpenVINO 2026.0,
 TensorFlow 2.21.0 (CPU), PyTorch 2.9.1 (torch.compile inductor, torch.jit),
 JAX 0.9.2, onnx2torch.
 
-Uniqueness: each of the 50 bugs has a distinct ONNX graph signature (op
+Uniqueness: each of the 67 bugs has a distinct ONNX graph signature (op
 sequence + key attributes). No two bugs share the same structure.
 
 ---
@@ -166,6 +168,58 @@ These low-level patterns explain most of the 34 new bugs:
 7. **Transpose–MatMul–Transpose** sandwich — optimizers wrongly collapse transposes.
 8. **`Greater` + `Cast(bool→fp32)`** mask + MatMul — TF miscomputes broadcast.
 
+---
+
+## Part 1C — 4 New GitHub + Cross-Compiler Bugs — batch 2 (2026-04-14)
+
+| # | Bug ID | Compiler | max_diff | Status | Root cause |
+|---|---|---|---|---|---|
+| 51 | [github_inductor_009_transpose_reduce_fusion](github_inductor_009_transpose_reduce_fusion.py) | Inductor CPU | 1.53e-05 | **ACTIVE** | Inductor fuses row-wise reduce + pointwise mul + transpose(); reinterprets storage strides as if tensor were already transposed — constant 2^-16 error on attention-grad-like patterns (pytorch/pytorch#146416) |
+| 52 | [github_inductor_011_bitshift_ub_shift64](github_inductor_011_bitshift_ub_shift64.py) | ORT + Inductor | 1000 | **ACTIVE** | C UB: `x >> 64` on x86 masks shift count to 6 bits → `x >> 0 = x` instead of 0; ORT's ONNX BitShift op also affected — `[1000,255] >> [64,64]` returns `[1000,255]` (pytorch/pytorch#143555, also ORT) |
+| 53 | [github_tvm_012_gelu_approx_tanh](github_tvm_012_gelu_approx_tanh.py) | TVM Relax | 2.18e-04 | **ACTIVE** | TVM's ONNX frontend ignores `approximate="tanh"` attribute on opset-20 Gelu; maps to exact erf formula — systematic error >1e-4 for all activations (apache/tvm#18750) |
+| 54 | [cross_openvino_conv_fp32_precision](cross_openvino_conv_fp32_precision.py) | OpenVINO 2026.0 | 0.054 | **ACTIVE** | OV CPU plugin selects Winograd/tiled-GEMM for float32 Conv; different accumulation order produces 0.054 max diff vs ORT direct-conv (3×3) and 0.083 for 5×5 kernel |
+
+---
+
+## Part 3 — 13 Campaign v4 Bugs (2026-04-14)
+
+Oracle-verified by 300-model 5-compiler differential sweep (seed 900).
+All use `pytorch_eager` (via onnx2torch) as reference; failure = `rel_L2 > 0.01`.
+
+### 3A. ORT optimizer divergence from PyTorch (9)
+
+| # | Bug ID | rel_L2 | Failing | Patterns |
+|---|---|---:|---|---|
+| 55 | [bug_v4_000035](bug_v4_000035.py) | 0.92 | ORT_opt | LayerNorm + Dropout(identity) + Squeeze/Unsqueeze + ReduceL2 + reshape-LayerNorm + GLU |
+| 56 | [bug_v4_000048](bug_v4_000048.py) | 1.04 | ORT_opt | CumSum(axis=3/spatial) + Conv + BN + ReLU + MaxPool + MatMul×2 + InstanceNorm |
+| 57 | [bug_v4_000078](bug_v4_000078.py) | 1.00 | ORT_opt | cRMS-norm + Resize(nearest,ceil) + LayerNorm-gate + batched-MatMul + identity-Transpose |
+| 58 | [bug_v4_000135](bug_v4_000135.py) | 0.15 | ORT_opt | Stable-softmax (ReduceMax-Sub-Exp-Div) + AvgPool + Gather(channel) + reshape-GroupNorm + Relu |
+| 59 | [bug_v4_000151](bug_v4_000151.py) | 1.84 | ORT_opt | Add-zero(identity) + CumSum + Mul-add-mul chain + SE-block + KV-cache attention |
+| 60 | [bug_v4_000186](bug_v4_000186.py) | 1.43 | ORT_opt | identity-chain + Conv+Tanh + concat-conv + CumSum + global-branch-mul |
+| 61 | [bug_v4_000198](bug_v4_000198.py) | 3.53e5 | ORT_opt | MatMul+bias+Sigmoid + residual-relu + TopK(axis=0)+Tile → self-add×3 → LayerNorm(ε≈0) + Div(temp) |
+| 62 | [bug_v4_000223](bug_v4_000223.py) | 4.72e4 | ORT_opt | Gather(3)+Reshape + TopK(k=1)+Tile + L1-norm + Mul/Add chain + LayerNorm + Div(temp=2.25) |
+| 63 | [bug_v4_000290](bug_v4_000290.py) | 1.53 | ORT_opt | Abs+SiLU + CumSum(axis=2) + Sigmoid+SiLU + MatMul+scale + Clip(-100,100)+Cast(int)+Cast(fp32)+Mul |
+
+### 3B. TorchScript (jit) divergence from PyTorch eager (4)
+
+| # | Bug ID | rel_L2 | Patterns |
+|---|---|---:|---|
+| 64 | [bug_v4_000036](bug_v4_000036.py) | 0.31 | MatMul×3 + Resize(cubic,half_pixel) + Concat-with-zero |
+| 65 | [bug_v4_000055](bug_v4_000055.py) | 0.07 | Parallel MaxPool+AvgPool + reflect-Pad+Conv + Sub-Mul-Add + Resize(cubic,half_pixel) + Unsqueeze-Expand-Mul |
+| 66 | [bug_v4_000234](bug_v4_000234.py) | 0.94 | Conv+BN+Elu + CumSum + padded-grouped-Conv + ASPP dilated branches + Swish(explicit Sigmoid) |
+| 67 | [bug_v4_000254](bug_v4_000254.py) | 0.18 | Transpose-Conv(NHWC) + AvgPool(count_include_pad) + Pow(canonical) + ceil-mode-AvgPool+Conv + batched-MatMul |
+
+### Notes on extreme divergence (bugs 61, 62)
+
+`bug_v4_000198` and `bug_v4_000223` produce rel_L2 in the 10^4–10^5 range.
+Both use a **LayerNorm with near-zero variance** (all-same input from TopK+Tile)
+followed by a **temperature division**.  When all elements are identical,
+LayerNorm variance → 0 and the normalization output is numerically unstable
+(depends on epsilon).  ORT and PyTorch use different epsilon handling → cascade to
+catastrophic amplification in the downstream Div.
+
+---
+
 ## How to run
 
 ```bash
@@ -193,6 +247,7 @@ bugs/minimal/
 ├── README.md                 # this file
 ├── ROOT_CAUSES.md            # legacy root-cause notes (kept)
 ├── bug_000XXX.py             # 34 campaign v3 bugs (programmatic ONNX)
-├── github_*.py, cross_*.py   # 16 still-live + new active bugs
+├── bug_v4_0XXXXX.py          # 13 campaign v4 bugs (base64 ONNX, 5-compiler sweep)
+├── github_*.py, cross_*.py   # 20 still-live + new active bugs
 └── _fixed_archive/           # 133 bugs fixed upstream + bug_000350 (borderline) — kept for reference
 ```
