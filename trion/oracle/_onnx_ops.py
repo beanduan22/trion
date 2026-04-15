@@ -187,9 +187,14 @@ def dispatch_op(node, values: dict, F) -> list:
         # values are a rare edge case and the spec explicitly leaves the
         # behaviour implementation-defined; both ORT and JAX agree on
         # in-range values, which covers ~all real-world traffic.
-        _NARROW_INT = (np.int8, np.uint8, np.int16, np.uint16)
-        if np.issubdtype(dtype, np.integer) and dtype.type in _NARROW_INT:
-            info = np.iinfo(dtype)
+        # `dtype` is a numpy *type class* (np.int8, np.int32, ...), not an
+        # instance. Type classes expose no `.type` attribute, so the earlier
+        # check `dtype.type in _NARROW_INT` raised AttributeError whenever a
+        # model contained Cast(float→int). Compare against the type objects
+        # themselves instead.
+        _NARROW_INT_TYPES = {np.int8, np.uint8, np.int16, np.uint16}
+        if np.issubdtype(dtype, np.integer) and dtype in _NARROW_INT_TYPES:
+            info = np.iinfo(np.dtype(dtype))
             span = int(info.max) - int(info.min) + 1   # ≤ 65536
             x_int = (F.where(x >= np.float32(0.0), F.floor(x), F.ceil(x))
                      if hasattr(F, "where") and hasattr(F, "ceil")

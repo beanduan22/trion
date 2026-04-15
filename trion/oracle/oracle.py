@@ -333,6 +333,36 @@ class DiscrepancyOracle:
             if warning is not None:
                 report.shared_infra_warning = warning
 
+        # Extra triage: if ≥2 members of any SHARED_INFRA group CRASHED
+        # (rather than merely agreeing on a wrong value), the surviving
+        # targets may include torch_compile-via-onnx2torch, whose converter
+        # can silently mis-translate the very ops that made the dispatch
+        # group crash. Flag this pattern so downstream classification
+        # treats the score as untrusted. Example from the 500-model run:
+        # 9/14 "bugs" were models with ReduceL1 → xla/tflite/tvm all fail
+        # "Unsupported ONNX op: ReduceL1" in _onnx_ops dispatch, leaving
+        # openvino/onnxruntime/torch_compile, where torch_compile produced
+        # wrong output via onnx2torch's ReduceL1 converter — the score was
+        # NOT a real Inductor bug.
+        if report.total_score > 0.0 and report.shared_infra_warning is None:
+            crashed = {
+                label.rsplit("+opt", 1)[0]
+                for label in report.crashes
+                if label.endswith("+opt")
+            }
+            for group, infra_label in SHARED_INFRA.items():
+                group_crashed = [g for g in group if g in crashed]
+                if len(group_crashed) >= 2:
+                    report.shared_infra_warning = (
+                        f"{sorted(group_crashed)} (sharing {infra_label}) "
+                        "all crashed on this model; score computed on the "
+                        "surviving targets may reflect the converter of "
+                        "whichever surviving backend depends on onnx2torch "
+                        "or a similar bridge. Inspect the error messages "
+                        "in report.errors before filing a compiler bug."
+                    )
+                    break
+
         # For back-compat with downstream code that expected the old fields.
         report.s_diff = {name: report.total_score for name, _ in valid}
         if valid:
