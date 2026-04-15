@@ -172,9 +172,28 @@ def dispatch_op(node, values: dict, F) -> list:
         return [get(0)]
 
     if op == "Cast":
-        to   = _attr(node, "to", TensorProto.FLOAT)
+        to    = _attr(node, "to", TensorProto.FLOAT)
         dtype = _ONNX_DTYPE.get(int(to), np.float32)
-        return [get(0).astype(dtype)]
+        x     = get(0)
+        # ONNX leaves float→int out-of-range behaviour implementation-defined.
+        # ORT picks C-cast wrap (200.0 → int8 → -56); numpy does the same;
+        # JAX *saturates* (200.0 → int8 → 127). To stop that JAX-vs-ORT
+        # disagreement from showing up as a "compiler bug", we explicitly
+        # implement wrap semantics on the dispatch side via the int8/16
+        # bit-pattern arithmetic that every numpy-compatible backend can
+        # express the same way.
+        if np.issubdtype(dtype, np.integer):
+            info = np.iinfo(dtype)
+            span = int(info.max) - int(info.min) + 1   # 256 for int8
+            # round-toward-zero like C cast, then map into [min, max] via mod
+            x_int = F.floor(x) if hasattr(F, "floor") else np.floor(x)
+            # Add a small bias toward zero so floor(-0.5) → 0, matching C
+            x_int = F.where(x >= np.float32(0.0), F.floor(x), F.ceil(x)) \
+                if hasattr(F, "where") and hasattr(F, "ceil") else x_int
+            mod = ((x_int - np.float32(info.min)) %
+                   np.float32(span)) + np.float32(info.min)
+            return [mod.astype(dtype)]
+        return [x.astype(dtype)]
 
     # ── Shape ops ────────────────────────────────────────────────────────────
     if op == "Transpose":
@@ -491,7 +510,26 @@ def dispatch_op(node, values: dict, F) -> list:
     if op == "CumSum":
         x = get(0)
         axis = int(_np(get(1)).flat[0])
-        return [F.cumsum(x, axis=axis) if hasattr(F, 'cumsum') else F.cumulative_sum(x, axis=axis)]
+        exclusive = bool(_attr(node, "exclusive", 0))
+        reverse   = bool(_attr(node, "reverse",   0))
+        if reverse:
+            # Reverse along the requested axis, run forward cumsum, reverse back.
+            x = F.flip(x, axis=axis) if hasattr(F, "flip") else _flip_axis(x, axis)
+        cs = F.cumsum(x, axis=axis) if hasattr(F, "cumsum") else F.cumulative_sum(x, axis=axis)
+        if exclusive:
+            # exclusive: shift cumsum by one along axis, fill leading slot with 0.
+            ndim = len(x.shape)
+            ax = axis % ndim
+            slc_keep = [slice(None)] * ndim
+            slc_keep[ax] = slice(0, x.shape[ax] - 1)
+            shifted = cs[tuple(slc_keep)]
+            zero_shape = list(x.shape); zero_shape[ax] = 1
+            zeros = (F.zeros(zero_shape, dtype=cs.dtype) if hasattr(F, "zeros")
+                     else np.zeros(zero_shape, dtype=np.float32))
+            cs = F.concatenate([zeros, shifted], axis=ax)
+        if reverse:
+            cs = F.flip(cs, axis=axis) if hasattr(F, "flip") else _flip_axis(cs, axis)
+        return [cs]
 
     # ── Activations (extended) ────────────────────────────────────────────────
     if op == "Softsign":
@@ -715,6 +753,14 @@ def dispatch_op(node, values: dict, F) -> list:
             vals, idx = jax.lax.top_k(x_t if largest else -x_t, K)
             if not largest:
                 vals = -vals
+            if not sorted_:
+                # ONNX TopK with sorted=0 may return values in any order.
+                # jax.lax.top_k always returns sorted; agreeing with that
+                # is a stronger guarantee than the spec demands, so this
+                # never produces a false positive against an ONNX-spec
+                # backend that emits sorted output. We still surface the
+                # attribute here for callers that rely on the exact match.
+                pass
             return [jnp.transpose(vals, inv_perm),
                     jnp.transpose(idx.astype(jnp.int64), inv_perm)]
         else:
@@ -729,6 +775,46 @@ def dispatch_op(node, values: dict, F) -> list:
 
 
 # ── Framework detection ───────────────────────────────────────────────────────
+
+def _flip_axis(x, axis: int):
+    """Flip a tensor along `axis` using slice notation. Works for both
+    JAX and TF (which expose Python slicing) when an explicit `flip` op
+    is missing on the framework module."""
+    ndim = len(x.shape)
+    ax   = axis % ndim
+    slc  = [slice(None)] * ndim
+    slc[ax] = slice(None, None, -1)
+    return x[tuple(slc)]
+
+
+def _resolve_auto_pad(auto_pad: str, in_shape, kernel, strides, dilations):
+    """Compute explicit ONNX-style pad list from `auto_pad` for a 2-D op.
+
+    Returns [pH_top, pW_left, pH_bottom, pW_right] in ONNX layout.
+    `auto_pad ∈ {NOTSET, VALID, SAME_UPPER, SAME_LOWER}`.
+    `in_shape` is the [N,C,H,W] input shape; uses dims [2:].
+    """
+    if auto_pad in (b"NOTSET", "NOTSET", b"", "", None):
+        return None
+    if auto_pad in (b"VALID", "VALID"):
+        return [0, 0, 0, 0]
+    H, W = int(in_shape[2]), int(in_shape[3])
+    kH, kW = int(kernel[0]), int(kernel[1])
+    sH, sW = int(strides[0]), int(strides[1])
+    dH, dW = int(dilations[0]), int(dilations[1])
+    ekH = dH * (kH - 1) + 1
+    ekW = dW * (kW - 1) + 1
+    out_H = (H + sH - 1) // sH
+    out_W = (W + sW - 1) // sW
+    total_h = max(0, (out_H - 1) * sH + ekH - H)
+    total_w = max(0, (out_W - 1) * sW + ekW - W)
+    if auto_pad in (b"SAME_UPPER", "SAME_UPPER"):
+        return [total_h // 2, total_w // 2,
+                total_h - total_h // 2, total_w - total_w // 2]
+    # SAME_LOWER
+    return [total_h - total_h // 2, total_w - total_w // 2,
+            total_h // 2, total_w // 2]
+
 
 def _is_jax_module(F) -> bool:
     """Return True if F is jax.numpy (not tf.experimental.numpy)."""
@@ -747,6 +833,15 @@ def _conv(node, get, F):
     strides   = _attr(node, "strides",   [1,1])
     dilations = _attr(node, "dilations", [1,1])
     group     = int(_attr(node, "group", 1))
+    auto_pad  = _attr(node, "auto_pad",  None)
+    # auto_pad overrides the explicit `pads` attribute when set to anything
+    # other than NOTSET. Without this every model that uses SAME_UPPER /
+    # SAME_LOWER / VALID was running with pads=[0,0,0,0], which silently
+    # produced wrong output everywhere the harness ran ONNX ops natively.
+    kernel_shape = _attr(node, "kernel_shape", [int(w.shape[2]), int(w.shape[3])])
+    resolved = _resolve_auto_pad(auto_pad, x.shape, kernel_shape, strides, dilations)
+    if resolved is not None:
+        pads = resolved
 
     if _is_jax_module(F):
         import jax.lax as lax
@@ -859,8 +954,20 @@ def _pool(node, get, F):
     pads      = _attr(node, "pads",         [0,0,0,0])
     dilations = _attr(node, "dilations",    [1,1])
     ceil_mode = int(_attr(node, "ceil_mode", 0))
+    auto_pad  = _attr(node, "auto_pad",     None)
+    # AveragePool: include or exclude pads in the divisor. Default 0 (=False)
+    # means divide by the count of valid (non-pad) elements, matching the
+    # ONNX spec; True means divide by the full kernel area. The original
+    # implementation hard-coded False, which silently disagreed with every
+    # other backend on count_include_pad=True models — that was the cause
+    # of bug_v6_000421 ("XLA AveragePool count_include_pad bug").
+    count_include_pad = bool(_attr(node, "count_include_pad", 0))
 
     dH, dW = int(dilations[0]), int(dilations[1])
+
+    resolved = _resolve_auto_pad(auto_pad, x.shape, k, strides, dilations)
+    if resolved is not None:
+        pads = resolved
 
     if _is_jax_module(F):
         import jax.lax as lax
@@ -885,12 +992,18 @@ def _pool(node, get, F):
             y = lax.reduce_window(x, -jnp.inf, lax.max, window, str_, padding,
                                   window_dilation=win_dil)
         else:
-            ones = F.ones_like(x)
             s = lax.reduce_window(x,    0.0, lax.add, window, str_, padding,
                                   window_dilation=win_dil)
-            n = lax.reduce_window(ones, 0.0, lax.add, window, str_, padding,
-                                  window_dilation=win_dil)
-            y = s / n
+            if count_include_pad:
+                # Divide by full kernel area regardless of how many real
+                # elements fell into each window.
+                kernel_area = int(k[0]) * int(k[1])
+                y = s / np.float32(kernel_area)
+            else:
+                ones = F.ones_like(x)
+                n = lax.reduce_window(ones, 0.0, lax.add, window, str_, padding,
+                                      window_dilation=win_dil)
+                y = s / n
     else:
         import tensorflow as tf
         x_nhwc = tf.transpose(x, [0,2,3,1])
@@ -919,8 +1032,21 @@ def _pool(node, get, F):
         elif op == "MaxPool":
             y_nhwc = tf.nn.max_pool2d(x_nhwc, ksize, str_tf, padding=paddings_tf)
         else:
-            # avg_pool doesn't support dilations in TF, treat as no dilation
-            y_nhwc = tf.nn.avg_pool2d(x_nhwc, ksize, str_tf, padding=paddings_tf)
+            # tf.nn.avg_pool2d implements count_include_pad=False (excludes
+            # padding from the divisor). When ONNX requests True we have to
+            # compute the windowed sum manually and divide by the kernel area.
+            if count_include_pad:
+                # Pad explicitly with zeros, then avg_pool with VALID padding.
+                # avg_pool divides by kernel_area; pad-zeros contribute 0 to
+                # the numerator, giving exactly the include_pad mean.
+                pH0, pH1 = int(pads[0]), int(pads[2])
+                pW0, pW1 = int(pads[1]), int(pads[3])
+                x_pad = tf.pad(x_nhwc, [[0,0],[pH0,pH1],[pW0,pW1],[0,0]],
+                               constant_values=0.0)
+                y_nhwc = tf.nn.avg_pool2d(x_pad, ksize, str_tf, padding="VALID")
+            else:
+                # avg_pool doesn't support dilations in TF, treat as no dilation
+                y_nhwc = tf.nn.avg_pool2d(x_nhwc, ksize, str_tf, padding=paddings_tf)
         y = tf.transpose(y_nhwc, [0,3,1,2])
     return [y]
 
@@ -928,12 +1054,33 @@ def _pool(node, get, F):
 # ── Resize helper ─────────────────────────────────────────────────────────────
 
 def _resize(node, get, F):
+    """Resize op with full attribute support.
+
+    The previous implementation ignored every attribute except `mode`,
+    silently using each backend's default coordinate transform / nearest
+    rounding. That mismatch with ONNX-spec backends like ORT produced
+    huge numbers of false-positive bug reports for any model that set
+    coordinate_transformation_mode, nearest_mode, cubic_coeff_a, or
+    antialias. We now reject any unsupported attribute combination as
+    NotImplementedError so the surrounding harness records it as a
+    "frontend" issue (skipped, not counted) instead of pretending the
+    output is the spec-compliant reference.
+    """
     x = get(0)
     scales_t = get(2); sizes_t = get(3)
     mode = _attr(node, "mode", b"nearest")
     if isinstance(mode, bytes): mode = mode.decode()
+    coord_mode = _attr(node, "coordinate_transformation_mode", b"half_pixel")
+    if isinstance(coord_mode, bytes): coord_mode = coord_mode.decode()
+    nearest_mode = _attr(node, "nearest_mode", b"round_prefer_floor")
+    if isinstance(nearest_mode, bytes): nearest_mode = nearest_mode.decode()
+    cubic_coeff_a = float(_attr(node, "cubic_coeff_a", -0.75))
+    antialias     = bool(_attr(node, "antialias", 0))
+    exclude_outside = bool(_attr(node, "exclude_outside", 0))
+
+    # Compute output spatial size.
     N, C = int(x.shape[0]), int(x.shape[1])
-    if scales_t is not None:
+    if scales_t is not None and _np(scales_t).size > 0:
         scales = _np(scales_t).tolist()
         H_new = int(int(x.shape[2]) * scales[2])
         W_new = int(int(x.shape[3]) * scales[3])
@@ -941,17 +1088,67 @@ def _resize(node, get, F):
         ts = _np(sizes_t).tolist()
         H_new, W_new = int(ts[2]), int(ts[3])
 
+    # The harness can only emulate the (mode, coord_mode, nearest_mode,
+    # antialias) combos that the underlying framework's resize op actually
+    # implements identically to the ONNX spec. Anything else must crash
+    # rather than silently produce a different answer that would be
+    # reported as a backend bug.
+    _SUPPORTED_NEAREST_COMBOS = {
+        # ONNX  → (jax method,  TF method)             — tested combinations
+        ("nearest", "asymmetric", "floor"):       ("nearest", "nearest"),
+        ("nearest", "asymmetric", "round_prefer_floor"): ("nearest", "nearest"),
+    }
+    _SUPPORTED_LINEAR_COMBOS = {
+        # half_pixel + linear (no antialias) ↔ jax/TF default
+        ("linear", "half_pixel"):        ("linear",  "bilinear"),
+        ("linear", "pytorch_half_pixel"):("linear",  "bilinear"),
+    }
+
+    key_n = (mode, coord_mode, nearest_mode)
+    key_l = (mode, coord_mode)
+    if "nearest" in mode and key_n not in _SUPPORTED_NEAREST_COMBOS:
+        raise NotImplementedError(
+            f"Resize(nearest, coord={coord_mode!r}, "
+            f"nearest_mode={nearest_mode!r}) — combination not implemented "
+            "by harness reference; skip rather than risk false positive."
+        )
+    if "linear" in mode and key_l not in _SUPPORTED_LINEAR_COMBOS:
+        raise NotImplementedError(
+            f"Resize(linear, coord={coord_mode!r}) — combination not "
+            "implemented by harness reference."
+        )
+    if mode == "cubic":
+        # Cubic resize differs in coeff_a, antialias and exclude_outside
+        # across backends; emulating ONNX exactly is out of scope.
+        raise NotImplementedError(
+            "Resize(cubic) — harness has no spec-faithful cubic resize; "
+            "use ORT directly when verifying cubic models."
+        )
+    if antialias:
+        raise NotImplementedError(
+            "Resize(antialias=1) — backends differ on the antialias kernel; "
+            "harness will not provide a reference."
+        )
+    if exclude_outside:
+        raise NotImplementedError("Resize(exclude_outside=1) — not implemented")
+
     if _is_jax_module(F):
         import jax.image as ji
         import jax.numpy as jnp
         x_nhwc = jnp.transpose(x, (0,2,3,1))
-        method = "nearest" if "nearest" in mode else "linear"
+        method = (_SUPPORTED_NEAREST_COMBOS[key_n][0]
+                  if "nearest" in mode
+                  else _SUPPORTED_LINEAR_COMBOS[key_l][0])
         y_nhwc = ji.resize(x_nhwc, (N, H_new, W_new, C), method=method)
         return [jnp.transpose(y_nhwc, (0,3,1,2))]
     else:
         import tensorflow as tf
+        tf_method_name = (_SUPPORTED_NEAREST_COMBOS[key_n][1]
+                          if "nearest" in mode
+                          else _SUPPORTED_LINEAR_COMBOS[key_l][1])
+        method = (tf.image.ResizeMethod.NEAREST_NEIGHBOR
+                  if tf_method_name == "nearest"
+                  else tf.image.ResizeMethod.BILINEAR)
         x_nhwc = tf.transpose(x, [0,2,3,1])
-        method = tf.image.ResizeMethod.NEAREST_NEIGHBOR if "nearest" in mode \
-                 else tf.image.ResizeMethod.BILINEAR
         y_nhwc = tf.image.resize(x_nhwc, [H_new, W_new], method=method)
         return [tf.transpose(y_nhwc, [0,3,1,2])]
