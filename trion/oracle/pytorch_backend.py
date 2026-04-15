@@ -1,7 +1,24 @@
 """
-PyTorch Eager Reference Backend.
-Converts the ONNX model to a PyTorch module via onnx2torch (or falls back to
-onnxruntime with graph_optimization_level=DISABLE_ALL as a CPU reference).
+Reference Backend.
+
+The reference is the *oracle* against which every other backend is compared.
+It must be more reliable than the backends under test, otherwise every false
+oracle answer becomes a false-positive bug report.
+
+Execution order (most-trusted first):
+
+  1. ONNXRuntime CPU with graph_optimization_level=DISABLE_ALL — a pure ONNX
+     spec interpreter, bypassing ORT's own fusion passes. Independent of any
+     ONNX→PyTorch conversion library.
+  2. onnx2torch → torch eager — only used when ORT is unavailable. Known to
+     mishandle several ops (CumSum graph break, Resize nearest_ceil → floor,
+     Pad mode='reflect' shape errors, …). Logged when invoked.
+  3. Crash if neither path is available.
+
+This backend keeps the historical name `pytorch_eager` for back-compat with
+existing configs / reports, but it is strictly the trusted oracle, not a
+"PyTorch flavour" target — tests that need PyTorch behaviour should use the
+torch.compile / torchscript backends instead.
 """
 from __future__ import annotations
 import logging
@@ -62,10 +79,19 @@ class PyTorchEagerBackend(BackendBase):
         inputs: Dict[str, np.ndarray],
         optimized: bool = True,
     ) -> BackendResult:
-        if self._torch_available and self._onnx2torch_available:
-            return self._run_onnx2torch(model, inputs)
+        # ORT-noopt is the trusted ONNX-spec interpreter and must be tried
+        # first. onnx2torch is a *fallback* — it has known wrong-conversion
+        # bugs (CumSum, Resize variants, Pad-reflect) that would silently
+        # poison the oracle if used as the primary reference.
         if self._ort_available:
             return self._run_ort_no_opt(model, inputs)
+        if self._torch_available and self._onnx2torch_available:
+            logger.warning(
+                "Reference falling back to onnx2torch — ORT not available. "
+                "Bug reports may include false positives caused by onnx2torch "
+                "conversion errors (CumSum, Resize, Pad-reflect)."
+            )
+            return self._run_onnx2torch(model, inputs)
         return BackendResult(None, "No suitable backend found", crashed=True)
 
     def _run_onnx2torch(self, model, inputs) -> BackendResult:

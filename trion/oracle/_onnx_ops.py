@@ -73,7 +73,7 @@ def dispatch_op(node, values: dict, F) -> list:
     if op == "Exp":       return [F.exp(get(0))]
     if op == "Log":       return [F.log(get(0))]
     if op == "Tanh":      return [F.tanh(get(0))]
-    if op == "Reciprocal": return [1.0 / get(0)]
+    if op == "Reciprocal": return [np.float32(1.0) / get(0)]
 
     if op == "Pow":
         return [get(0) ** _np(get(1)).flat[0] if isinstance(get(1), np.ndarray)
@@ -282,15 +282,61 @@ def dispatch_op(node, values: dict, F) -> list:
             pads = _np(pads_t).tolist()
         mode = _attr(node, "mode", b"constant")
         if isinstance(mode, bytes): mode = mode.decode()
+        constant_value_t = get(2) if len(node.input) >= 3 else None
+        constant_value = (
+            float(_np(constant_value_t).flatten()[0])
+            if constant_value_t is not None
+            else 0.0
+        )
         n = len(x.shape)
         pad_width = [(int(pads[i]), int(pads[i+n])) for i in range(n)]
         if _is_jax_module(F):
             import jax.numpy as jnp
-            return [jnp.pad(x, pad_width, mode=mode if mode != "constant" else "constant")]
+            # ONNX modes map directly to numpy/jax: constant, reflect, edge, wrap.
+            jnp_mode = {"wrap": "wrap"}.get(mode, mode)
+            if jnp_mode == "constant":
+                return [jnp.pad(x, pad_width, mode="constant",
+                                constant_values=constant_value)]
+            return [jnp.pad(x, pad_width, mode=jnp_mode)]
         else:
+            # TF native pad supports CONSTANT, REFLECT, SYMMETRIC. ONNX `edge`
+            # has no direct TF equivalent — we emulate it with tf.concat of
+            # gathered border slices so XLA still gets a static graph.
             import tensorflow as tf
             paddings = tf.constant(pad_width, dtype=tf.int32)
-            return [tf.pad(x, paddings)]
+            tf_mode = {"constant": "CONSTANT",
+                       "reflect":  "REFLECT"}.get(mode)
+            if tf_mode == "CONSTANT":
+                return [tf.pad(x, paddings, mode="CONSTANT",
+                               constant_values=constant_value)]
+            if tf_mode == "REFLECT":
+                return [tf.pad(x, paddings, mode="REFLECT")]
+            # mode == "edge" (replicate boundary) or "wrap" (circular).
+            for axis, (pb, pe) in enumerate(pad_width):
+                if pb == 0 and pe == 0:
+                    continue
+                parts = []
+                if mode == "edge":
+                    if pb:
+                        parts.append(tf.repeat(tf.gather(x, [0], axis=axis),
+                                               pb, axis=axis))
+                    parts.append(x)
+                    if pe:
+                        last_idx = tf.shape(x)[axis] - 1
+                        parts.append(tf.repeat(tf.gather(x, [last_idx], axis=axis),
+                                               pe, axis=axis))
+                elif mode == "wrap":
+                    if pb:
+                        parts.append(tf.gather(
+                            x, tf.range(tf.shape(x)[axis] - pb,
+                                        tf.shape(x)[axis]), axis=axis))
+                    parts.append(x)
+                    if pe:
+                        parts.append(tf.gather(x, tf.range(pe), axis=axis))
+                else:
+                    raise NotImplementedError(f"Pad mode={mode!r} not supported in TF backend")
+                x = tf.concat(parts, axis=axis)
+            return [x]
 
     if op == "Tile":
         x = get(0)
@@ -433,9 +479,6 @@ def dispatch_op(node, values: dict, F) -> list:
         x = get(0)
         return [np.array(x.shape, dtype=np.int64)]
 
-    if op == "Reciprocal":
-        return [np.float32(1.0) / get(0)]
-
     if op in ("Equal", "Less", "Greater", "Not", "LessOrEqual", "GreaterOrEqual"):
         a, b = get(0), get(1)
         if op == "Equal":         return [a == b]
@@ -449,6 +492,238 @@ def dispatch_op(node, values: dict, F) -> list:
         x = get(0)
         axis = int(_np(get(1)).flat[0])
         return [F.cumsum(x, axis=axis) if hasattr(F, 'cumsum') else F.cumulative_sum(x, axis=axis)]
+
+    # ── Activations (extended) ────────────────────────────────────────────────
+    if op == "Softsign":
+        x = get(0)
+        return [x / (np.float32(1.0) + F.abs(x))]
+
+    if op == "PRelu":
+        x = get(0); slope = get(1)
+        return [F.where(x >= np.float32(0.0), x, slope * x)]
+
+    if op == "ThresholdedRelu":
+        theta = float(_attr(node, "alpha", 1.0))
+        x = get(0)
+        return [F.where(x > np.float32(theta), x, np.float32(0.0))]
+
+    if op == "Shrink":
+        lambd = float(_attr(node, "lambd", 0.5))
+        bias  = float(_attr(node, "bias",  0.0))
+        x = get(0)
+        return [F.where(x < -np.float32(lambd), x + np.float32(bias),
+                F.where(x > np.float32(lambd), x - np.float32(bias), np.float32(0.0)))]
+
+    if op == "LogSoftmax":
+        axis = int(_attr(node, "axis", -1))
+        x = get(0)
+        x_max = F.max(x, axis=axis, keepdims=True)
+        log_z = F.log(F.sum(F.exp(x - x_max), axis=axis, keepdims=True)) + x_max
+        return [x - log_z]
+
+    # ── Math ops (extended) ───────────────────────────────────────────────────
+    if op == "Acosh":
+        if _is_jax_module(F):
+            import jax.numpy as jnp
+            return [jnp.arccosh(get(0))]
+        else:
+            import tensorflow as tf
+            return [tf.math.acosh(get(0))]
+
+    if op == "Atanh":
+        if _is_jax_module(F):
+            import jax.numpy as jnp
+            return [jnp.arctanh(get(0))]
+        else:
+            import tensorflow as tf
+            return [tf.math.atanh(get(0))]
+
+    # ── Aggregation ───────────────────────────────────────────────────────────
+    if op == "Mean":
+        tensors = [get(i) for i in range(len(node.input)) if node.input[i]]
+        result = tensors[0]
+        for t in tensors[1:]:
+            result = result + t
+        return [result / np.float32(len(tensors))]
+
+    # ── Tensor construction ───────────────────────────────────────────────────
+    if op == "EyeLike":
+        x = get(0)
+        dtype_attr = _attr(node, "dtype", None)
+        dtype = _ONNX_DTYPE.get(int(dtype_attr), np.float32) if dtype_attr is not None else np.float32
+        k = int(_attr(node, "k", 0))
+        rows, cols = int(x.shape[0]), int(x.shape[1])
+        eye = np.eye(rows, cols, k=k, dtype=dtype)
+        return [F.asarray(eye) if hasattr(F, 'asarray') else eye]
+
+    if op == "Range":
+        start = float(_np(get(0)).flat[0])
+        limit = float(_np(get(1)).flat[0])
+        delta = float(_np(get(2)).flat[0])
+        if _is_jax_module(F):
+            import jax.numpy as jnp
+            return [jnp.arange(start, limit, delta, dtype=jnp.float32)]
+        else:
+            import tensorflow as tf
+            return [tf.range(start, limit, delta, dtype=tf.float32)]
+
+    # ── Linear algebra (extended) ─────────────────────────────────────────────
+    if op == "Einsum":
+        equation = _attr(node, "equation", b"")
+        if isinstance(equation, bytes): equation = equation.decode()
+        inputs = [get(i) for i in range(len(node.input)) if node.input[i]]
+        if _is_jax_module(F):
+            import jax.numpy as jnp
+            return [jnp.einsum(equation, *inputs)]
+        else:
+            import tensorflow as tf
+            return [tf.einsum(equation, *inputs)]
+
+    if op == "Trilu":
+        x = get(0)
+        k_t = get(1)
+        k = int(_np(k_t).flat[0]) if k_t is not None else 0
+        upper = int(_attr(node, "upper", 1))
+        rows, cols = int(x.shape[-2]), int(x.shape[-1])
+        mask_2d = (np.triu(np.ones((rows, cols), dtype=bool), k=k) if upper
+                   else np.tril(np.ones((rows, cols), dtype=bool), k=k))
+        mask = np.broadcast_to(mask_2d, x.shape)
+        return [F.where(mask, x, F.zeros_like(x))]
+
+    # ── Pooling (extended) ────────────────────────────────────────────────────
+    if op == "GlobalLpPool":
+        x_np = np.array(get(0), dtype=np.float32)
+        p = int(_attr(node, "p", 2))
+        axes = tuple(range(2, len(x_np.shape)))
+        return [(np.sum(np.abs(x_np) ** p, axis=axes, keepdims=True) ** (1.0 / p)).astype(np.float32)]
+
+    if op == "LpPool":
+        x_np = np.array(get(0), dtype=np.float32)
+        p = int(_attr(node, "p", 2))
+        k = _attr(node, "kernel_shape", [2, 2])
+        strides = _attr(node, "strides", [1, 1])
+        pads = _attr(node, "pads", [0, 0, 0, 0])
+        N, C, H, W = x_np.shape
+        kH, kW = int(k[0]), int(k[1])
+        sH, sW = int(strides[0]), int(strides[1])
+        pH0, pH1 = int(pads[0]), int(pads[2])
+        pW0, pW1 = int(pads[1]), int(pads[3])
+        x_pad = np.pad(x_np, ((0, 0), (0, 0), (pH0, pH1), (pW0, pW1)))
+        H_out = (H + pH0 + pH1 - kH) // sH + 1
+        W_out = (W + pW0 + pW1 - kW) // sW + 1
+        out = np.zeros((N, C, H_out, W_out), dtype=np.float32)
+        for ii in range(H_out):
+            for jj in range(W_out):
+                patch = x_pad[:, :, ii*sH:ii*sH+kH, jj*sW:jj*sW+kW]
+                out[:, :, ii, jj] = np.sum(np.abs(patch) ** p, axis=(2, 3)) ** (1.0 / p)
+        return [out]
+
+    # ── Quantization ──────────────────────────────────────────────────────────
+    if op == "QuantizeLinear":
+        x_np = np.array(get(0), dtype=np.float32)
+        scale = float(_np(get(1)).flat[0])
+        zp = get(2)
+        zero_point = int(_np(zp).flat[0]) if zp is not None else 0
+        zp_dtype = _np(zp).dtype if zp is not None else np.uint8
+        quantized = np.round(x_np / scale) + zero_point
+        if zp_dtype == np.int8:
+            return [np.clip(quantized, -128, 127).astype(np.int8)]
+        return [np.clip(quantized, 0, 255).astype(np.uint8)]
+
+    if op == "DequantizeLinear":
+        x_np = _np(get(0)).astype(np.float32)
+        scale = float(_np(get(1)).flat[0])
+        zp = get(2)
+        zero_point = float(_np(zp).flat[0]) if zp is not None else 0.0
+        return [((x_np - zero_point) * scale).astype(np.float32)]
+
+    # ── Advanced indexing ─────────────────────────────────────────────────────
+    if op == "GatherElements":
+        data = get(0)
+        indices = _np(get(1)).astype(np.int64)
+        axis = int(_attr(node, "axis", 0))
+        indices = np.where(indices < 0, indices + int(data.shape[axis]), indices)
+        if _is_jax_module(F):
+            import jax.numpy as jnp
+            return [jnp.take_along_axis(data, indices, axis=axis)]
+        else:
+            import tensorflow as tf
+            return [tf.experimental.numpy.take_along_axis(data, tf.constant(indices), axis=axis)]
+
+    if op == "GatherND":
+        data = get(0)
+        indices = _np(get(1)).astype(np.int64)
+        k = indices.shape[-1]
+        outer_shape = indices.shape[:-1]
+        flat_idx = indices.reshape(-1, k)
+        if _is_jax_module(F):
+            import jax.numpy as jnp
+            result = jnp.stack([data[tuple(idx)] for idx in flat_idx])
+            return [result.reshape(outer_shape + data.shape[k:])]
+        else:
+            import tensorflow as tf
+            result = tf.gather_nd(data, tf.constant(flat_idx))
+            return [tf.reshape(result, list(outer_shape) + [int(d) for d in data.shape[k:]])]
+
+    if op == "ScatterElements":
+        # Use numpy for reference; indices always come from initializers
+        data_np = np.array(get(0), dtype=np.float32)
+        indices = _np(get(1)).astype(np.int64)
+        updates_np = np.array(get(2), dtype=np.float32)
+        axis = int(_attr(node, "axis", 0))
+        indices = np.where(indices < 0, indices + data_np.shape[axis], indices)
+        result = data_np.copy()
+        for idx in np.ndindex(indices.shape):
+            target = list(idx)
+            target[axis] = int(indices[idx])
+            result[tuple(target)] = updates_np[idx]
+        return [result]
+
+    if op == "ScatterND":
+        data_np = np.array(get(0), dtype=np.float32)
+        indices = _np(get(1)).astype(np.int64)
+        updates_np = np.array(get(2), dtype=np.float32)
+        k = indices.shape[-1]
+        flat_idx = indices.reshape(-1, k)
+        upd_tail = updates_np.shape[len(indices.shape) - 1:]
+        flat_upd = updates_np.reshape(-1, *upd_tail)
+        result = data_np.copy()
+        for i, idx in enumerate(flat_idx):
+            result[tuple(idx)] = flat_upd[i]
+        return [result]
+
+    # ── TopK ──────────────────────────────────────────────────────────────────
+    if op == "TopK":
+        x = get(0)
+        K = int(_np(get(1)).flat[0])
+        axis = int(_attr(node, "axis", -1))
+        largest = bool(_attr(node, "largest", 1))
+        sorted_ = bool(_attr(node, "sorted", 1))
+        ndim = len(x.shape)
+        axis_mod = axis % ndim
+        # Move target axis to last position for framework top_k
+        perm = list(range(ndim))
+        perm.pop(axis_mod)
+        perm.append(axis_mod)
+        inv_perm = [0] * ndim
+        for i, p in enumerate(perm):
+            inv_perm[p] = i
+        if _is_jax_module(F):
+            import jax
+            import jax.numpy as jnp
+            x_t = jnp.transpose(x, perm)
+            vals, idx = jax.lax.top_k(x_t if largest else -x_t, K)
+            if not largest:
+                vals = -vals
+            return [jnp.transpose(vals, inv_perm),
+                    jnp.transpose(idx.astype(jnp.int64), inv_perm)]
+        else:
+            import tensorflow as tf
+            x_t = tf.transpose(x, perm)
+            res = tf.math.top_k(x_t if largest else -x_t, k=K, sorted=sorted_)
+            vals = res.values if largest else -res.values
+            idx = tf.cast(res.indices, tf.int64)
+            return [tf.transpose(vals, inv_perm), tf.transpose(idx, inv_perm)]
 
     raise NotImplementedError(f"Unsupported ONNX op: {op}")
 
