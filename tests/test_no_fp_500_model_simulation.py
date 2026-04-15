@@ -429,6 +429,81 @@ def test_frontend_gate_rejects_bridge_mismatch_before_scoring():
     )
 
 
+def test_known_pattern_divergence_is_attributed_not_re_flagged():
+    """When a model contains a pattern that the strengthened compat cache
+    flagged as divergent on backend B, and B is the outlier at model
+    scoring time, the report should RECORD the attribution rather than
+    treat it as a fresh discovery. We don't zero out total_score — the
+    divergence is real — but we do populate
+    report.attributed_to_known_pattern so downstream triage can tell
+    "this bug was already seen in the pattern catalogue".
+
+    Divergent patterns are NOT excluded from the campaign (the user
+    explicitly asked for that) — exclusion would throw away exactly the
+    bug signal we want to find. Attribution is the right middle ground:
+    keep the signal, deduplicate against the catalogue.
+    """
+    from trion.config import TrionConfig
+    from trion.oracle.oracle import DiscrepancyOracle
+    from trion.oracle.base import BackendResult
+
+    ref     = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
+    diverge = np.array([9.0, 9.0, 9.0, 9.0], dtype=np.float32)
+
+    class _OptBreakStub:
+        def __init__(self, name, opt, noopt):
+            self.name, self._opt, self._noopt = name, opt, noopt
+        def is_available(self): return True
+        def run(self, model, feeds, optimized=True):
+            return BackendResult(self._opt if optimized else self._noopt)
+
+    class _RefStub:
+        name = "pytorch_eager"
+        def is_available(self): return True
+        def run(self, model, feeds, optimized=False):
+            return BackendResult(ref)
+
+    cfg = TrionConfig()
+    cfg.target_backends = []
+    cfg.reference_backend = "pytorch_eager"
+    cfg.tolerance = 0.01
+    oracle = DiscrepancyOracle(cfg)
+    oracle._eager_backend = _RefStub()
+    oracle._target_backends = [
+        _OptBreakStub("onnxruntime", ref,     ref),
+        _OptBreakStub("openvino",    diverge, ref),   # real outlier
+    ]
+    # Inject a known pattern-level divergence for openvino on
+    # "resize_nearest_ceil" — the kind of entry the strengthened compat
+    # cache produces.
+    oracle.set_known_divergences({
+        "resize_nearest_ceil": {
+            "openvino": {"rel_diff": 0.08, "ctx": "4D_NCHW_small"},
+        },
+    })
+
+    x_vi = helper.make_tensor_value_info("X", TensorProto.FLOAT, [4])
+    y_vi = helper.make_tensor_value_info("Y", TensorProto.FLOAT, [4])
+    node  = helper.make_node("Identity", ["X"], ["Y"])
+    g     = helper.make_graph([node], "g", [x_vi], [y_vi])
+    m     = helper.make_model(g, opset_imports=[helper.make_opsetid("", 17)])
+
+    # The model carries the divergent pattern in its pattern_sequence.
+    rep = oracle.score(
+        onnx.load_from_string(m.SerializeToString()),
+        {"X": np.zeros(4, dtype=np.float32)},
+        model_patterns=[("layout", "resize_nearest_ceil")],
+    )
+    assert rep.total_score > 0.0   # divergence is still visible
+    assert "openvino" in rep.attributed_to_known_pattern, (
+        "openvino diverged AND the catalogue already knows it diverges on "
+        "this pattern, so the attribution must fire. Otherwise every model "
+        "containing the known-bad pattern would re-file the same bug."
+    )
+    pattern_hits = rep.attributed_to_known_pattern["openvino"]
+    assert any(p == "resize_nearest_ceil" for p, _ in pattern_hits)
+
+
 def test_frontend_gate_silent_when_spec_reference_unavailable():
     """If no spec interpreter is configured / it crashed, the gate must
     not bring the oracle down — every target participates as before, but

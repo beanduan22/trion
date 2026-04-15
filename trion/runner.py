@@ -83,6 +83,15 @@ class TrionRunner:
         self.search_space = PatternAwareSearchSpace(self.library, cfg, rng)
         self.mutator      = InputMutator(rng)
         self.oracle       = DiscrepancyOracle(cfg)
+        # Inject the per-pattern known-divergence catalogue (from the
+        # strengthened compat cache) so the oracle can attribute model-level
+        # divergences to already-identified pattern-level ones instead of
+        # reporting them as fresh discoveries. Empty when no strengthened
+        # cache was loaded.
+        try:
+            self.oracle.set_known_divergences(self.library.known_divergences())
+        except AttributeError:
+            pass   # older library version without known_divergences()
 
         self.credit = CreditAssignment(cfg, self.library.categories)
         for cat in self.library.categories:
@@ -255,10 +264,15 @@ class TrionRunner:
             num_mutations=cfg.num_mutations_per_model,
         )
 
-        # 3. Score with oracle (take max across inputs)
+        # 3. Score with oracle (take max across inputs). Pass the model's
+        # pattern sequence so the oracle can attribute model-level
+        # divergences to already-known pattern-level ones.
         best_report: Optional[OracleReport] = None
         for feed in all_inputs:
-            report = self.oracle.score(gen_model.onnx_model, feed, model_id)
+            report = self.oracle.score(
+                gen_model.onnx_model, feed, model_id,
+                model_patterns=list(gen_model.pattern_sequence or ()),
+            )
             if best_report is None or report.total_score > best_report.total_score:
                 best_report = report
 
@@ -410,6 +424,8 @@ class TrionRunner:
                                  getattr(report, "frontend_gate_passed", {}),
             "frontend_gate_rejected":
                                  getattr(report, "frontend_gate_rejected", {}),
+            "attributed_to_known_pattern":
+                                 getattr(report, "attributed_to_known_pattern", {}),
             # Legacy fields kept for back-compat.
             "n_valid_comparisons": report.n_valid_comparisons,
             "s_diff":            report.s_diff,

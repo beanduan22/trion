@@ -86,6 +86,10 @@ class OTPLibrary:
         given (or the file does not exist) all patterns are included.
         """
         self._map: Dict[str, Dict[str, OTP]] = {}
+        # pattern-name → {backend: {rel_diff, ctx}}; populated only when a
+        # strengthened compat cache is available. Empty dict when the cache
+        # is the old bool-shaped schema or isn't loaded at all.
+        self._known_divergences: Dict[str, Dict[str, dict]] = {}
 
         allowed: Optional[Set[str]] = None
         if compat_json and active_backends and os.path.exists(compat_json):
@@ -101,39 +105,55 @@ class OTPLibrary:
                         compat_json, sorted(missing),
                     )
                 else:
-                    def _is_pass(per_backend: dict, bname: str) -> bool:
-                        """A pattern passes on `bname` iff the cache entry
-                        reports status=='pass' (new schema) OR the value is
-                        a truthy boolean (old boolean schema). Anything else
-                        — crash, diverge, missing — is a no."""
+                    def _is_runnable(per_backend: dict, bname: str) -> bool:
+                        """Include a pattern iff it *runs* on `bname` — i.e.,
+                        status is 'pass' OR 'diverge'. Only 'crash' is
+                        disqualifying. Divergent patterns are KEPT because
+                        the divergence itself is the bug signal we want to
+                        find; the oracle's frontend gate + pattern-level
+                        known-divergence metadata attributes them at scoring
+                        time instead of excluding them from the campaign."""
                         entry = per_backend.get(bname)
                         if isinstance(entry, dict):
-                            return entry.get("status") == "pass"
+                            return entry.get("status") in ("pass", "diverge")
                         return bool(entry)
                     allowed = {
                         name
                         for name, per_backend in cache.get("patterns", {}).items()
-                        if all(_is_pass(per_backend, b) for b in active_backends)
+                        if all(_is_runnable(per_backend, b) for b in active_backends)
                     }
                     total_cached = len(cache.get("patterns", {}))
-                    # Count how many patterns are specifically excluded because
-                    # they diverge (not crash) on at least one backend — that's
-                    # the number of patterns that would have caused a
-                    # pattern-level FP if left in the campaign.
-                    diverge_count = sum(
+                    # Record per-backend known divergences so the oracle
+                    # can attribute a model-level divergence to a known
+                    # pattern-level one instead of logging a new "bug".
+                    self._known_divergences: Dict[str, Dict[str, dict]] = {}
+                    for name, per_backend in cache.get("patterns", {}).items():
+                        diverging_backends: Dict[str, dict] = {}
+                        for b in active_backends:
+                            entry = per_backend.get(b)
+                            if isinstance(entry, dict) and entry.get("status") == "diverge":
+                                diverging_backends[b] = {
+                                    "rel_diff": entry.get("rel_diff"),
+                                    "ctx":      entry.get("ctx"),
+                                }
+                        if diverging_backends:
+                            self._known_divergences[name] = diverging_backends
+
+                    crashed_patterns = sum(
                         1
                         for per_backend in cache.get("patterns", {}).values()
                         if any(
                             isinstance(per_backend.get(b), dict)
-                            and per_backend.get(b, {}).get("status") == "diverge"
+                            and per_backend.get(b, {}).get("status") == "crash"
                             for b in active_backends
                         )
                     )
                     logger.info(
-                        "Pattern compat filter: %d/%d patterns pass on all of %s "
-                        "(%d excluded because they diverge on at least one backend — "
-                        "these would have been pattern-level false positives).",
-                        len(allowed), total_cached, active_backends, diverge_count,
+                        "Pattern compat filter: %d/%d runnable on all of %s "
+                        "(%d excluded due to crash on at least one backend; "
+                        "%d retained as known-divergent pattern-level bugs).",
+                        len(allowed), total_cached, active_backends,
+                        crashed_patterns, len(getattr(self, "_known_divergences", {})),
                     )
             except Exception as exc:
                 logger.warning("Failed to read compat cache %s: %s", compat_json, exc)
@@ -162,6 +182,15 @@ class OTPLibrary:
 
     def get(self, category: str, name: str) -> OTP:
         return self._map[category][name]
+
+    def known_divergences(self) -> Dict[str, Dict[str, dict]]:
+        """Return a copy of the per-pattern known-divergence table loaded
+        from the strengthened compat cache. Callers use this to decide at
+        scoring time whether a model-level divergence can be attributed to
+        a known pattern-backend divergence (no new bug) rather than treated
+        as a fresh discovery. Empty dict when no strengthened cache was
+        loaded."""
+        return dict(self._known_divergences)
 
     def summary(self) -> str:
         lines = [f"OTPLibrary — {len(self.all_patterns())} patterns total"]

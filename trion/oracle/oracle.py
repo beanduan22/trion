@@ -165,6 +165,13 @@ class OracleReport:
     # which onnx2torch mishandles"). These targets did NOT participate in the
     # pairwise score; counted under crashes nor under valid targets.
 
+    # When a model-level divergence can be attributed to a known
+    # pattern-backend divergence (detected by the strengthened compat
+    # cache), record the attribution here so downstream triage doesn't
+    # re-log it as a new bug discovery.
+    # backend → [(pattern_name, known_rel_diff), ...]
+    attributed_to_known_pattern: Dict[str, List] = field(default_factory=dict)
+
     # ── Frontend-validation gate (Oracle 1 correctness) ───────────────────────
     # Every pairwise score comparing two backends relies on both backends
     # running the *same* semantics as the ONNX spec. If a backend's
@@ -216,7 +223,21 @@ class DiscrepancyOracle:
 
         self._eager_backend: Optional[BackendBase] = None  # blame helper only
         self._target_backends: List[BackendBase] = []
+        # pattern name → {backend: {rel_diff, ctx}}; set by set_known_divergences
+        self._known_divergences: Dict[str, Dict[str, dict]] = {}
         self._init_backends()
+
+    # ── Known pattern-level divergences (injected from compat cache) ─────────
+
+    def set_known_divergences(
+        self,
+        table: Dict[str, Dict[str, dict]],
+    ) -> None:
+        """Called by the runner once the pattern library has been loaded.
+        Provides the per-pattern per-backend known-divergence catalogue so
+        the oracle can attribute a model-level divergence to an existing
+        pattern-level one rather than double-logging it as a new bug."""
+        self._known_divergences = dict(table or {})
 
     # ── Initialisation ───────────────────────────────────────────────────────
 
@@ -290,6 +311,7 @@ class DiscrepancyOracle:
         model: onnx.ModelProto,
         inputs: Dict[str, np.ndarray],
         model_id: int = 0,
+        model_patterns: Optional[List[tuple]] = None,
     ) -> OracleReport:
         report = OracleReport(model_id=model_id, total_score=0.0)
         report.bug_inputs = {k: v.flatten().tolist() for k, v in inputs.items()}
@@ -357,6 +379,15 @@ class DiscrepancyOracle:
         # Oracle 1 + eager blame helper: only when divergence is real.
         if report.total_score > 0.0 and self._eager_backend is not None:
             self._attribute_blame_via_eager(model, inputs, valid, report)
+
+        # Known-pattern attribution: if a target was named in the worst pair
+        # and the model contains a pattern known to diverge on that exact
+        # backend, record the attribution. This doesn't change total_score
+        # (you still want to see the divergence in the report) but it tells
+        # triage "this was already seen at the pattern level, don't file
+        # as a new bug."
+        if report.total_score > 0.0 and model_patterns and self._known_divergences:
+            self._attribute_to_known_patterns(model_patterns, valid, report)
 
         # Triage: if the worst-pair is a known shared-infra pair AND the
         # rest of the field agrees with each other, raise a warning so the
@@ -492,6 +523,38 @@ class DiscrepancyOracle:
         suspect = max(distances, key=distances.get)
         report.suspect_backend = suspect
         report.suspect_distance_to_eager = distances[suspect]
+
+    # ── Known pattern-level divergence attribution ───────────────────────────
+
+    def _attribute_to_known_patterns(
+        self,
+        model_patterns: List[tuple],
+        valid: List[Tuple[str, np.ndarray]],
+        report: OracleReport,
+    ) -> None:
+        """Walk the model's pattern sequence; for every pattern that the
+        strengthened compat cache flagged as divergent on some backend that
+        is also in the valid-target set, record the (pattern, backend)
+        attribution. Multiple patterns and/or backends can be attributed."""
+        valid_names = {n for n, _ in valid}
+        attributions: Dict[str, List] = {}
+        for entry in model_patterns:
+            # pattern_sequence items are typically [category, name] tuples.
+            if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                pname = entry[1]
+            else:
+                pname = str(entry)
+            divergent_backends = self._known_divergences.get(pname)
+            if not divergent_backends:
+                continue
+            for bname, meta in divergent_backends.items():
+                if bname not in valid_names:
+                    continue
+                attributions.setdefault(bname, []).append(
+                    (pname, float(meta.get("rel_diff") or 0.0))
+                )
+        if attributions:
+            report.attributed_to_known_pattern = attributions
 
     # ── Frontend-validation gate (the "connection correctness" layer) ────────
 
