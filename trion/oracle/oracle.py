@@ -55,13 +55,20 @@ from .openvino_backend import OpenVINOBackend
 logger = logging.getLogger(__name__)
 
 # Errors that are clearly NOT compiler bugs — they're ONNX→PyTorch conversion
-# issues or torch.fx tracing limitations in onnx2torch, not the compiler itself.
+# issues, torch.fx tracing limitations, or tool/hardware shape constraints
+# triggered by the model generator, not the compiler's codegen itself.
 _FRONTEND_KEYWORDS = [
     "onnx2torch",
     "FakeTensor", "fake_tensor",
     "make_fx", "symbolic_trace", "torch.fx",
     "dynamo",
     "BackendCompilerFailed",
+    # TFLite hardware-layout constraints that reject valid ONNX inputs
+    # whose shape doesn't align with the TFL op's tile/block requirement.
+    # Not a TFLite codegen bug — TFLite is correctly refusing to run.
+    "tfl.fully_connected",
+    "num_elements %",
+    "expect 'input' num_elements",
 ]
 _BACKEND_KEYWORDS = [
     "CUDA", "cudnn",
@@ -73,6 +80,18 @@ _BACKEND_KEYWORDS = [
     "DType",
     "Not implemented",
 ]
+
+# ── Numerical tolerances for pairwise comparison ──────────────────────────────
+#
+# When the reference output itself is at fp32 machine epsilon (e.g. LayerNorm of
+# a constant collapses to 0, or an ill-conditioned logsumexp saturates), the
+# relative norm ratio ||y_i - y_j|| / max(||y_i||, ||y_j||) inflates trivial
+# float-noise into an apparent 100% divergence. To prevent that false-positive
+# class, every pairwise comparison first applies an absolute tolerance: if
+# ||y_i - y_j||_∞ (max elementwise abs diff) is below _PAIRWISE_ATOL, divergence
+# is clamped to 0 regardless of norm ratio.
+_PAIRWISE_ATOL = 1e-4       # per-element absolute tolerance
+_NEAR_ZERO_REF = 1e-3       # ||y|| below this is treated as "near zero"
 
 
 # ── Shared-infrastructure pairs ───────────────────────────────────────────────
@@ -199,6 +218,12 @@ class OracleReport:
     n_valid_comparisons: int = 0
     reference_likely_wrong: bool = False
     consensus_size: int = 0
+    # Targets whose output was non-finite (NaN/Inf) on the optimised path
+    # for this particular model+input combo. These are excluded from
+    # pairwise scoring AND from the crash channel — the cause is almost
+    # always generator-side numerical instability (unbounded exp, reciprocal
+    # of near-zero, softmax(−∞)), not a compiler bug. Backend → reason.
+    nonfinite_targets: Dict[str, str] = field(default_factory=dict)
 
 
 class DiscrepancyOracle:
@@ -362,12 +387,15 @@ class DiscrepancyOracle:
             except Exception:
                 continue
             if not np.all(np.isfinite(arr)):
-                # NaN / Inf in a target output is a bug, but it isn't a
-                # divergence we can score numerically — record under the
-                # crash channel as "backend" and skip.
-                report.crashes.append(f"{name}+nan")
-                report.errors[f"{name}+nan"] = "non-finite output"
-                report.crash_info[f"{name}+nan"] = "backend"
+                # Non-finite output on the optimised path. This is NOT a
+                # compiler crash — it's almost always generator-side
+                # numerical instability (unbounded exp, softmax of −∞,
+                # reciprocal of a near-zero LayerNorm output). Recording it
+                # as a backend crash produces false bug reports (e.g. v8
+                # bug 741 "onnxruntime+nan"). Instead, exclude the target
+                # from pairwise scoring for this sample and keep the rest
+                # of the comparison meaningful.
+                report.nonfinite_targets[name] = "non-finite output"
                 continue
             valid.append((name, arr))
             report.target_outputs[name] = arr.flatten().tolist()
@@ -444,10 +472,18 @@ class DiscrepancyOracle:
         valid: List[Tuple[str, np.ndarray]],
         report: OracleReport,
     ) -> float:
-        """S(m) = max_{i≠j} min(1, ||y_i − y_j|| / δ).
+        """S(m) = max_{i≠j} min(1, rel(y_i, y_j) / δ).
 
         Records every pairwise divergence in `report.pairwise_divergence` and
         the worst pair in `report.worst_pair`.
+
+        Uses a hybrid absolute + relative tolerance:
+          • If max elementwise abs diff ≤ _PAIRWISE_ATOL, divergence is 0.
+            This filters the "ref-is-near-zero" FP class where rel_L2 ≈ 1.0
+            on machine-epsilon outputs.
+          • If both ||y_i|| and ||y_j|| are below _NEAR_ZERO_REF, only the
+            absolute tolerance applies.
+          • Otherwise the usual rel_L2 / delta ratio is used, capped at 1.
         """
         max_div = 0.0
         worst: Optional[Tuple[str, str]] = None
@@ -458,14 +494,30 @@ class DiscrepancyOracle:
                 if yi.shape != yj.shape:
                     div = 1.0  # structural divergence — capped
                 else:
-                    diff = float(np.linalg.norm(yi.flatten() - yj.flatten()))
-                    norm = max(
-                        float(np.linalg.norm(yi.flatten())),
-                        float(np.linalg.norm(yj.flatten())),
-                        1e-3,
-                    )
-                    raw = (diff / norm) / self.delta
-                    div = float(min(1.0, raw)) if np.isfinite(raw) else 0.0
+                    yi_f = yi.flatten()
+                    yj_f = yj.flatten()
+                    abs_max = float(np.max(np.abs(yi_f - yj_f))) if yi_f.size else 0.0
+                    if abs_max <= _PAIRWISE_ATOL:
+                        # Agreement within absolute fp-noise — no divergence.
+                        div = 0.0
+                    else:
+                        norm_i = float(np.linalg.norm(yi_f))
+                        norm_j = float(np.linalg.norm(yj_f))
+                        max_norm = max(norm_i, norm_j)
+                        if max_norm < _NEAR_ZERO_REF:
+                            # Both outputs near zero but abs diff exceeds
+                            # per-element atol. Saturate gradually: at
+                            # abs_max == 10 * _PAIRWISE_ATOL treat as full
+                            # divergence. Still capped at 1.
+                            raw = abs_max / (10.0 * _PAIRWISE_ATOL)
+                            div = float(min(1.0, raw))
+                        else:
+                            diff = float(np.linalg.norm(yi_f - yj_f))
+                            raw = (diff / max_norm) / self.delta
+                            div = (
+                                float(min(1.0, raw))
+                                if np.isfinite(raw) else 0.0
+                            )
                 pair_key = (ni, nj)
                 report.pairwise_divergence[pair_key] = div
                 if div > max_div:
@@ -490,6 +542,13 @@ class DiscrepancyOracle:
         first. If eager itself crashes or produces non-finite output, no
         blame is attributed — the divergence is still reported, just
         without a suspect.
+
+        Crucially: a suspect is only named when its distance to the eager
+        reference actually exceeds the oracle tolerance δ. If every target
+        agrees with eager within δ, the divergence lives purely in pairwise
+        noise between targets — naming any single "suspect" in that case
+        is meaningless and produces false attributions (the historical
+        "XLA-blamed-while-matching-eager" FP class).
         """
         try:
             res = self._eager_backend.run(model, inputs, optimized=False)
@@ -507,9 +566,11 @@ class DiscrepancyOracle:
         report.eager_helper_used = True
         report.eager_output = ref.flatten().tolist()
         # Distance per target — only those with matching shape can be ranked.
+        # Uses the same hybrid absolute + relative tolerance as the pairwise
+        # oracle so a near-zero reference can't inflate rel_L2 on noise.
         distances: Dict[str, float] = {}
         ref_flat = ref.flatten()
-        ref_norm = max(float(np.linalg.norm(ref_flat)), 1e-3)
+        ref_norm = float(np.linalg.norm(ref_flat))
         for name, arr in valid:
             arr_flat = arr.flatten()
             if arr_flat.shape != ref_flat.shape:
@@ -517,12 +578,33 @@ class DiscrepancyOracle:
                 # wrong; max possible distance.
                 distances[name] = float("inf")
                 continue
-            distances[name] = float(np.linalg.norm(arr_flat - ref_flat) / ref_norm)
+            abs_max = (
+                float(np.max(np.abs(arr_flat - ref_flat)))
+                if arr_flat.size else 0.0
+            )
+            if abs_max <= _PAIRWISE_ATOL:
+                distances[name] = 0.0
+                continue
+            arr_norm = float(np.linalg.norm(arr_flat))
+            max_norm = max(ref_norm, arr_norm)
+            if max_norm < _NEAR_ZERO_REF:
+                distances[name] = min(1.0, abs_max / (10.0 * _PAIRWISE_ATOL))
+            else:
+                distances[name] = float(
+                    np.linalg.norm(arr_flat - ref_flat) / max_norm
+                )
         if not distances:
             return
         suspect = max(distances, key=distances.get)
-        report.suspect_backend = suspect
-        report.suspect_distance_to_eager = distances[suspect]
+        suspect_dist = distances[suspect]
+        report.suspect_distance_to_eager = suspect_dist
+        # Gate attribution on real disagreement with eager. If the farthest
+        # target is still within δ of eager, the pairwise divergence came
+        # from inter-target noise and no backend deserves the blame label.
+        if suspect_dist >= self.delta:
+            report.suspect_backend = suspect
+        else:
+            report.suspect_backend = None
 
     # ── Known pattern-level divergence attribution ───────────────────────────
 
@@ -574,6 +656,11 @@ class DiscrepancyOracle:
         or None if no interpreter is available / the interpreter crashed or
         produced non-finite output. When None, we skip the frontend gate
         entirely (conservative: every target participates).
+
+        Reference is ``self._eager_backend.run(model, inputs, optimized=False)``.
+        The backend class (default ``PyTorchEagerBackend``) is responsible
+        for preferring ORT-DISABLE_ALL over onnx2torch so the spec path
+        never silently degrades to the historical FP source.
         """
         # Prefer ORT-noopt (runs every ONNX op with all optimiser passes
         # disabled = pure spec interpretation). If eager backend is
