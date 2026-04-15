@@ -102,13 +102,30 @@ def _test_pattern(pattern, oracle, rng) -> Dict[str, dict]:
     # Pick a spec interpreter — ORT-noopt via the configured eager backend.
     spec_be = getattr(oracle, "_eager_backend", None)
 
+    # Absolute floor: when the spec output is near zero (e.g. LayerNorm
+    # of a constant input is exactly 0, making any fp-noise look like
+    # 100% rel error under pure relative-diff), we cap the denominator
+    # so the rel_diff matches what a human would call a divergence.
+    _ABS_TOL = 1e-4
+
     def _rel(a: np.ndarray, b: np.ndarray) -> float:
         a = a.astype(np.float64).ravel(); b = b.astype(np.float64).ravel()
         if a.shape != b.shape:
             return float("inf")
         if not (np.all(np.isfinite(a)) and np.all(np.isfinite(b))):
             return float("inf")
-        return float(np.linalg.norm(a - b) / max(np.linalg.norm(a), 1e-3))
+        abs_diff = float(np.linalg.norm(a - b))
+        # If both outputs are inside fp noise of zero, they agree — no
+        # matter what their relative ratio is. Without this the checker
+        # flags trivial near-zero outputs (e.g. LayerNorm of a constant)
+        # as "diverging on 5 of 6 backends" when only bit-level fp noise
+        # is actually present.
+        if abs_diff <= _ABS_TOL * max(a.size, 1):
+            return 0.0
+        # Otherwise use the larger of ||a||, ||b||, ABS_TOL so neither a
+        # near-zero ref nor a near-zero target can inflate rel_diff.
+        denom = max(float(np.linalg.norm(a)), float(np.linalg.norm(b)), _ABS_TOL)
+        return abs_diff / denom
 
     result: Dict[str, dict] = {}
     for ctx_name, ctx in _SEED_CONTEXTS:

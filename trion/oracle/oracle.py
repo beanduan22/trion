@@ -611,7 +611,12 @@ class DiscrepancyOracle:
         bug distinction is now visible.
         """
         spec_flat = spec_ref.flatten()
-        spec_norm = max(float(np.linalg.norm(spec_flat)), 1e-3)
+        spec_norm = float(np.linalg.norm(spec_flat))
+        # Absolute tolerance so near-zero spec outputs (e.g. LayerNorm of a
+        # constant input is exactly 0) don't inflate rel_diff into a
+        # false bridge-mismatch. A difference smaller than _ABS_TOL per
+        # element is treated as agreement regardless of norm ratio.
+        _ABS_TOL = 1e-4
         for name, res in list(noopt_runs.items()):
             if res.crashed or res.output is None:
                 report.frontend_gate_rejected[name] = (
@@ -636,7 +641,16 @@ class DiscrepancyOracle:
                 report.frontend_gate_rejected[name] = "noopt non-finite output"
                 opt_runs.pop(name, None)
                 continue
-            rel = float(np.linalg.norm(arr - spec_flat) / spec_norm)
+            abs_diff = float(np.linalg.norm(arr - spec_flat))
+            if abs_diff <= _ABS_TOL * max(arr.size, 1):
+                # Agreement within absolute fp-noise regardless of ratio.
+                rel = 0.0
+            else:
+                # Normalise by the larger of |spec|, |target|, or the
+                # absolute tolerance — prevents a tiny-norm reference or
+                # target from inflating rel_diff into a spurious mismatch.
+                denom = max(spec_norm, float(np.linalg.norm(arr)), _ABS_TOL)
+                rel = abs_diff / denom
             if rel > self._FRONTEND_GATE_REL_TOL:
                 report.frontend_gate_rejected[name] = (
                     f"noopt rel_diff vs {report.frontend_gate_ref} = "
