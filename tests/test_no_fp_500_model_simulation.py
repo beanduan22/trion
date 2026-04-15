@@ -429,6 +429,37 @@ def test_frontend_gate_rejects_bridge_mismatch_before_scoring():
     )
 
 
+def test_real_tvm_backend_runs_via_subprocess_worker():
+    """Real Apache TVM (not the JAX stand-in) must run a tiny ONNX model
+    end-to-end via the subprocess worker. Skipped when the 3.10 worker
+    python or tvm_worker.py is absent — that keeps the test portable."""
+    from trion.oracle.tvm_backend import TVMBackend
+    be = TVMBackend()
+    if not be.is_available():
+        pytest.skip(
+            "TVM worker python / apache-tvm not installed in this env. "
+            "To enable: create a Python 3.10 conda env with "
+            "`pip install apache-tvm 'numpy<2' 'onnx<1.16'` and point "
+            "TRION_TVM_WORKER_PYTHON at its python binary."
+        )
+
+    X = helper.make_tensor_value_info("X", TensorProto.FLOAT, [1, 4])
+    Y = helper.make_tensor_value_info("Y", TensorProto.FLOAT, [1, 4])
+    node = helper.make_node("Relu", ["X"], ["Y"])
+    g = helper.make_graph([node], "g", [X], [Y])
+    m = helper.make_model(g, opset_imports=[helper.make_opsetid("", 13)])
+    m.ir_version = 8
+
+    x = np.array([[-1.0, 2.0, -3.0, 4.0]], dtype=np.float32)
+    r = be.run(m, {"X": x}, optimized=True)
+    assert not r.crashed, f"TVM backend crashed: {r.error}"
+    assert r.output is not None
+    assert np.allclose(r.output, np.maximum(x, 0))
+    # Second call — must reuse the worker (no re-import of TVM per call)
+    r2 = be.run(m, {"X": x * 2}, optimized=False)
+    assert r2.output is not None and np.allclose(r2.output, np.maximum(x * 2, 0))
+
+
 def test_known_pattern_divergence_is_attributed_not_re_flagged():
     """When a model contains a pattern that the strengthened compat cache
     flagged as divergent on backend B, and B is the outlier at model
