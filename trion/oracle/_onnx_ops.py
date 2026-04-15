@@ -175,21 +175,25 @@ def dispatch_op(node, values: dict, F) -> list:
         to    = _attr(node, "to", TensorProto.FLOAT)
         dtype = _ONNX_DTYPE.get(int(to), np.float32)
         x     = get(0)
-        # ONNX leaves float→int out-of-range behaviour implementation-defined.
-        # ORT picks C-cast wrap (200.0 → int8 → -56); numpy does the same;
-        # JAX *saturates* (200.0 → int8 → 127). To stop that JAX-vs-ORT
-        # disagreement from showing up as a "compiler bug", we explicitly
-        # implement wrap semantics on the dispatch side via the int8/16
-        # bit-pattern arithmetic that every numpy-compatible backend can
-        # express the same way.
-        if np.issubdtype(dtype, np.integer):
+        # ORT and numpy use C-cast wrap on float→int (200.0 → int8 → -56);
+        # JAX saturates (200.0 → int8 → 127). For *narrow* int types
+        # (int8, uint8, int16, uint16) we explicitly implement wrap to
+        # match ORT — the mod arithmetic stays inside fp32's 2^24 exact
+        # integer range, so no precision is lost.
+        # For wide int types (int32, int64) the wrap span (2^32 / 2^64)
+        # cannot be represented exactly in fp32, so attempting wrap-mod
+        # in fp32 produces zero (catastrophic precision loss). For these
+        # types we fall back to plain astype — out-of-range float→int32/64
+        # values are a rare edge case and the spec explicitly leaves the
+        # behaviour implementation-defined; both ORT and JAX agree on
+        # in-range values, which covers ~all real-world traffic.
+        _NARROW_INT = (np.int8, np.uint8, np.int16, np.uint16)
+        if np.issubdtype(dtype, np.integer) and dtype.type in _NARROW_INT:
             info = np.iinfo(dtype)
-            span = int(info.max) - int(info.min) + 1   # 256 for int8
-            # round-toward-zero like C cast, then map into [min, max] via mod
-            x_int = F.floor(x) if hasattr(F, "floor") else np.floor(x)
-            # Add a small bias toward zero so floor(-0.5) → 0, matching C
-            x_int = F.where(x >= np.float32(0.0), F.floor(x), F.ceil(x)) \
-                if hasattr(F, "where") and hasattr(F, "ceil") else x_int
+            span = int(info.max) - int(info.min) + 1   # ≤ 65536
+            x_int = (F.where(x >= np.float32(0.0), F.floor(x), F.ceil(x))
+                     if hasattr(F, "where") and hasattr(F, "ceil")
+                     else (F.floor(x) if hasattr(F, "floor") else np.floor(x)))
             mod = ((x_int - np.float32(info.min)) %
                    np.float32(span)) + np.float32(info.min)
             return [mod.astype(dtype)]
