@@ -1,17 +1,40 @@
 """
-Optimization-Sensitive Oracles (Section 2.5).
+Cross-backend Oracle (Section 2.5, redesigned 2026-04-15).
 
-S(m) = S_diff(m) + Δ_opt(m)
+The oracle reports two independent bug signals:
 
-S_diff:   cross-backend inconsistency   (pytorch_eager ref vs target)
-Δ_opt:    optimization-induced deviation (target+opt vs target−opt)
+  Oracle 1 — Cross-backend inconsistency.
+      S(m) = max_{i ≠ j}  min( 1, ||y_i − y_j|| / δ )
+    over all *target* backends that produced numerical output for the
+    same model m and input x.  No single reference is trusted: any
+    pairwise disagreement above tolerance is the signal.  This avoids
+    the "reference is wrong" failure mode that produced ~50 historical
+    false positives when the harness's reference (onnx2torch) was
+    silently buggy.
 
-Crashes are logged separately and do NOT contribute to S(m).
+  Oracle 2 — Crash.
+      Recorded per-backend in `report.crashes` and never folded into
+      total_score.  A target that crashed contributes neither to
+      Oracle 1 nor to its own crash entry's score; downstream filtering
+      handles "frontend" vs "backend" classification.
+
+Eager helpers (PyTorch eager, JAX eager, TF eager) are NOT used to
+compute S(m).  They are consulted *post hoc* — when Oracle 1 fires —
+to attribute blame: the target whose output is farthest from the
+eager consensus is named in `report.suspect_backend`, but the score
+itself is independent of any eager run.
+
+Backend availability fallbacks:
+
+  - If the user requests `xla` (JAX→XLA) and JAX is missing, the
+    oracle silently registers `tensorflow` (TF→XLA via
+    tf.function(jit_compile=True)) under the same logical role so XLA
+    coverage is preserved.
 """
 from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import onnx
@@ -34,51 +57,35 @@ logger = logging.getLogger(__name__)
 # Errors that are clearly NOT compiler bugs — they're ONNX→PyTorch conversion
 # issues or torch.fx tracing limitations in onnx2torch, not the compiler itself.
 _FRONTEND_KEYWORDS = [
-    "onnx2torch",           # conversion library failure
-    "FakeTensor",           # torch.compile tracing via onnx2torch calls torch.Size(FakeTensor)
-    "fake_tensor",
-    "make_fx",              # torch.fx graph capture failure
-    "symbolic_trace",       # torch.fx symbolic tracing
-    "torch.fx",
-    "dynamo",               # TorchDynamo frontend
-    "BackendCompilerFailed", # dynamo caught a backend error and wrapped it
+    "onnx2torch",
+    "FakeTensor", "fake_tensor",
+    "make_fx", "symbolic_trace", "torch.fx",
+    "dynamo",
+    "BackendCompilerFailed",
 ]
-
-# Errors that are genuine compiler/runtime bugs
 _BACKEND_KEYWORDS = [
-    "CUDA",                 # GPU kernel error
-    "cudnn",                # cuDNN failure
-    "RuntimeError",         # real execution failure (not tracing)
-    "illegal memory",       # memory corruption
-    "INTERNAL ASSERT",      # compiler assertion
-    "lax.",                 # JAX/XLA primitive failure
-    "conv_general",         # XLA convolution bug
-    "shape mismatch",       # compiler shape inference bug
-    "DType",                # dtype handling bug
-    "Not implemented",      # missing op in compiler
+    "CUDA", "cudnn",
+    "RuntimeError",
+    "illegal memory",
+    "INTERNAL ASSERT",
+    "lax.", "conv_general",
+    "shape mismatch",
+    "DType",
+    "Not implemented",
 ]
 
 
 def _classify_crash(error: str) -> str:
-    """Classify crash as 'frontend' (not a compiler bug) or 'backend' (compiler bug).
-
-    Decision logic:
-    - If any frontend keyword is present → 'frontend' (conversion/tracing artifact)
-    - Otherwise → 'backend' (genuine compiler failure)
-    """
     if any(k in error for k in _FRONTEND_KEYWORDS):
         return "frontend"
     return "backend"
 
 
 def _error_signature(error: str) -> str:
-    """Extract a short normalized signature for grouping same-type errors."""
     import re
-    # Take first non-empty line of the error
     first_line = next((l.strip() for l in error.splitlines() if l.strip()), error)
-    # Normalize: remove memory addresses, line numbers, tensor shapes
-    sig = re.sub(r'0x[0-9a-fA-F]+', '<addr>', first_line)
-    sig = re.sub(r'\b\d+\b', 'N', sig)
+    sig = re.sub(r"0x[0-9a-fA-F]+", "<addr>", first_line)
+    sig = re.sub(r"\b\d+\b", "N", sig)
     return sig[:120]
 
 
@@ -86,36 +93,40 @@ def _error_signature(error: str) -> str:
 class OracleReport:
     """Per-model oracle result."""
     model_id: int
-    total_score: float
-    s_diff: Dict[str, float] = field(default_factory=dict)     # backend → score
-    delta_opt: Dict[str, float] = field(default_factory=dict)  # backend → score
-    crashes: List[str] = field(default_factory=list)           # crashed backend labels
-    errors:  Dict[str, str] = field(default_factory=dict)      # backend → error msg
-    crash_info: Dict[str, str] = field(default_factory=dict)   # backend → "frontend"|"backend"
-    error_signatures: Dict[str, str] = field(default_factory=dict)  # backend → normalized sig
-    n_valid_comparisons: int = 0   # backends that produced valid numerical s_diff
-    # ── Bug evidence (set when a real bug is found) ───────────────────────────
-    # backend → flat float32 list (for JSON serialisation)
-    bug_inputs: Dict[str, List] = field(default_factory=dict)      # input_name → values
-    expected_outputs: Dict[str, List] = field(default_factory=dict) # backend → noopt output
-    buggy_outputs: Dict[str, List] = field(default_factory=dict)    # backend → opt output
-    noopt_valid: Dict[str, bool] = field(default_factory=dict)      # backend → noopt≈ref
-    # Consensus-based reference correction (set by _consensus_check):
-    # When ≥3 target backends agree pairwise but disagree with the reference,
-    # the reference is the likely bug — every per-backend s_diff is zeroed
-    # and this flag is set so callers can skip the candidate.
+    total_score: float                                            # = Oracle 1, max pairwise
+
+    # Oracle 1: cross-backend pairwise divergence
+    pairwise_divergence: Dict[Tuple[str, str], float] = field(default_factory=dict)
+    worst_pair: Optional[Tuple[str, str]] = None                  # (b_i, b_j) at the max
+    suspect_backend: Optional[str] = None                         # name attributed by eager helper
+    suspect_distance_to_eager: float = 0.0
+    eager_helper_used: bool = False                               # True iff eager ran successfully
+    n_valid_targets: int = 0                                      # targets that produced output
+
+    # Oracle 2: crash channel (independent)
+    crashes: List[str] = field(default_factory=list)              # crashed backend labels
+    errors: Dict[str, str] = field(default_factory=dict)          # backend → error msg
+    crash_info: Dict[str, str] = field(default_factory=dict)      # backend → "frontend"|"backend"
+    error_signatures: Dict[str, str] = field(default_factory=dict)
+
+    # Bug evidence (always populated when total_score > 0)
+    bug_inputs: Dict[str, List] = field(default_factory=dict)     # input_name → flat list
+    target_outputs: Dict[str, List] = field(default_factory=dict) # backend → flat list
+    eager_output: Optional[List] = None                           # eager helper's output, if any
+
+    # Back-compat fields for downstream code that read the old report.
+    s_diff: Dict[str, float] = field(default_factory=dict)
+    delta_opt: Dict[str, float] = field(default_factory=dict)
+    expected_outputs: Dict[str, List] = field(default_factory=dict)
+    buggy_outputs: Dict[str, List] = field(default_factory=dict)
+    noopt_valid: Dict[str, bool] = field(default_factory=dict)
+    n_valid_comparisons: int = 0
     reference_likely_wrong: bool = False
-    consensus_size: int = 0   # number of targets that agreed in the consensus group
+    consensus_size: int = 0
 
 
 class DiscrepancyOracle:
-    """
-    Manages all backends and computes the unified discrepancy score S(m).
-
-    Crashes are recorded in crash_info but do NOT contribute to total_score.
-    Only genuine numerical divergence between pytorch_eager and a target
-    (or between opt/no-opt runs of the same target) affects the score.
-    """
+    """Cross-backend pairwise oracle (Oracle 1) + crash channel (Oracle 2)."""
 
     _BACKEND_CLASSES = {
         "pytorch_eager":  PyTorchEagerBackend,
@@ -134,43 +145,74 @@ class DiscrepancyOracle:
         self.config = config
         self.delta  = config.tolerance
 
-        self._ref_backend:    Optional[BackendBase] = None
-        self._target_backends: List[BackendBase]    = []
-
+        self._eager_backend: Optional[BackendBase] = None  # blame helper only
+        self._target_backends: List[BackendBase] = []
         self._init_backends()
+
+    # ── Initialisation ───────────────────────────────────────────────────────
 
     def _init_backends(self) -> None:
         cfg = self.config
 
-        # Reference
+        # Eager helper (used only post-hoc to attribute blame).
         ref_cls = self._BACKEND_CLASSES.get(cfg.reference_backend)
         if ref_cls:
             b = ref_cls()
             if b.is_available():
-                self._ref_backend = b
+                self._eager_backend = b
             else:
-                logger.warning("Reference backend '%s' not available.",
-                               cfg.reference_backend)
+                logger.warning("Eager helper '%s' not available — Oracle 1 "
+                               "will still fire but blame attribution will be "
+                               "skipped.", cfg.reference_backend)
 
-        # Targets
+        # Targets — with XLA → TF-XLA fallback.
+        seen_names: set = set()
         for bname in cfg.target_backends:
-            cls = self._BACKEND_CLASSES.get(bname)
-            if cls is None:
-                logger.warning("Unknown backend: %s", bname)
+            backend = self._instantiate_target(bname)
+            if backend is None:
                 continue
-            kwargs: dict = {}
-            if bname == "tvm":
-                kwargs = {"target": cfg.tvm_target, "opt_level": cfg.tvm_opt_level}
-            elif bname == "tensorrt":
-                kwargs = {"fp16": cfg.tensorrt_fp16}
-            b = cls(**kwargs)
-            if b.is_available():
-                self._target_backends.append(b)
-            else:
-                logger.info("Backend '%s' not available (skipped).", bname)
+            # Avoid registering the same backend twice when xla→tensorflow
+            # fallback collides with an explicit `tensorflow` entry.
+            if backend.name in seen_names:
+                logger.info("Backend '%s' already registered — skipping "
+                            "duplicate from '%s'.", backend.name, bname)
+                continue
+            self._target_backends.append(backend)
+            seen_names.add(backend.name)
 
         if not self._target_backends:
             logger.warning("No target backends available; oracle will return 0.")
+        elif len(self._target_backends) == 1:
+            logger.warning("Only 1 target backend available — Oracle 1 needs "
+                           "≥ 2 to compute any pairwise divergence.")
+
+    def _instantiate_target(self, bname: str) -> Optional[BackendBase]:
+        """Build a backend instance, falling back from xla → tensorflow when
+        JAX is missing so XLA coverage is preserved."""
+        cfg = self.config
+        cls = self._BACKEND_CLASSES.get(bname)
+        if cls is None:
+            logger.warning("Unknown backend: %s", bname)
+            return None
+        kwargs: dict = {}
+        if bname == "tvm":
+            kwargs = {"target": cfg.tvm_target, "opt_level": cfg.tvm_opt_level}
+        elif bname == "tensorrt":
+            kwargs = {"fp16": cfg.tensorrt_fp16}
+        b = cls(**kwargs)
+        if b.is_available():
+            return b
+        if bname == "xla":
+            # XLA via JAX unavailable — fall back to TF-XLA so we still test
+            # XLA's algebraic simplifier / HLO passes.
+            tf_b = self._BACKEND_CLASSES["tensorflow"]()
+            if tf_b.is_available():
+                logger.info("xla backend not available; substituting "
+                            "tensorflow (TF-XLA via jit_compile=True) so XLA "
+                            "coverage is preserved.")
+                return tf_b
+        logger.info("Backend '%s' not available (skipped).", bname)
+        return None
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -181,295 +223,165 @@ class DiscrepancyOracle:
         model_id: int = 0,
     ) -> OracleReport:
         report = OracleReport(model_id=model_id, total_score=0.0)
+        report.bug_inputs = {k: v.flatten().tolist() for k, v in inputs.items()}
 
-        # Store input arrays once (shared across all backends)
-        report.bug_inputs = {
-            k: v.flatten().tolist() for k, v in inputs.items()
-        }
-
-        # Run reference (pytorch_eager, no optimization)
-        ref_result: Optional[BackendResult] = None
-        if self._ref_backend:
-            ref_result = self._ref_backend.run(model, inputs, optimized=False)
-            if ref_result.crashed:
-                label = "ref:" + self._ref_backend.name
-                report.crashes.append(label)
-                err = ref_result.error or ""
-                report.errors[label] = err
-                report.crash_info[label] = _classify_crash(err)
-                ref_result = None   # treat as unavailable; s_diff will be 0
-            elif ref_result.output is not None:
-                # Discard models where the reference itself is numerically
-                # invalid — NaN/Inf in the reference means we have no ground
-                # truth to compare against, so any discrepancy is meaningless.
-                if not np.all(np.isfinite(ref_result.output)):
-                    logger.debug(
-                        "Model %d: reference output contains NaN/Inf — skipping.",
-                        model_id,
-                    )
-                    return report  # total_score stays 0; not a real bug
-
-        # Collect every target's noopt output before scoring so the
-        # consensus check can decide whether the reference is wrong.
-        per_backend_runs: Dict[str, dict] = {}
+        # Run every target with optimisation enabled. The new oracle has no
+        # noopt comparison — that was the Δ_opt term of the prior design,
+        # which the new Oracle 1 spec doesn't include.
+        target_runs: Dict[str, BackendResult] = {}
         for backend in self._target_backends:
-            res_opt   = backend.run(model, inputs, optimized=True)
-            res_noopt = backend.run(model, inputs, optimized=False)
-            per_backend_runs[backend.name] = {"opt": res_opt, "noopt": res_noopt}
+            res = backend.run(model, inputs, optimized=True)
+            self._record_crash_if_any(report, backend.name, res)
+            target_runs[backend.name] = res
 
-        # If ≥3 targets pairwise agree and the reference disagrees, treat the
-        # reference as the buggy party — clear it and score all targets as 0.
-        ref_was_wrong = self._reference_disagrees_with_consensus(
-            ref_result, per_backend_runs, report,
-        )
-        if ref_was_wrong:
-            ref_result = None  # downstream s_diff falls back to 0.0
+        # Oracle 1: max pairwise divergence over targets that produced output.
+        valid: List[Tuple[str, np.ndarray]] = []
+        for name, res in target_runs.items():
+            if res.crashed or res.output is None:
+                continue
+            try:
+                arr = np.asarray(res.output).astype(np.float64)
+            except Exception:
+                continue
+            if not np.all(np.isfinite(arr)):
+                # NaN / Inf in a target output is a bug, but it isn't a
+                # divergence we can score numerically — record under the
+                # crash channel as "backend" and skip.
+                report.crashes.append(f"{name}+nan")
+                report.errors[f"{name}+nan"] = "non-finite output"
+                report.crash_info[f"{name}+nan"] = "backend"
+                continue
+            valid.append((name, arr))
+            report.target_outputs[name] = arr.flatten().tolist()
+        report.n_valid_targets = len(valid)
 
-        for backend in self._target_backends:
-            bname = backend.name
-            res_opt   = per_backend_runs[bname]["opt"]
-            res_noopt = per_backend_runs[bname]["noopt"]
+        if len(valid) >= 2:
+            report.total_score = self._oracle1_pairwise(valid, report)
 
-            # Record crashes — but do NOT count them toward total_score
-            if res_opt.crashed:
-                label = f"{bname}+opt"
-                report.crashes.append(label)
-                err = res_opt.error or ""
-                report.errors[label] = err
-                report.crash_info[label] = _classify_crash(err)
-                report.error_signatures[label] = _error_signature(err)
+        # Oracle 1 + eager blame helper: only when divergence is real.
+        if report.total_score > 0.0 and self._eager_backend is not None:
+            self._attribute_blame_via_eager(model, inputs, valid, report)
 
-            if res_noopt.crashed:
-                label = f"{bname}-opt"
-                report.crashes.append(label)
-                err = res_noopt.error or ""
-                report.errors[label] = err
-                report.crash_info[label] = _classify_crash(err)
-                report.error_signatures[label] = _error_signature(err)
-
-            # Validate noopt ≈ pytorch_eager reference.
-            # Only count Δ_opt as a real bug if the baseline (noopt) is correct.
-            noopt_ok = self._noopt_matches_ref(ref_result, res_noopt)
-            report.noopt_valid[bname] = noopt_ok
-
-            # S_diff: cross-backend inconsistency (includes status-differ = 1.0)
-            s_diff = self._compute_s_diff(ref_result, res_opt, bname)
-            report.s_diff[bname] = s_diff
-            # Count as valid comparison only when both produced numerical output
-            if (ref_result is not None and ref_result.output is not None
-                    and not res_opt.crashed and res_opt.output is not None):
-                report.n_valid_comparisons += 1
-
-            # Δ_opt — only count when noopt itself is correct (noopt ≈ ref)
-            # If noopt is already wrong, the discrepancy may not be opt-induced.
-            if noopt_ok:
-                delta_opt = self._compute_delta_opt(res_opt, res_noopt)
-            else:
-                delta_opt = 0.0
-            report.delta_opt[bname] = delta_opt
-
-            report.total_score += s_diff + delta_opt
-
-            # Always record per-backend evidence (noopt output as "expected",
-            # opt output as "buggy") and the PyTorch reference, so that
-            # downstream reproducer scripts have all three sides of the
-            # comparison even when the bug is borderline.
-            if res_noopt.output is not None:
-                report.expected_outputs[bname] = res_noopt.output.flatten().tolist()
-            if res_opt.output is not None:
-                report.buggy_outputs[bname] = res_opt.output.flatten().tolist()
-
-        if (ref_result is not None
-                and ref_result.output is not None):
-            report.expected_outputs["__reference__"] = (
-                ref_result.output.flatten().tolist()
+        # For back-compat with downstream code that expected the old fields.
+        report.s_diff = {name: report.total_score for name, _ in valid}
+        if valid:
+            report.expected_outputs["__cross_max__"] = (
+                valid[0][1].flatten().tolist()
             )
 
         return report
 
-    def _reference_disagrees_with_consensus(
+    # ── Oracle 1: pairwise divergence ────────────────────────────────────────
+
+    def _oracle1_pairwise(
         self,
-        ref: Optional[BackendResult],
-        per_backend_runs: Dict[str, dict],
-        report: "OracleReport",
-    ) -> bool:
-        """Detect a wrong reference using cross-target consensus.
+        valid: List[Tuple[str, np.ndarray]],
+        report: OracleReport,
+    ) -> float:
+        """S(m) = max_{i≠j} min(1, ||y_i − y_j|| / δ).
 
-        Heuristic: if at least 3 target backends produced numerical output
-        with the *same shape* and they pairwise agree (rel_L2 ≤ self.delta),
-        but the reference's output diverges from them by more than self.delta,
-        then the reference is the bug — independent compilers very rarely
-        produce the same wrong answer for the same model.
-
-        Marks `report.reference_likely_wrong = True` and records the
-        consensus group size so callers can skip the candidate.
+        Records every pairwise divergence in `report.pairwise_divergence` and
+        the worst pair in `report.worst_pair`.
         """
-        if ref is None or ref.output is None:
-            return False
-        try:
-            ref_flat = ref.output.flatten().astype(np.float64)
-        except Exception:
-            return False
+        max_div = 0.0
+        worst: Optional[Tuple[str, str]] = None
+        for i in range(len(valid)):
+            ni, yi = valid[i]
+            for j in range(i + 1, len(valid)):
+                nj, yj = valid[j]
+                if yi.shape != yj.shape:
+                    div = 1.0  # structural divergence — capped
+                else:
+                    diff = float(np.linalg.norm(yi.flatten() - yj.flatten()))
+                    norm = max(
+                        float(np.linalg.norm(yi.flatten())),
+                        float(np.linalg.norm(yj.flatten())),
+                        1e-3,
+                    )
+                    raw = (diff / norm) / self.delta
+                    div = float(min(1.0, raw)) if np.isfinite(raw) else 0.0
+                pair_key = (ni, nj)
+                report.pairwise_divergence[pair_key] = div
+                if div > max_div:
+                    max_div = div
+                    worst = pair_key
+        report.worst_pair = worst
+        return max_div
 
-        candidates = []  # list of (name, flat float64 vector)
-        for name, runs in per_backend_runs.items():
-            r = runs["noopt"]
-            if r.crashed or r.output is None:
-                continue
-            try:
-                v = r.output.flatten().astype(np.float64)
-            except Exception:
-                continue
-            if v.shape != ref_flat.shape:
-                continue
-            candidates.append((name, v))
+    # ── Eager blame attribution (post-hoc only) ──────────────────────────────
 
-        if len(candidates) < 3:
-            return False
-
-        def _close(a: np.ndarray, b: np.ndarray) -> bool:
-            denom = max(float(np.linalg.norm(b)), 1e-3)
-            return float(np.linalg.norm(a - b) / denom) <= self.delta
-
-        # Find the largest set of mutually-agreeing targets.
-        n = len(candidates)
-        best_group: List[int] = []
-        for i in range(n):
-            group = [i]
-            for j in range(n):
-                if j == i:
-                    continue
-                if all(_close(candidates[j][1], candidates[k][1]) for k in group):
-                    group.append(j)
-            if len(group) > len(best_group):
-                best_group = group
-
-        if len(best_group) < 3:
-            return False
-
-        # Reference must disagree with the consensus group.
-        consensus_vec = candidates[best_group[0]][1]
-        if _close(consensus_vec, ref_flat):
-            return False
-
-        report.reference_likely_wrong = True
-        report.consensus_size = len(best_group)
-        logger.info(
-            "Model %d: reference disagrees with %d-target consensus — "
-            "treating reference as buggy, no per-target bug recorded.",
-            report.model_id, len(best_group),
-        )
-        return True
-
-    def _noopt_matches_ref(
+    def _attribute_blame_via_eager(
         self,
-        ref: Optional[BackendResult],
-        noopt: BackendResult,
-    ) -> bool:
-        """Return True if noopt output is close enough to the pytorch_eager reference.
-        When ref is unavailable (crashed), assume noopt is valid (can't check)."""
-        if ref is None or ref.output is None:
-            return True   # cannot validate; give benefit of the doubt
-        if noopt.crashed or noopt.output is None:
-            return False
+        model: onnx.ModelProto,
+        inputs: Dict[str, np.ndarray],
+        valid: List[Tuple[str, np.ndarray]],
+        report: OracleReport,
+    ) -> None:
+        """Run the eager helper once; blame the target farthest from it.
+
+        This does NOT change Oracle 1's score. It only annotates the report
+        so a downstream triage tool can suggest which compiler to look at
+        first. If eager itself crashes or produces non-finite output, no
+        blame is attributed — the divergence is still reported, just
+        without a suspect.
+        """
         try:
-            r = ref.output.flatten().astype(np.float64)
-            n = noopt.output.flatten().astype(np.float64)
-            # Shape mismatch is a real divergence, not a "match".
-            if r.shape != n.shape:
-                return False
-            diff = np.linalg.norm(r - n)
-            norm = np.linalg.norm(r) + 1e-8
-            return float(diff / norm) <= (self.delta * 10)  # 10× looser for noopt check
+            res = self._eager_backend.run(model, inputs, optimized=False)
+        except Exception as exc:
+            logger.debug("eager helper crashed: %s", exc)
+            return
+        if res.crashed or res.output is None:
+            return
+        try:
+            ref = np.asarray(res.output).astype(np.float64)
         except Exception:
-            return True
+            return
+        if not np.all(np.isfinite(ref)):
+            return
+        report.eager_helper_used = True
+        report.eager_output = ref.flatten().tolist()
+        # Distance per target — only those with matching shape can be ranked.
+        distances: Dict[str, float] = {}
+        ref_flat = ref.flatten()
+        ref_norm = max(float(np.linalg.norm(ref_flat)), 1e-3)
+        for name, arr in valid:
+            arr_flat = arr.flatten()
+            if arr_flat.shape != ref_flat.shape:
+                # Shape mismatch with eager — that target is structurally
+                # wrong; max possible distance.
+                distances[name] = float("inf")
+                continue
+            distances[name] = float(np.linalg.norm(arr_flat - ref_flat) / ref_norm)
+        if not distances:
+            return
+        suspect = max(distances, key=distances.get)
+        report.suspect_backend = suspect
+        report.suspect_distance_to_eager = distances[suspect]
 
-    # ── Score components ──────────────────────────────────────────────────────
+    # ── Helpers ──────────────────────────────────────────────────────────────
 
-    def _compute_s_diff(
+    def _record_crash_if_any(
         self,
-        ref: Optional[BackendResult],
-        tar: BackendResult,
+        report: OracleReport,
         bname: str,
-    ) -> float:
-        """Cross-backend inconsistency S_diff(m) per the paper oracle.
+        res: BackendResult,
+    ) -> None:
+        if not res.crashed:
+            return
+        label = f"{bname}+opt"
+        report.crashes.append(label)
+        err = res.error or ""
+        report.errors[label] = err
+        report.crash_info[label] = _classify_crash(err)
+        report.error_signatures[label] = _error_signature(err)
 
-        S_diff = 1                              if execution status differs
-               = min(1, rel_diff / δ)           otherwise (both ran)
-               = 0                              if ref unavailable
-
-        "Execution status differs" means exactly one side produced output;
-        the other crashed.  Crashes are also logged separately in crash_info.
-        """
-        ref_ok = (ref is not None and not ref.crashed
-                  and ref.output is not None)
-        tar_ok = (not tar.crashed and tar.output is not None)
-
-        # Ref unavailable → can't compute meaningful S_diff
-        if not ref_ok:
-            return 0.0
-
-        # Execution status differs: ref ran, target crashed → S_diff = 1
-        if not tar_ok:
-            return 1.0
-
-        # Both ran: compute relative L2 divergence
-        try:
-            r = ref.output.flatten().astype(np.float64)
-            t = tar.output.flatten().astype(np.float64)
-            # Shape mismatch ⇒ structural divergence: cap at 1.0.
-            if r.shape != t.shape:
-                return 1.0
-            diff = np.linalg.norm(r - t)
-            # Use max(||ref||, abs_floor) as denominator so that near-zero
-            # reference outputs don't inflate the relative error into false
-            # positives.  1e-3 means: if the reference output norm is smaller
-            # than 1e-3 we treat it as if it were 1e-3 for the purposes of
-            # the ratio.  A real divergence on a near-zero output would need
-            # to exceed delta * 1e-3 in absolute terms to fire.
-            _ABS_FLOOR = 1e-3
-            norm = max(float(np.linalg.norm(r)), _ABS_FLOOR)
-            raw  = (diff / norm) / self.delta
-            return float(min(1.0, raw)) if np.isfinite(raw) else 0.0
-        except Exception as exc:
-            logger.debug("S_diff computation error (%s): %s", bname, exc)
-            return 0.0
-
-    def _compute_delta_opt(
-        self,
-        res_opt:   BackendResult,
-        res_noopt: BackendResult,
-    ) -> float:
-        """Optimization-induced deviation Δ_opt(m) per the paper oracle.
-
-        Δ_opt = min(1, ||y_tar+ - y_tar-||_rel / δ)
-
-        Returns 0.0 if either run crashed (crashes are logged separately).
-        """
-        if res_opt.crashed or res_noopt.crashed:
-            return 0.0
-        if res_opt.output is None or res_noopt.output is None:
-            return 0.0
-        try:
-            a = res_opt.output.flatten().astype(np.float64)
-            b = res_noopt.output.flatten().astype(np.float64)
-            # Shape mismatch between opt and noopt is itself a real divergence.
-            if a.shape != b.shape:
-                return 1.0
-            diff = np.linalg.norm(a - b)
-            _ABS_FLOOR = 1e-3
-            norm = max(float(np.linalg.norm(b)), _ABS_FLOOR)
-            raw  = (diff / norm) / self.delta
-            return float(min(1.0, raw)) if np.isfinite(raw) else 0.0
-        except Exception as exc:
-            logger.debug("Δ_opt computation error: %s", exc)
-            return 0.0
-
-    # ── Availability summary ──────────────────────────────────────────────────
+    # ── Availability summary ─────────────────────────────────────────────────
 
     def summary(self) -> str:
         lines = ["=== Backend Availability ==="]
-        ref_name = self._ref_backend.name if self._ref_backend else "NONE"
-        lines.append(f"  Reference : {ref_name}")
-        lines.append(f"  Targets   : {[b.name for b in self._target_backends]}")
+        eager_name = self._eager_backend.name if self._eager_backend else "NONE"
+        lines.append(f"  Eager (blame helper) : {eager_name}")
+        lines.append(f"  Targets ({len(self._target_backends)}) : "
+                     f"{[b.name for b in self._target_backends]}")
+        lines.append(f"  Tolerance δ           : {self.delta}")
         return "\n".join(lines)

@@ -184,63 +184,52 @@ class _StubBackend:
         return BackendResult(self._output)
 
 
-def test_oracle_consensus_check_demotes_wrong_reference():
-    """When ≥3 targets agree but the reference disagrees, the reference
-    should be marked as the buggy party — every target's s_diff becomes 0.
-    """
-    pytest.importorskip("onnxruntime")
-    from trion.config import TrionConfig
-    from trion.oracle.oracle import DiscrepancyOracle
-
-    correct = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
-    wrong   = np.array([9.0, 9.0, 9.0, 9.0], dtype=np.float32)
-
-    cfg = TrionConfig()
-    cfg.target_backends = []          # we'll inject stubs by hand
-    cfg.reference_backend = "pytorch_eager"
-    oracle = DiscrepancyOracle(cfg)
-    oracle._ref_backend = _StubBackend("pytorch_eager", wrong)
-    oracle._target_backends = [
-        _StubBackend("a", correct),
-        _StubBackend("b", correct),
-        _StubBackend("c", correct),
-    ]
-
-    # Build a trivial valid ONNX model — content is irrelevant; the stubs
-    # ignore it.
+def _identity_model() -> onnx.ModelProto:
     x_vi = helper.make_tensor_value_info("X", TensorProto.FLOAT, [4])
     y_vi = helper.make_tensor_value_info("Y", TensorProto.FLOAT, [4])
     node  = helper.make_node("Identity", ["X"], ["Y"])
     g     = helper.make_graph([node], "g", [x_vi], [y_vi])
     m     = helper.make_model(g, opset_imports=[helper.make_opsetid("", 17)])
-    mb    = onnx.load_from_string(m.SerializeToString())
+    return onnx.load_from_string(m.SerializeToString())
 
-    rep = oracle.score(mb, {"X": np.zeros(4, dtype=np.float32)}, model_id=42)
 
-    assert rep.reference_likely_wrong is True, (
-        "Consensus check failed to demote a reference that disagrees with "
-        "3 mutually agreeing targets."
-    )
-    assert rep.consensus_size == 3
-    # No target should be flagged as buggy when the reference is the bug.
+def test_oracle1_pairwise_returns_zero_when_all_targets_agree():
+    """No target disagrees → S(m) = 0. The eager helper must not fire."""
+    pytest.importorskip("onnxruntime")
+    from trion.config import TrionConfig
+    from trion.oracle.oracle import DiscrepancyOracle
+
+    same = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
+
+    cfg = TrionConfig()
+    cfg.target_backends = []
+    cfg.reference_backend = "pytorch_eager"
+    cfg.tolerance = 0.01
+    oracle = DiscrepancyOracle(cfg)
+    # Eager helper is a wrong stub — the test must NOT consult it.
+    oracle._eager_backend = _StubBackend("pytorch_eager",
+                                         np.array([99., 99., 99., 99.],
+                                                  dtype=np.float32))
+    oracle._target_backends = [_StubBackend(n, same) for n in "abc"]
+
+    rep = oracle.score(_identity_model(),
+                       {"X": np.zeros(4, dtype=np.float32)},
+                       model_id=1)
     assert rep.total_score == 0.0
-    for name in ("a", "b", "c"):
-        assert rep.s_diff[name] == 0.0, (
-            f"Target {name} was scored as buggy even though the reference "
-            "lost the consensus vote."
-        )
+    assert rep.worst_pair is None
+    assert rep.suspect_backend is None
+    assert rep.eager_helper_used is False
+    assert rep.n_valid_targets == 3
 
 
-def test_oracle_consensus_check_does_not_fire_when_targets_disagree():
-    """When targets disagree among themselves, the reference is trusted —
-    a real per-target divergence must still register as a bug.
-    """
+def test_oracle1_pairwise_fires_on_real_outlier():
+    """Real outlier (one target disagrees) must produce S(m) > 0 and the
+    eager helper must blame the outlier."""
     pytest.importorskip("onnxruntime")
     from trion.config import TrionConfig
     from trion.oracle.oracle import DiscrepancyOracle
 
     ref     = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
-    matches = ref
     diverge = np.array([9.0, 9.0, 9.0, 9.0], dtype=np.float32)
 
     cfg = TrionConfig()
@@ -248,25 +237,106 @@ def test_oracle_consensus_check_does_not_fire_when_targets_disagree():
     cfg.reference_backend = "pytorch_eager"
     cfg.tolerance = 0.01
     oracle = DiscrepancyOracle(cfg)
-    oracle._ref_backend = _StubBackend("pytorch_eager", ref)
+    oracle._eager_backend = _StubBackend("pytorch_eager", ref)
     oracle._target_backends = [
-        _StubBackend("a", matches),
-        _StubBackend("b", matches),
-        _StubBackend("c", diverge),  # genuine outlier
+        _StubBackend("a", ref),
+        _StubBackend("b", ref),
+        _StubBackend("c", diverge),  # outlier
     ]
 
-    x_vi = helper.make_tensor_value_info("X", TensorProto.FLOAT, [4])
-    y_vi = helper.make_tensor_value_info("Y", TensorProto.FLOAT, [4])
-    node  = helper.make_node("Identity", ["X"], ["Y"])
-    g     = helper.make_graph([node], "g", [x_vi], [y_vi])
-    m     = helper.make_model(g, opset_imports=[helper.make_opsetid("", 17)])
-    mb    = onnx.load_from_string(m.SerializeToString())
+    rep = oracle.score(_identity_model(),
+                       {"X": np.zeros(4, dtype=np.float32)},
+                       model_id=2)
+    assert rep.total_score > 0.0
+    # The worst pair must include the outlier.
+    assert rep.worst_pair is not None and "c" in rep.worst_pair
+    # Eager helper points at the outlier.
+    assert rep.eager_helper_used is True
+    assert rep.suspect_backend == "c"
 
-    rep = oracle.score(mb, {"X": np.zeros(4, dtype=np.float32)}, model_id=7)
-    assert rep.reference_likely_wrong is False
-    assert rep.s_diff["a"] == 0.0
-    assert rep.s_diff["b"] == 0.0
-    assert rep.s_diff["c"] > 0.0, (
-        "Real outlier 'c' was incorrectly suppressed; consensus check is "
-        "over-eager."
+
+def test_oracle1_does_not_use_eager_to_compute_score():
+    """Even if eager is wrong (worst-case), Oracle 1's score must be
+    determined entirely by target-target agreement. This is the property
+    that prevents the historical "reference is wrong" false positives."""
+    pytest.importorskip("onnxruntime")
+    from trion.config import TrionConfig
+    from trion.oracle.oracle import DiscrepancyOracle
+
+    same = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
+    very_wrong_eager = np.array([99., 99., 99., 99.], dtype=np.float32)
+
+    cfg = TrionConfig()
+    cfg.target_backends = []
+    cfg.reference_backend = "pytorch_eager"
+    cfg.tolerance = 0.01
+    oracle = DiscrepancyOracle(cfg)
+    oracle._eager_backend = _StubBackend("pytorch_eager", very_wrong_eager)
+    oracle._target_backends = [_StubBackend(n, same) for n in "abcde"]
+
+    rep = oracle.score(_identity_model(),
+                       {"X": np.zeros(4, dtype=np.float32)},
+                       model_id=3)
+    # Targets all agree → S(m) = 0 regardless of how wrong eager is.
+    assert rep.total_score == 0.0
+    assert rep.suspect_backend is None
+
+
+def test_oracle2_crash_channel_does_not_inflate_score():
+    """A crashing target must not contribute to S(m). The crash is
+    recorded under report.crashes / report.crash_info instead."""
+    pytest.importorskip("onnxruntime")
+    from trion.config import TrionConfig
+    from trion.oracle.oracle import DiscrepancyOracle
+
+    same = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
+
+    cfg = TrionConfig()
+    cfg.target_backends = []
+    cfg.reference_backend = "pytorch_eager"
+    cfg.tolerance = 0.01
+    oracle = DiscrepancyOracle(cfg)
+    oracle._eager_backend = _StubBackend("pytorch_eager", same)
+    oracle._target_backends = [
+        _StubBackend("a", same),
+        _StubBackend("b", same),
+        _StubBackend("c", None, crashed=True),
+    ]
+
+    rep = oracle.score(_identity_model(),
+                       {"X": np.zeros(4, dtype=np.float32)},
+                       model_id=4)
+    # Crash recorded but does not raise S(m).
+    assert "c+opt" in rep.crashes
+    assert rep.total_score == 0.0
+    assert rep.n_valid_targets == 2
+
+
+def test_oracle_xla_fallback_to_tensorflow_when_jax_missing():
+    """If `xla` (JAX backend) cannot be instantiated, the oracle must
+    silently substitute `tensorflow` (TF-XLA via jit_compile=True) so
+    XLA coverage is preserved."""
+    from trion.config import TrionConfig
+    from trion.oracle.oracle import DiscrepancyOracle
+
+    cfg = TrionConfig()
+    cfg.target_backends = ["xla"]
+    cfg.reference_backend = "pytorch_eager"
+
+    # Force `xla` (JAX) to look unavailable, regardless of whether JAX is
+    # installed in this environment.
+    from trion.oracle.xla_backend import XLABackend
+    saved = XLABackend.is_available
+    XLABackend.is_available = lambda self: False
+    try:
+        oracle = DiscrepancyOracle(cfg)
+    finally:
+        XLABackend.is_available = saved
+
+    names = [b.name for b in oracle._target_backends]
+    assert "tensorflow" in names, (
+        f"XLA → TF-XLA fallback did not fire; targets={names}. "
+        "Without the fallback, asking for `xla` on a JAX-less machine "
+        "leaves the oracle with one fewer compiler than the user "
+        "configured."
     )
