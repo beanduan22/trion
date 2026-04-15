@@ -165,6 +165,24 @@ class OracleReport:
     # which onnx2torch mishandles"). These targets did NOT participate in the
     # pairwise score; counted under crashes nor under valid targets.
 
+    # ── Frontend-validation gate (Oracle 1 correctness) ───────────────────────
+    # Every pairwise score comparing two backends relies on both backends
+    # running the *same* semantics as the ONNX spec. If a backend's
+    # ONNX→native bridge (onnx2torch, trion _onnx_ops dispatch, OV frontend,
+    # TVM importer, etc.) mis-converts even one op, its opt-mode output will
+    # disagree with everyone else not because the compiler is buggy but
+    # because it's running a different program. To prevent that class of
+    # false positive, every target must first pass a frontend gate: its
+    # unoptimised output must agree with the trusted ONNX-spec interpreter
+    # (ORT with all optimisations disabled). Targets that fail the gate are
+    # RECORDED HERE and EXCLUDED from pairwise scoring — they can't
+    # contribute to a bug count.
+    frontend_gate_ref: Optional[str] = None  # name of the spec interpreter used
+    frontend_gate_passed: Dict[str, float] = field(default_factory=dict)
+    # ↑ backend → rel_diff of backend-noopt vs spec-ref (≤ gate_tolerance)
+    frontend_gate_rejected: Dict[str, str] = field(default_factory=dict)
+    # ↑ backend → reason it failed the gate (crash message or rel_diff value)
+
     # Back-compat fields for downstream code that read the old report.
     s_diff: Dict[str, float] = field(default_factory=dict)
     delta_opt: Dict[str, float] = field(default_factory=dict)
@@ -276,25 +294,41 @@ class DiscrepancyOracle:
         report = OracleReport(model_id=model_id, total_score=0.0)
         report.bug_inputs = {k: v.flatten().tolist() for k, v in inputs.items()}
 
-        # Pre-flight: identify which backends should be skipped for this
-        # model because their *frontend* (not their compiler) is known to
-        # mishandle one of the model's ops. Without this filter, every
-        # CumSum-containing model would falsely flag torch.compile and
-        # TorchScript as buggy, when the bug is actually in onnx2torch.
+        # Pre-flight 1: static op-list filter. Drop targets whose frontend
+        # is documented to mishandle one of the model's ops (catalogue in
+        # FRONTEND_VULNERABLE_OPS) before we even compile.
         op_types = {n.op_type for n in model.graph.node}
         skip = self._skipped_targets_for(op_types)
         report.skipped_targets = skip
 
-        # Run every target with optimisation enabled. The new oracle has no
-        # noopt comparison — that was the Δ_opt term of the prior design,
-        # which the new Oracle 1 spec doesn't include.
+        # Pre-flight 2: frontend-validation gate. For every remaining target
+        # we run its UNOPTIMISED path once and compare the output to the
+        # trusted ONNX-spec interpreter. A target whose noopt output does
+        # not match the spec has a bridge bug (not a compiler bug) and is
+        # excluded from Oracle 1 — this is what guarantees the "connection
+        # correctness" between score and compiler: only backends whose
+        # ONNX→native translation is verified on *this* model participate.
+        spec_ref = self._spec_reference(model, inputs, report)
+
+        # Run every target's optimised path. Record crashes as Oracle 2.
         target_runs: Dict[str, BackendResult] = {}
+        target_noopt: Dict[str, BackendResult] = {}
         for backend in self._target_backends:
             if backend.name in skip:
-                continue   # frontend-vulnerable for this op set
-            res = backend.run(model, inputs, optimized=True)
-            self._record_crash_if_any(report, backend.name, res)
-            target_runs[backend.name] = res
+                continue
+            # Unoptimised run for the frontend gate. If the backend crashes
+            # even without its optimiser, the bridge is busted for this
+            # model — log as frontend rejection, not as an Oracle 2 crash.
+            res_noopt = backend.run(model, inputs, optimized=False)
+            target_noopt[backend.name] = res_noopt
+            # Optimised run is what Oracle 1 compares pairwise.
+            res_opt = backend.run(model, inputs, optimized=True)
+            self._record_crash_if_any(report, backend.name, res_opt)
+            target_runs[backend.name] = res_opt
+
+        # Apply the frontend gate.
+        if spec_ref is not None:
+            self._apply_frontend_gate(spec_ref, target_noopt, target_runs, report)
 
         # Oracle 1: max pairwise divergence over targets that produced output.
         valid: List[Tuple[str, np.ndarray]] = []
@@ -458,6 +492,99 @@ class DiscrepancyOracle:
         suspect = max(distances, key=distances.get)
         report.suspect_backend = suspect
         report.suspect_distance_to_eager = distances[suspect]
+
+    # ── Frontend-validation gate (the "connection correctness" layer) ────────
+
+    # Tolerance used when comparing a target's noopt output to the trusted
+    # ONNX-spec interpreter. Kept at 10× the oracle δ so genuine fp-noise
+    # (tiled GEMM reduction order, etc.) doesn't reject a backend for this
+    # model. Anything worse than this *is* a bridge bug.
+    _FRONTEND_GATE_REL_TOL = 0.05
+
+    def _spec_reference(
+        self,
+        model: onnx.ModelProto,
+        inputs: Dict[str, np.ndarray],
+        report: OracleReport,
+    ) -> Optional[np.ndarray]:
+        """Return the trusted ONNX-spec interpreter's output for this model,
+        or None if no interpreter is available / the interpreter crashed or
+        produced non-finite output. When None, we skip the frontend gate
+        entirely (conservative: every target participates).
+        """
+        # Prefer ORT-noopt (runs every ONNX op with all optimiser passes
+        # disabled = pure spec interpretation). If eager backend is
+        # configured to something else (TorchEager / onnx2torch), don't use
+        # it as a spec interpreter — we've been burned by that before.
+        if self._eager_backend is None:
+            return None
+        try:
+            res = self._eager_backend.run(model, inputs, optimized=False)
+        except Exception:
+            return None
+        if res.crashed or res.output is None:
+            return None
+        arr = np.asarray(res.output)
+        if not np.all(np.isfinite(arr)):
+            return None
+        report.frontend_gate_ref = self._eager_backend.name
+        return arr.astype(np.float64)
+
+    def _apply_frontend_gate(
+        self,
+        spec_ref: np.ndarray,
+        noopt_runs: Dict[str, "BackendResult"],
+        opt_runs: Dict[str, "BackendResult"],
+        report: OracleReport,
+    ) -> None:
+        """Remove from `opt_runs` every target whose noopt output diverges
+        from `spec_ref` by more than _FRONTEND_GATE_REL_TOL. Records reason
+        in `report.frontend_gate_rejected` / `frontend_gate_passed` so the
+        rejection is auditable.
+
+        Rejected targets no longer participate in Oracle 1. Their crashes
+        were already recorded in `report.crashes` via `_record_crash_if_any`
+        (Oracle 2) so nothing is lost — only the frontend-bug-vs-compiler-
+        bug distinction is now visible.
+        """
+        spec_flat = spec_ref.flatten()
+        spec_norm = max(float(np.linalg.norm(spec_flat)), 1e-3)
+        for name, res in list(noopt_runs.items()):
+            if res.crashed or res.output is None:
+                report.frontend_gate_rejected[name] = (
+                    f"noopt crashed: {(res.error or '')[:80]}"
+                )
+                opt_runs.pop(name, None)
+                continue
+            try:
+                arr = np.asarray(res.output, dtype=np.float64).flatten()
+            except Exception as exc:
+                report.frontend_gate_rejected[name] = f"noopt non-numeric: {exc}"
+                opt_runs.pop(name, None)
+                continue
+            if arr.shape != spec_flat.shape:
+                report.frontend_gate_rejected[name] = (
+                    f"noopt shape mismatch: {arr.shape} vs spec "
+                    f"{spec_flat.shape}"
+                )
+                opt_runs.pop(name, None)
+                continue
+            if not np.all(np.isfinite(arr)):
+                report.frontend_gate_rejected[name] = "noopt non-finite output"
+                opt_runs.pop(name, None)
+                continue
+            rel = float(np.linalg.norm(arr - spec_flat) / spec_norm)
+            if rel > self._FRONTEND_GATE_REL_TOL:
+                report.frontend_gate_rejected[name] = (
+                    f"noopt rel_diff vs {report.frontend_gate_ref} = "
+                    f"{rel:.4e} > {self._FRONTEND_GATE_REL_TOL:.2e} "
+                    "— backend's ONNX-to-native bridge is unreliable for "
+                    "this model; excluded from pairwise score so a later "
+                    "opt-vs-others divergence can't be blamed on the compiler."
+                )
+                opt_runs.pop(name, None)
+            else:
+                report.frontend_gate_passed[name] = rel
 
     # ── False-positive guards ────────────────────────────────────────────────
 

@@ -166,7 +166,11 @@ def test_reference_backend_uses_ort_first():
 # ─────────────────────────────────────────────────────────────────────────────
 
 class _StubBackend:
-    """Minimal backend stub used to exercise the consensus check."""
+    """Minimal backend stub used to exercise the oracle. Returns the same
+    output for both optimized and noopt runs so the frontend-validation
+    gate treats the stub as "bridge correct" — that lets us write tests
+    that target just Oracle 1's pairwise logic without having to also
+    stub out the spec reference."""
 
     def __init__(self, name: str, output: np.ndarray | None,
                  crashed: bool = False) -> None:
@@ -206,10 +210,9 @@ def test_oracle1_pairwise_returns_zero_when_all_targets_agree():
     cfg.reference_backend = "pytorch_eager"
     cfg.tolerance = 0.01
     oracle = DiscrepancyOracle(cfg)
-    # Eager helper is a wrong stub — the test must NOT consult it.
-    oracle._eager_backend = _StubBackend("pytorch_eager",
-                                         np.array([99., 99., 99., 99.],
-                                                  dtype=np.float32))
+    # Spec reference agrees with every target — gate passes, all three
+    # participate, they all agree, score is 0, eager-helper never fires.
+    oracle._eager_backend = _StubBackend("pytorch_eager", same)
     oracle._target_backends = [_StubBackend(n, same) for n in "abc"]
 
     rep = oracle.score(_identity_model(),
@@ -218,19 +221,33 @@ def test_oracle1_pairwise_returns_zero_when_all_targets_agree():
     assert rep.total_score == 0.0
     assert rep.worst_pair is None
     assert rep.suspect_backend is None
-    assert rep.eager_helper_used is False
+    assert rep.eager_helper_used is False   # score is 0 so no blame attribution
     assert rep.n_valid_targets == 3
+    assert set(rep.frontend_gate_passed) == {"a", "b", "c"}
 
 
 def test_oracle1_pairwise_fires_on_real_outlier():
-    """Real outlier (one target disagrees) must produce S(m) > 0 and the
+    """Real outlier (one target's OPT path disagrees, but its noopt agrees
+    with the spec reference — so the frontend gate passes and the
+    divergence is genuinely an optimiser bug). Oracle 1 must fire and the
     eager helper must blame the outlier."""
     pytest.importorskip("onnxruntime")
     from trion.config import TrionConfig
     from trion.oracle.oracle import DiscrepancyOracle
+    from trion.oracle.base import BackendResult
 
     ref     = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
     diverge = np.array([9.0, 9.0, 9.0, 9.0], dtype=np.float32)
+
+    class _OptBreakStub:
+        """Simulates a backend whose frontend is correct but whose optimiser
+        is buggy — noopt matches spec, opt diverges. This is the exact
+        scenario Oracle 1 exists to catch."""
+        def __init__(self, name, opt, noopt):
+            self.name, self._opt, self._noopt = name, opt, noopt
+        def is_available(self): return True
+        def run(self, model, feeds, optimized=True):
+            return BackendResult(self._opt if optimized else self._noopt)
 
     cfg = TrionConfig()
     cfg.target_backends = []
@@ -239,45 +256,53 @@ def test_oracle1_pairwise_fires_on_real_outlier():
     oracle = DiscrepancyOracle(cfg)
     oracle._eager_backend = _StubBackend("pytorch_eager", ref)
     oracle._target_backends = [
-        _StubBackend("a", ref),
-        _StubBackend("b", ref),
-        _StubBackend("c", diverge),  # outlier
+        _OptBreakStub("a", ref,     ref),
+        _OptBreakStub("b", ref,     ref),
+        # Outlier: noopt correct (passes gate), opt wrong (real optimiser bug)
+        _OptBreakStub("c", diverge, ref),
     ]
 
     rep = oracle.score(_identity_model(),
                        {"X": np.zeros(4, dtype=np.float32)},
                        model_id=2)
+    assert set(rep.frontend_gate_passed) == {"a", "b", "c"}, (
+        "All three stubs' noopt matches the spec ref; all should pass the "
+        f"frontend gate. Rejected: {rep.frontend_gate_rejected}"
+    )
     assert rep.total_score > 0.0
-    # The worst pair must include the outlier.
     assert rep.worst_pair is not None and "c" in rep.worst_pair
-    # Eager helper points at the outlier.
     assert rep.eager_helper_used is True
     assert rep.suspect_backend == "c"
 
 
-def test_oracle1_does_not_use_eager_to_compute_score():
-    """Even if eager is wrong (worst-case), Oracle 1's score must be
-    determined entirely by target-target agreement. This is the property
-    that prevents the historical "reference is wrong" false positives."""
+def test_oracle1_never_produces_fp_when_spec_reference_is_broken():
+    """If the spec reference (ORT-noopt) is wrong for some reason, the
+    frontend-validation gate will reject every target (since each target's
+    noopt disagrees with the wrong spec). Oracle 1 then scores on an
+    empty set of targets → S(m) = 0. No false positive is ever produced.
+    This is the post-500-model-run guarantee: a wrong gate can only
+    *lose* information, never fabricate a bug."""
     pytest.importorskip("onnxruntime")
     from trion.config import TrionConfig
     from trion.oracle.oracle import DiscrepancyOracle
 
     same = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
-    very_wrong_eager = np.array([99., 99., 99., 99.], dtype=np.float32)
+    wrong_spec = np.array([99., 99., 99., 99.], dtype=np.float32)
 
     cfg = TrionConfig()
     cfg.target_backends = []
     cfg.reference_backend = "pytorch_eager"
     cfg.tolerance = 0.01
     oracle = DiscrepancyOracle(cfg)
-    oracle._eager_backend = _StubBackend("pytorch_eager", very_wrong_eager)
+    oracle._eager_backend = _StubBackend("pytorch_eager", wrong_spec)
     oracle._target_backends = [_StubBackend(n, same) for n in "abcde"]
 
     rep = oracle.score(_identity_model(),
                        {"X": np.zeros(4, dtype=np.float32)},
                        model_id=3)
-    # Targets all agree → S(m) = 0 regardless of how wrong eager is.
+    # Every target rejected because its noopt ≠ wrong_spec.
+    assert set(rep.frontend_gate_rejected) == set("abcde")
+    # With nothing to compare, S(m) must be 0 — no compiler blamed.
     assert rep.total_score == 0.0
     assert rep.suspect_backend is None
 

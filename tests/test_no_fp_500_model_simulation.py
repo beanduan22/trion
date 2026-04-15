@@ -353,6 +353,120 @@ def test_shared_infra_warning_when_xla_tflite_diverge_alone():
     assert "_onnx_ops" in rep.shared_infra_warning
 
 
+def test_frontend_gate_rejects_bridge_mismatch_before_scoring():
+    """The frontend-validation gate must exclude any backend whose
+    unoptimised output already disagrees with the ONNX-spec reference,
+    BEFORE any pairwise divergence is computed. This is the restriction
+    that guarantees Oracle 1's "connection correctness": a compiler can
+    only be blamed if its ONNX→native bridge is verified first.
+
+    This is the exact FP pattern that inflated the 500-model run:
+    torch_compile's noopt (via onnx2torch) disagreed with ORT-noopt on
+    ReduceL1-containing models, yet the old logic still included its
+    opt output in the pairwise score → false "Inductor bug".
+    """
+    from trion.config import TrionConfig
+    from trion.oracle.oracle import DiscrepancyOracle
+    from trion.oracle.base import BackendResult
+
+    spec_ref = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
+
+    class _Stub:
+        def __init__(self, name, out_opt, out_noopt):
+            self.name, self._opt, self._noopt = name, out_opt, out_noopt
+        def is_available(self): return True
+        def run(self, model, feeds, optimized=True):
+            return BackendResult(self._opt if optimized else self._noopt)
+
+    class _RefStub:
+        name = "pytorch_eager"
+        def is_available(self): return True
+        def run(self, model, feeds, optimized=False):
+            return BackendResult(spec_ref)
+
+    cfg = TrionConfig()
+    cfg.target_backends = []
+    cfg.reference_backend = "pytorch_eager"
+    cfg.tolerance = 0.01
+    oracle = DiscrepancyOracle(cfg)
+    oracle._eager_backend = _RefStub()
+    oracle._target_backends = [
+        # "trustworthy" targets: their noopt matches the spec reference.
+        _Stub("onnxruntime", spec_ref, spec_ref),
+        _Stub("openvino",    spec_ref, spec_ref),
+        # "bridge-broken" target: its noopt ALREADY disagrees with the spec
+        # (simulating onnx2torch mis-converting an op). Its opt output
+        # looks "divergent" from the other two, but only because its input
+        # to the compiler was already wrong. The frontend gate must reject
+        # it so the pairwise score stays clean.
+        _Stub("torch_compile",
+              out_opt=np.array([9., 9., 9., 9.], dtype=np.float32),
+              out_noopt=np.array([9., 9., 9., 9.], dtype=np.float32)),
+    ]
+
+    x_vi = helper.make_tensor_value_info("X", TensorProto.FLOAT, [4])
+    y_vi = helper.make_tensor_value_info("Y", TensorProto.FLOAT, [4])
+    node  = helper.make_node("Identity", ["X"], ["Y"])
+    g     = helper.make_graph([node], "g", [x_vi], [y_vi])
+    m     = helper.make_model(g, opset_imports=[helper.make_opsetid("", 17)])
+
+    rep = oracle.score(onnx.load_from_string(m.SerializeToString()),
+                       {"X": np.zeros(4, dtype=np.float32)})
+
+    assert rep.frontend_gate_ref == "pytorch_eager"
+    assert "torch_compile" in rep.frontend_gate_rejected, (
+        "Frontend gate failed to exclude torch_compile even though its "
+        "noopt output disagrees with ORT-noopt. Without this exclusion, "
+        "the pairwise score will blame torch_compile's compiler for a "
+        "bug that lives in onnx2torch."
+    )
+    assert "onnxruntime" in rep.frontend_gate_passed
+    assert "openvino"    in rep.frontend_gate_passed
+    assert rep.total_score == 0.0, (
+        "Score is non-zero. The gate let a bridge-broken target into the "
+        "pairwise comparison. This is the exact false-positive pattern "
+        f"we saw in the 500-model campaign. rep={rep!r}"
+    )
+
+
+def test_frontend_gate_silent_when_spec_reference_unavailable():
+    """If no spec interpreter is configured / it crashed, the gate must
+    not bring the oracle down — every target participates as before, but
+    the report records that no gate ran."""
+    from trion.config import TrionConfig
+    from trion.oracle.oracle import DiscrepancyOracle
+    from trion.oracle.base import BackendResult
+
+    class _Stub:
+        def __init__(self, name, out): self.name, self._out = name, out
+        def is_available(self): return True
+        def run(self, model, feeds, optimized=True):
+            return BackendResult(self._out)
+
+    same = np.array([1., 2., 3., 4.], dtype=np.float32)
+    cfg = TrionConfig()
+    cfg.target_backends = []
+    cfg.reference_backend = "pytorch_eager"
+    cfg.tolerance = 0.01
+    oracle = DiscrepancyOracle(cfg)
+    oracle._eager_backend = None   # no spec interpreter
+    oracle._target_backends = [_Stub(n, same) for n in ("a", "b", "c")]
+
+    x_vi = helper.make_tensor_value_info("X", TensorProto.FLOAT, [4])
+    y_vi = helper.make_tensor_value_info("Y", TensorProto.FLOAT, [4])
+    node  = helper.make_node("Identity", ["X"], ["Y"])
+    g     = helper.make_graph([node], "g", [x_vi], [y_vi])
+    m     = helper.make_model(g, opset_imports=[helper.make_opsetid("", 17)])
+
+    rep = oracle.score(onnx.load_from_string(m.SerializeToString()),
+                       {"X": np.zeros(4, dtype=np.float32)})
+
+    assert rep.frontend_gate_ref is None
+    assert rep.frontend_gate_passed == {}
+    assert rep.frontend_gate_rejected == {}
+    assert rep.total_score == 0.0   # all three still compared
+
+
 def test_shared_infra_warning_silent_when_others_also_disagree():
     """The shared-infra warning must NOT fire when the rest of the field
     is itself incoherent — that's a genuine multi-backend divergence and
