@@ -60,7 +60,7 @@ class TrionConfig:
     # ── Pattern-compat cache ──────────────────────────────────────────────────
     # Path to a JSON produced by `tools/check_pattern_compat.py`.  If set,
     # patterns unsupported by any active target backend are excluded.
-    pattern_compat_json: str = "campaign_results/pattern_compat_v3.json"
+    pattern_compat_json: str = "campaign_results/pattern_compat_v4_real_tvm.json"
 
     # ── Resume ────────────────────────────────────────────────────────────────
     # Skip the first N models by fast-forwarding the RNG without scoring.
