@@ -1,4 +1,4 @@
-# Minimal Reproducible Bug Scripts — 41 Real Bugs
+# Minimal Reproducible Bug Scripts — 43 Real Bugs
 
 **Verified on 2026-04-16** against Python 3.13, ONNX 1.21, ONNXRuntime 1.24.4 (CPU),
 OpenVINO 2026.0, TensorFlow 2.21.0 (CPU), PyTorch 2.9.1 (torch.compile / torch.jit),
@@ -76,7 +76,7 @@ is embedded below.
 | 17 | [cross_openvino_conv_fp32_precision.py](cross_openvino_conv_fp32_precision.py) | max abs 0.054 | OV CPU Conv picks Winograd / tiled GEMM; fp32 accumulation differs from ORT reference (also 5×5 kernel: 0.083). |
 | 18 | [cross_openvino_fp16_matmul_add.py](cross_openvino_fp16_matmul_add.py) | max abs 0.078 | OV fp16 CPU tiled GEMM accumulates partial sums in different order than ORT; error grows with `N`. |
 
-## 3. TensorFlow / XLA (4)
+## 3. TensorFlow / XLA (5)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
@@ -84,6 +84,7 @@ is embedded below.
 | 20 | [github_tfxla_001_bf16_cast_elide.py](github_tfxla_001_bf16_cast_elide.py) | cast eliminated | XLA `AlgebraicSimplifier` collapses `Convert(fp32→bf16)→Convert(bf16→fp32)` as identity without checking that the intermediate type has fewer bits. Silently skips bf16 rounding. |
 | 39 | [cross_xla_gather_oob_silent_clamp.py](cross_xla_gather_oob_silent_clamp.py) | silently clamps to last index | `tf.gather(x, [..., 256, ...])` on a length-256 tensor: TF eager / tf.function / PyTorch / ONNX Runtime all raise on the OOB index. XLA (`jit_compile=True`) silently clamps `256 → 255` and returns `x[255]` for that position with no error or warning. The XLA `Gather` lowering applies an implicit `clamp(idx, 0, dim-1)` instead of bounds-checking. |
 | 40 | [cross_xla_gather_oob_clamp_variants.py](cross_xla_gather_oob_clamp_variants.py) | silently clamps in 8/8 variants | Multi-input characterization of #39. XLA's silent `clamp(idx, 0, dim-1)` applies regardless of (a) magnitude — off-by-one, far-positive, INT_MAX, multiple OOB; (b) sign — negative indices clamp to 0 instead of dim-1; (c) rank — 2D gather on axis 0 or axis 1; while TF eager / PyTorch raise in every case. Confirms the bug is data- and shape-independent. |
+| 41 | [cross_xla_autocluster_slice_oob_suppress.py](cross_xla_autocluster_slice_oob_suppress.py) | OOB silently ignored | `tf_xla_auto_jit=2` dead-code-eliminates a `tf.slice` with OOB `size[2]=4` on dim of size 3 before bounds-checking, so the invalid op is never validated. TF eager, `tf.function` (no XLA), and `jit_compile=True` all raise `InvalidArgumentError`. Reproduces on 4/4 shapes with varying outer dims. |
 
 ## 4. JAX (1)
 
@@ -120,13 +121,14 @@ is embedded below.
 | 34 | [cross_onnx2torch_resize_linear_asym.py](cross_onnx2torch_resize_linear_asym.py) | max_diff 0.80 | onnx2torch maps ONNX `asymmetric` coord mode to the wrong PyTorch interpolation mode. |
 | 35 | [cross_onnx2torch_resize_nearest_ceil.py](cross_onnx2torch_resize_nearest_ceil.py) | max_diff 3.00 | onnx2torch converts `nearest_mode='ceil'` to PyTorch's `F.interpolate`, which only supports floor nearest. |
 
-## 8. TFLite (3)
+## 8. TFLite (4)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
 | 36 | [cross_tflite_unstack_concat_reshape_fold.py](cross_tflite_unstack_concat_reshape_fold.py) | output = input | TFLite converter folds `reshape(x,[H,W,1]) → unstack(axis=1) → concat(axis=0) → reshape(x,[H,W])` into a single no-op `RESHAPE`, dropping the transpose-equivalent element permutation. ModelAnalyzer confirms the converted subgraph is just `Op#0 RESHAPE`. TF eager / XLA / PyTorch / ONNX Runtime all return the correct permutation. |
 | 37 | [cross_tflite_l2_normalize_axis_mismatch.py](cross_tflite_l2_normalize_axis_mismatch.py) | 1.0 vs 1/√2 | `tf.math.l2_normalize(x)` defaults to `axis=None` (whole-tensor norm), but the TFLite converter silently lowers it to TFLite's built-in `L2_NORMALIZATION` op which only normalizes the **innermost** dimension. For input shape `[1,1,2] → +1 → transpose → l2_normalize`, the innermost dim has size 1, so each scalar is normalized to 1.0 instead of 1/√2 ≈ 0.7071. TF eager / XLA / PyTorch / ONNX Runtime all return 0.7071. |
 | 38 | [cross_tflite_l2_normalize_multi_shape.py](cross_tflite_l2_normalize_multi_shape.py) | per-row vs whole-tensor | Same root cause as #37 reproduced on additional shapes: rank-3 `(2,2,3)` half-step floats and `(4,1)` integers. TFLite normalizes each innermost vector independently (or each scalar to 1.0 when innermost dim = 1) while the four reference runtimes return the whole-tensor L2 normalization. Confirms the bug is data-independent and triggers whenever the product of non-innermost dims is > 1. |
+| 42 | [cross_tflite_fully_connected_mul_fusion_crash.py](cross_tflite_fully_connected_mul_fusion_crash.py) | converter crash | `multiply(x, scalar) → matmul(result, W) → add(result, bias)` triggers a converter crash in the `Mul+MatMul+Add → tfl.fully_connected` fusion pass. The fused op infers the pre-mul input as `tensor<1xf32>` (shape [1]) instead of `tensor<1xNxf32>`, failing the validation: `'input' num_elements % N == 0`. The constraint N = number of rows in W: crashes for w1 `[2,*]`, `[4,*]` etc. on 4/4 tested configurations. Keras runs correctly; the converter cannot produce a deployable flatbuffer. |
 
 ---
 
@@ -285,6 +287,14 @@ XLA jit        [5.0, 8.0, 7.0, 16.0, 255.0, 123.0]
 PyTorch        RAISED IndexError
 ONNX Runtime   RAISED InvalidArgument
 BUG REPRODUCED — XLA silently clamped OOB index 256 -> 255
+
+$ python3 cross_xla_autocluster_slice_oob_suppress.py
+Case                   Eager                          XLA jit                        Autocluster
+V1: shape=(1,3,3,2)    RAISED InvalidArgumentError    RAISED InvalidArgumentError    OK  [2.0, 3.0, 8.0]...  ← BUG
+V2: shape=(2,4,3,3)    RAISED InvalidArgumentError    RAISED InvalidArgumentError    OK  [3.0, 4.0, 5.0]...  ← BUG
+V3: shape=(1,5,3,1)    RAISED InvalidArgumentError    RAISED InvalidArgumentError    OK  [1.0, 4.0, 7.0]...  ← BUG
+V4: shape=(3,2,3,4)    RAISED InvalidArgumentError    RAISED InvalidArgumentError    OK  [4.0, 5.0, 6.0]...  ← BUG
+BUG REPRODUCED 4/4 — autocluster suppresses OOB Slice validation
 
 $ python3 cross_xla_gather_oob_clamp_variants.py
 V1 idx=256        XLA: [5, 8, 7, 16, 255, 123]                    -> clamp to dim-1
@@ -448,6 +458,13 @@ PyTorch        [0.7071067690849304, 0.7071067690849304] OK
 ONNX Runtime   [0.7071067690849304, 0.7071067690849304] OK
 TFLite         [1.0, 1.0]                               WRONG
 BUG REPRODUCED — TFLite lowers tf.math.l2_normalize(axis=None) to L2_NORMALIZATION (innermost-axis only)
+
+$ python3 cross_tflite_fully_connected_mul_fusion_crash.py
+V1 x=[1,2] w1=[2,1]:  Keras=[997.5]   TFLite=CONVERTER CRASH: 'tfl.fully_connected' op expect 'input' num_elements % 2 == 0, got tensor<1xf32>
+V2 x=[1,2] w1=[2,1]:  Keras=[21.0]    TFLite=CONVERTER CRASH: 'tfl.fully_connected' op expect 'input' num_elements % 2 == 0, got tensor<1xf32>
+V3 x=[1,4] w1=[4,1]:  Keras=[13860.0] TFLite=CONVERTER CRASH: 'tfl.fully_connected' op expect 'input' num_elements % 4 == 0, got tensor<1xf32>
+V4 x=[1,2] w1=[2,2]:  Keras=[483.0, 2198.0]  TFLite=CONVERTER CRASH: 'tfl.fully_connected' op expect 'input' num_elements % 2 == 0, got tensor<1xf32>
+BUG REPRODUCED 4/4 — Mul+MatMul+Add fusion incorrectly infers pre-mul input as tensor<1xf32>
 
 $ python3 cross_tflite_l2_normalize_multi_shape.py
 === Case 3: shape=(2,2,3), half-step floats ===
