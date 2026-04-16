@@ -1,4 +1,4 @@
-# Minimal Reproducible Bug Scripts — 39 Real Bugs
+# Minimal Reproducible Bug Scripts — 40 Real Bugs
 
 **Verified on 2026-04-16** against Python 3.13, ONNX 1.21, ONNXRuntime 1.24.4 (CPU),
 OpenVINO 2026.0, TensorFlow 2.21.0 (CPU), PyTorch 2.9.1 (torch.compile / torch.jit),
@@ -76,12 +76,13 @@ is embedded below.
 | 17 | [cross_openvino_conv_fp32_precision.py](cross_openvino_conv_fp32_precision.py) | max abs 0.054 | OV CPU Conv picks Winograd / tiled GEMM; fp32 accumulation differs from ORT reference (also 5×5 kernel: 0.083). |
 | 18 | [cross_openvino_fp16_matmul_add.py](cross_openvino_fp16_matmul_add.py) | max abs 0.078 | OV fp16 CPU tiled GEMM accumulates partial sums in different order than ORT; error grows with `N`. |
 
-## 3. TensorFlow / XLA (2)
+## 3. TensorFlow / XLA (3)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
 | 19 | [github_tensorflow_002.py](github_tensorflow_002.py) | off-by-one row | MLIR/TOSA nearest resize shifts rows by 1 with `half_pixel_centers=True` ([TF #62386](https://github.com/tensorflow/tensorflow/issues/62386)). |
 | 20 | [github_tfxla_001_bf16_cast_elide.py](github_tfxla_001_bf16_cast_elide.py) | cast eliminated | XLA `AlgebraicSimplifier` collapses `Convert(fp32→bf16)→Convert(bf16→fp32)` as identity without checking that the intermediate type has fewer bits. Silently skips bf16 rounding. |
+| 39 | [cross_xla_gather_oob_silent_clamp.py](cross_xla_gather_oob_silent_clamp.py) | silently clamps to last index | `tf.gather(x, [..., 256, ...])` on a length-256 tensor: TF eager / tf.function / PyTorch / ONNX Runtime all raise on the OOB index. XLA (`jit_compile=True`) silently clamps `256 → 255` and returns `x[255]` for that position with no error or warning. The XLA `Gather` lowering applies an implicit `clamp(idx, 0, dim-1)` instead of bounds-checking. |
 
 ## 4. JAX (1)
 
@@ -271,6 +272,18 @@ TensorFlow version: 2.21.0
 TF eager          : 1.234375000000   (loss = 1.93e-04)
 TF-XLA            : 1.234567880630    (loss = 9.49e-09)
 BUG REPRODUCED — TF-XLA stripped bf16↔fp32 cast pair as identity
+
+$ python3 cross_xla_gather_oob_silent_clamp.py
+x       : range(256), shape=(256,)
+indices : [5, 8, 7, 16, 256, 123]    (256 is out of range)
+Runtime        Result
+----------------------------------------------------------------------------
+TF eager       RAISED InvalidArgumentError
+tf.function    RAISED InvalidArgumentError
+XLA jit        [5.0, 8.0, 7.0, 16.0, 255.0, 123.0]
+PyTorch        RAISED IndexError
+ONNX Runtime   RAISED InvalidArgument
+BUG REPRODUCED — XLA silently clamped OOB index 256 -> 255
 ```
 
 ### JAX
