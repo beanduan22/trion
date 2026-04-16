@@ -1,4 +1,4 @@
-# Minimal Reproducible Bug Scripts — 40 Real Bugs
+# Minimal Reproducible Bug Scripts — 41 Real Bugs
 
 **Verified on 2026-04-16** against Python 3.13, ONNX 1.21, ONNXRuntime 1.24.4 (CPU),
 OpenVINO 2026.0, TensorFlow 2.21.0 (CPU), PyTorch 2.9.1 (torch.compile / torch.jit),
@@ -76,13 +76,14 @@ is embedded below.
 | 17 | [cross_openvino_conv_fp32_precision.py](cross_openvino_conv_fp32_precision.py) | max abs 0.054 | OV CPU Conv picks Winograd / tiled GEMM; fp32 accumulation differs from ORT reference (also 5×5 kernel: 0.083). |
 | 18 | [cross_openvino_fp16_matmul_add.py](cross_openvino_fp16_matmul_add.py) | max abs 0.078 | OV fp16 CPU tiled GEMM accumulates partial sums in different order than ORT; error grows with `N`. |
 
-## 3. TensorFlow / XLA (3)
+## 3. TensorFlow / XLA (4)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
 | 19 | [github_tensorflow_002.py](github_tensorflow_002.py) | off-by-one row | MLIR/TOSA nearest resize shifts rows by 1 with `half_pixel_centers=True` ([TF #62386](https://github.com/tensorflow/tensorflow/issues/62386)). |
 | 20 | [github_tfxla_001_bf16_cast_elide.py](github_tfxla_001_bf16_cast_elide.py) | cast eliminated | XLA `AlgebraicSimplifier` collapses `Convert(fp32→bf16)→Convert(bf16→fp32)` as identity without checking that the intermediate type has fewer bits. Silently skips bf16 rounding. |
 | 39 | [cross_xla_gather_oob_silent_clamp.py](cross_xla_gather_oob_silent_clamp.py) | silently clamps to last index | `tf.gather(x, [..., 256, ...])` on a length-256 tensor: TF eager / tf.function / PyTorch / ONNX Runtime all raise on the OOB index. XLA (`jit_compile=True`) silently clamps `256 → 255` and returns `x[255]` for that position with no error or warning. The XLA `Gather` lowering applies an implicit `clamp(idx, 0, dim-1)` instead of bounds-checking. |
+| 40 | [cross_xla_gather_oob_clamp_variants.py](cross_xla_gather_oob_clamp_variants.py) | silently clamps in 8/8 variants | Multi-input characterization of #39. XLA's silent `clamp(idx, 0, dim-1)` applies regardless of (a) magnitude — off-by-one, far-positive, INT_MAX, multiple OOB; (b) sign — negative indices clamp to 0 instead of dim-1; (c) rank — 2D gather on axis 0 or axis 1; while TF eager / PyTorch raise in every case. Confirms the bug is data- and shape-independent. |
 
 ## 4. JAX (1)
 
@@ -284,6 +285,17 @@ XLA jit        [5.0, 8.0, 7.0, 16.0, 255.0, 123.0]
 PyTorch        RAISED IndexError
 ONNX Runtime   RAISED InvalidArgument
 BUG REPRODUCED — XLA silently clamped OOB index 256 -> 255
+
+$ python3 cross_xla_gather_oob_clamp_variants.py
+V1 idx=256        XLA: [5, 8, 7, 16, 255, 123]                    -> clamp to dim-1
+V2 idx=1000       XLA: [5, 8, 255, 123]                           -> clamp to dim-1
+V3 idx=-1         XLA: [5, 0, 7, 16, 123]                         -> negative clamps to 0
+V4 idx=-300       XLA: [5, 0, 7, 123]                             -> negative clamps to 0
+V5 idx=INT_MAX    XLA: [5, 255]                                   -> clamp to dim-1
+V6 multi-OOB      XLA: [255, 255, 255, 255]                       -> all clamp to dim-1
+V7 2D axis=1      XLA: per-row inner-dim clamp                    -> per-axis clamp
+V8 2D axis=0      XLA: outer-row clamp (last row repeated)        -> per-axis clamp
+TF eager / PyTorch raise in all 8 variants. BUG REPRODUCED on 8/8.
 ```
 
 ### JAX
