@@ -1,4 +1,4 @@
-# Minimal Reproducible Bug Scripts — 36 Real Bugs
+# Minimal Reproducible Bug Scripts — 38 Real Bugs
 
 **Verified on 2026-04-16** against Python 3.13, ONNX 1.21, ONNXRuntime 1.24.4 (CPU),
 OpenVINO 2026.0, TensorFlow 2.21.0 (CPU), PyTorch 2.9.1 (torch.compile / torch.jit),
@@ -117,6 +117,13 @@ is embedded below.
 | 33 | [cross_onnx2torch_cumsum.py](cross_onnx2torch_cumsum.py) | max_diff 4.50 | `CumSum(axis=2)`: onnx2torch calls `axis.item()`, triggering a `torch.compile` graph break and producing wrong cumulative sum. |
 | 34 | [cross_onnx2torch_resize_linear_asym.py](cross_onnx2torch_resize_linear_asym.py) | max_diff 0.80 | onnx2torch maps ONNX `asymmetric` coord mode to the wrong PyTorch interpolation mode. |
 | 35 | [cross_onnx2torch_resize_nearest_ceil.py](cross_onnx2torch_resize_nearest_ceil.py) | max_diff 3.00 | onnx2torch converts `nearest_mode='ceil'` to PyTorch's `F.interpolate`, which only supports floor nearest. |
+
+## 8. TFLite (2)
+
+| # | Script | Error | Summary |
+|---|---|---|---|
+| 36 | [cross_tflite_unstack_concat_reshape_fold.py](cross_tflite_unstack_concat_reshape_fold.py) | output = input | TFLite converter folds `reshape(x,[H,W,1]) → unstack(axis=1) → concat(axis=0) → reshape(x,[H,W])` into a single no-op `RESHAPE`, dropping the transpose-equivalent element permutation. ModelAnalyzer confirms the converted subgraph is just `Op#0 RESHAPE`. TF eager / XLA / PyTorch / ONNX Runtime all return the correct permutation. |
+| 37 | [cross_tflite_l2_normalize_axis_mismatch.py](cross_tflite_l2_normalize_axis_mismatch.py) | 1.0 vs 1/√2 | `tf.math.l2_normalize(x)` defaults to `axis=None` (whole-tensor norm), but the TFLite converter silently lowers it to TFLite's built-in `L2_NORMALIZATION` op which only normalizes the **innermost** dimension. For input shape `[1,1,2] → +1 → transpose → l2_normalize`, the innermost dim has size 1, so each scalar is normalized to 1.0 instead of 1/√2 ≈ 0.7071. TF eager / XLA / PyTorch / ONNX Runtime all return 0.7071. |
 
 ---
 
@@ -387,6 +394,34 @@ BUG REPRODUCED
 $ python3 cross_onnx2torch_resize_nearest_ceil.py
 max_diff=3.003272  tol=0.01
 BUG REPRODUCED
+```
+
+### TFLite
+
+```
+$ python3 cross_tflite_unstack_concat_reshape_fold.py
+input    : [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]
+expected : [1.0, 4.0, 7.0, 10.0, 2.0, 5.0, 8.0, 11.0, 3.0, 6.0, 9.0, 12.0]
+Runtime        Output                                                       Match?
+--------------------------------------------------------------------------------------
+Keras eager    [1.0, 4.0, 7.0, 10.0, 2.0, 5.0, 8.0, 11.0, 3.0, 6.0, 9.0, 12.0]   OK
+XLA            [1.0, 4.0, 7.0, 10.0, 2.0, 5.0, 8.0, 11.0, 3.0, 6.0, 9.0, 12.0]   OK
+PyTorch        [1.0, 4.0, 7.0, 10.0, 2.0, 5.0, 8.0, 11.0, 3.0, 6.0, 9.0, 12.0]   OK
+ONNX Runtime   [1.0, 4.0, 7.0, 10.0, 2.0, 5.0, 8.0, 11.0, 3.0, 6.0, 9.0, 12.0]   OK
+TFLite         [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]   WRONG
+BUG REPRODUCED — TFLite folds reshape+unstack+concat+reshape into a no-op RESHAPE
+
+$ python3 cross_tflite_l2_normalize_axis_mismatch.py
+input    : shape=[1, 1, 2], all 1.0
+expected : [0.7071067690849304, 0.7071067690849304]  (= 1/sqrt(2))
+Runtime        Output                                   Match?
+----------------------------------------------------------------
+Keras eager    [0.7071067690849304, 0.7071067690849304] OK
+XLA            [0.7071067690849304, 0.7071067690849304] OK
+PyTorch        [0.7071067690849304, 0.7071067690849304] OK
+ONNX Runtime   [0.7071067690849304, 0.7071067690849304] OK
+TFLite         [1.0, 1.0]                               WRONG
+BUG REPRODUCED — TFLite lowers tf.math.l2_normalize(axis=None) to L2_NORMALIZATION (innermost-axis only)
 ```
 
 ---
