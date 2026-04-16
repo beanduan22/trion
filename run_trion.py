@@ -50,9 +50,11 @@ def parse_args():
                    help="Pattern sampling strategy (default: uniform for "
                         "broad per-campaign coverage)")
     p.add_argument("--pattern-compat", type=str,
-                   default="campaign_results/pattern_compat_v4_real_tvm.json",
+                   default="campaign_results/pattern_compat_v5.json",
                    help="Pattern-compatibility cache JSON produced by "
-                        "tools/check_pattern_compat.py (v4 = real Apache TVM)")
+                        "tools/check_pattern_compat.py "
+                        "(v5 = 559 patterns × 8 backends, "
+                        "393 cross-backend-safe on all 8)")
     p.add_argument("--start-model", type=int, default=0,
                    help="Skip (fast-forward RNG through) the first N models. "
                         "Use to resume a killed campaign at the correct RNG state.")

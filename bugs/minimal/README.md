@@ -1,6 +1,6 @@
-# Minimal Reproducible Bug Scripts — 35 Real Bugs
+# Minimal Reproducible Bug Scripts — 36 Real Bugs
 
-**Verified on 2026-04-15** against Python 3.13, ONNX 1.21, ONNXRuntime 1.24.4 (CPU),
+**Verified on 2026-04-16** against Python 3.13, ONNX 1.21, ONNXRuntime 1.24.4 (CPU),
 OpenVINO 2026.0, TensorFlow 2.21.0 (CPU), PyTorch 2.9.1 (torch.compile / torch.jit),
 JAX 0.9.2, TVM master (analytical), onnx2torch latest.
 
@@ -41,13 +41,13 @@ sweep. They were deleted because:
     not be mechanically minimised without re-investigating each one; they were
     dropped rather than kept in an unverified state.
 
-All 35 surviving files have been re-run from scratch on 2026-04-15; each exits 0
+All 36 surviving files have been re-run from scratch on 2026-04-16; each exits 0
 (bug reproduced) on the current toolchain. The verified output of every script
 is embedded below.
 
 ---
 
-## 1. ONNXRuntime (6)
+## 1. ONNXRuntime (7)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
@@ -57,6 +57,7 @@ is embedded below.
 | 4 | [github_ort_004.py](github_ort_004.py) | all True | `ORT_ENABLE_ALL` optimiser fuses `float→int32→bool` to `float→bool`, skipping the required int-truncation step. |
 | 5 | [github_ort_008.py](github_ort_008.py) | max abs 0.061 | CPU cubic resize (pytorch_half_pixel, antialias=0) diverges from PyTorch bicubic beyond tolerance. |
 | 6 | [github_ort_016.py](github_ort_016.py) | out of range | `GridSample(bicubic, padding=border)` clamps after neighbourhood lookup instead of per-sample, so values escape the input range [0, 15]. |
+| 7 | [github_ort_017_mod_int_divzero_sigfpe.py](github_ort_017_mod_int_divzero_sigfpe.py) | SIGFPE (signal 8) | `Mod(fmod=0, int32)` with zero divisor: ORT C++ kernel executes raw `a % b` without guarding `b == 0`, triggering a hardware SIGFPE that kills the process. Float `Mod(fmod=1)` handles zero correctly (returns NaN). |
 
 ## 2. OpenVINO (11)
 
@@ -160,6 +161,12 @@ $ python3 github_ort_016.py
 bicubic+border output[0,0,0,:]: [-0.5400001  2.6759987 12.323996  15.539993 ]
 Bicubic+border values in [0,15] range: False
 BUG REPRODUCED
+
+$ python3 github_ort_017_mod_int_divzero_sigfpe.py
+OnnxRuntime version: 1.24.4
+Child exit code: -8
+Child killed by SIGFPE (signal 8)
+BUG REPRODUCED — ORT Mod(fmod=0, int32) with B=0 triggers SIGFPE
 ```
 
 ### OpenVINO

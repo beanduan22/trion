@@ -27,6 +27,10 @@ from .op_coverage_v4 import OP_COVERAGE_V4_BY_CATEGORY
 from .op_coverage_v5 import OP_COVERAGE_V5_BY_CATEGORY
 from .op_coverage_v6 import OP_COVERAGE_V6_BY_CATEGORY
 from .universal_patterns import UNIVERSAL_BY_CATEGORY
+from .resize_sweep_patterns import RESIZE_SWEEP_BY_CATEGORY
+from .integer_arithmetic_patterns import INTEGER_ARITHMETIC_BY_CATEGORY
+from .edge_input_patterns import EDGE_INPUT_BY_CATEGORY
+from .cast_precision_patterns import CAST_PRECISION_BY_CATEGORY
 
 
 class OTPLibrary:
@@ -64,6 +68,10 @@ class OTPLibrary:
             OP_COVERAGE_V5_BY_CATEGORY,
             OP_COVERAGE_V6_BY_CATEGORY,
             UNIVERSAL_BY_CATEGORY,
+            RESIZE_SWEEP_BY_CATEGORY,
+            INTEGER_ARITHMETIC_BY_CATEGORY,
+            EDGE_INPUT_BY_CATEGORY,
+            CAST_PRECISION_BY_CATEGORY,
         ]
         out: List[OTP] = list(base_maps.get(category, []))
         for src in extra_sources:
