@@ -1,4 +1,4 @@
-# Minimal Reproducible Bug Scripts — 38 Real Bugs
+# Minimal Reproducible Bug Scripts — 39 Real Bugs
 
 **Verified on 2026-04-16** against Python 3.13, ONNX 1.21, ONNXRuntime 1.24.4 (CPU),
 OpenVINO 2026.0, TensorFlow 2.21.0 (CPU), PyTorch 2.9.1 (torch.compile / torch.jit),
@@ -118,12 +118,13 @@ is embedded below.
 | 34 | [cross_onnx2torch_resize_linear_asym.py](cross_onnx2torch_resize_linear_asym.py) | max_diff 0.80 | onnx2torch maps ONNX `asymmetric` coord mode to the wrong PyTorch interpolation mode. |
 | 35 | [cross_onnx2torch_resize_nearest_ceil.py](cross_onnx2torch_resize_nearest_ceil.py) | max_diff 3.00 | onnx2torch converts `nearest_mode='ceil'` to PyTorch's `F.interpolate`, which only supports floor nearest. |
 
-## 8. TFLite (2)
+## 8. TFLite (3)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
 | 36 | [cross_tflite_unstack_concat_reshape_fold.py](cross_tflite_unstack_concat_reshape_fold.py) | output = input | TFLite converter folds `reshape(x,[H,W,1]) → unstack(axis=1) → concat(axis=0) → reshape(x,[H,W])` into a single no-op `RESHAPE`, dropping the transpose-equivalent element permutation. ModelAnalyzer confirms the converted subgraph is just `Op#0 RESHAPE`. TF eager / XLA / PyTorch / ONNX Runtime all return the correct permutation. |
 | 37 | [cross_tflite_l2_normalize_axis_mismatch.py](cross_tflite_l2_normalize_axis_mismatch.py) | 1.0 vs 1/√2 | `tf.math.l2_normalize(x)` defaults to `axis=None` (whole-tensor norm), but the TFLite converter silently lowers it to TFLite's built-in `L2_NORMALIZATION` op which only normalizes the **innermost** dimension. For input shape `[1,1,2] → +1 → transpose → l2_normalize`, the innermost dim has size 1, so each scalar is normalized to 1.0 instead of 1/√2 ≈ 0.7071. TF eager / XLA / PyTorch / ONNX Runtime all return 0.7071. |
+| 38 | [cross_tflite_l2_normalize_multi_shape.py](cross_tflite_l2_normalize_multi_shape.py) | per-row vs whole-tensor | Same root cause as #37 reproduced on additional shapes: rank-3 `(2,2,3)` half-step floats and `(4,1)` integers. TFLite normalizes each innermost vector independently (or each scalar to 1.0 when innermost dim = 1) while the four reference runtimes return the whole-tensor L2 normalization. Confirms the bug is data-independent and triggers whenever the product of non-innermost dims is > 1. |
 
 ---
 
@@ -422,6 +423,21 @@ PyTorch        [0.7071067690849304, 0.7071067690849304] OK
 ONNX Runtime   [0.7071067690849304, 0.7071067690849304] OK
 TFLite         [1.0, 1.0]                               WRONG
 BUG REPRODUCED — TFLite lowers tf.math.l2_normalize(axis=None) to L2_NORMALIZATION (innermost-axis only)
+
+$ python3 cross_tflite_l2_normalize_multi_shape.py
+=== Case 3: shape=(2,2,3), half-step floats ===
+  expected : [0.0699, 0.1049, 0.1399, 0.1748, 0.2098, 0.2447, 0.2797, 0.3147, 0.3496, 0.3846, 0.4196, 0.4545]
+  Keras eager    matches expected                                              OK
+  XLA            matches expected                                              OK
+  PyTorch        matches expected                                              OK
+  ONNX Runtime   matches expected                                              OK
+  TFLite         [0.3714, 0.5571, 0.7428, 0.4767, 0.5721, 0.6674, 0.5111, ...] WRONG (each innermost-3 vec normalized independently)
+
+=== Case 4: shape=(4,1), unit innermost dim ===
+  expected : [0.2722, 0.4082, 0.5443, 0.6804]
+  Keras eager / XLA / PyTorch / ONNX Runtime: matches expected                 OK
+  TFLite         [1.0, 1.0, 1.0, 1.0]                                          WRONG (each scalar / itself = 1.0)
+BUG REPRODUCED on both cases — confirms data-independence of the axis-semantics mismatch
 ```
 
 ---
