@@ -1,13 +1,8 @@
-           x       y     sqrt(x)/y    rsqrt(x)*y     rel_err  bug?
-------------------------------------------------------------------------
-    1.00e-04     1.0    0.01000000     99.840172     9983.02  BUG
-    1.00e-02     2.0    0.05000000     19.965044      398.30  BUG
-    1.00e+00     1.0    1.00000000      0.998307        0.00  BUG
-
-Pattern 2: conv→relu→mul(s) vs mul(s)→conv→relu  (FoldScaleAxis)
-  relu(x)*scale (ref):  [-2.  -0.  -0.6 -0. ]
-  scale*relu(x) (bug):  [0.  1.  0.  2.4]
-  max_diff: 2.4000  BUG
-
-PASS=False
-BUG REPRODUCED: SimplifyExpr rsqrt rewrite introduces large precision error
+/home/binduan/miniconda3/envs/clawwork/lib/python3.10/site-packages/tvm/relay/frontend/onnx.py:6195: UserWarning: Field 'shape' of 'type' is required but missing.
+  warnings.warn(str(e))
+ORT[0,0,:]: [0.6476003  0.680636   0.2975294  0.6975541  0.5666482  0.30768085
+ 0.49313858 0.44409746]
+TVM[0,0,:]: [0.6062307  0.63081366 0.22761177 0.62207025 0.43770045 0.4528265
+ 0.5918484  0.31075302]
+max_abs=1.451457e-01  tol=1e-04
+BUG REPRODUCED: TVM Relay RoiAlign ignores coordinate_transformation_mode='half_pixel' and diverges from ORT

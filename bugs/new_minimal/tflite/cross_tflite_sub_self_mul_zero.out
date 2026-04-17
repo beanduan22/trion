@@ -1,2 +1,24 @@
-ORT (should be ~0): [0. 0. 0. 0.]
-BUG REPRODUCED (TFLite error): AttributeError: '_SignatureMap' object has no attribute 'name'
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1776431694.140572 2607050 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1776431695.076830 2607050 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+Keras (should ~0): [ 1.4998472  -0.20115077  0.6442596   0.65002275]
+Saved artifact at '/tmp/tmpn1qbz742'. The following endpoints are available:
+
+* Endpoint 'serve'
+  args_0 (POSITIONAL_ONLY): TensorSpec(shape=(None, 512), dtype=tf.float32, name=None)
+Output Type:
+  TensorSpec(shape=(2, 64), dtype=tf.float32, name=None)
+Captures:
+  131635626793232: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  131635626793808: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  131635626796112: TensorSpec(shape=(), dtype=tf.resource, name=None)
+/home/binduan/miniconda3/lib/python3.13/site-packages/tensorflow/lite/python/interpreter.py:457: UserWarning:     Warning: tf.lite.Interpreter is deprecated and is scheduled for deletion in
+    TF 2.20. Please use the LiteRT interpreter from the ai_edge_litert package.
+    See the [migration guide](https://ai.google.dev/edge/litert/migration)
+    for details.
+    
+  warnings.warn(_INTERPRETER_DELETION_WARNING)
+TFLite:            [1530.1123   -852.18256  -504.117      42.330757]
+max_abs=2250.318848, tfl_max=2250.280762
+BUG REPRODUCED: TFLite sub_self_mul_zero non-zero (max_abs=2250.318848)

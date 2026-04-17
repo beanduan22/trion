@@ -1,5 +1,11 @@
-ORT  output: [0.05263158 0.2631579  0.42105263 0.57894737 0.7368421  0.94736844]
-Expected:    [0.05263158 0.21052632 0.42105263 0.57894737 0.7894737  0.94736844]
-Bug (elem 4): ORT=0.7368, expected=0.7895
+Expected (spec)    : [0.05263158 0.21052632 0.42105263 0.57894737 0.7894737  0.94736844]
+ORT CPU            : [0.05263158 0.2631579  0.42105263 0.57894737 0.7368421  0.94736844]
+PyTorch nearest-ex : [0.05263158 0.2631579  0.42105263 0.57894737 0.7894737  0.94736844]
+OpenVINO CPU       : [0.05273438 0.26367188 0.421875   0.578125   0.73828125 0.94921875]
+
+elem 4  spec          : 0.789474  (index 15)
+elem 4  ORT           : 0.736842   match=False
+elem 4  torch nearest-exact : 0.789474   match=True
+elem 4  OpenVINO CPU  : 0.738281   match~spec=False
 PASS=False
-BUG REPRODUCED
+BUG REPRODUCED: at output element 4 ORT returns index 14 (0.7368); spec and torch nearest-exact return index 15 (0.7895).

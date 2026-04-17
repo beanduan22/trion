@@ -1,2 +1,28 @@
-ORT: [-4230.362   1943.0718 -1265.1711  3324.3977]
-BUG REPRODUCED (TFLite error): AttributeError: '_SignatureMap' object has no attribute 'name'
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1776431696.665480 2607520 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1776431697.608425 2607520 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+Keras: [0.62221676 0.9313083  1.011962   1.4583815 ]
+Saved artifact at '/tmp/tmph8o028cj'. The following endpoints are available:
+
+* Endpoint 'serve'
+  args_0 (POSITIONAL_ONLY): TensorSpec(shape=(None, 32, 128), dtype=tf.float32, name=None)
+Output Type:
+  TensorSpec(shape=(2, 32, 128), dtype=tf.float32, name=None)
+Captures:
+  137815629059600: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  137815629060176: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  137815629062480: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  137815629062672: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  137815629063248: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  137815629063440: TensorSpec(shape=(), dtype=tf.resource, name=None)
+/home/binduan/miniconda3/lib/python3.13/site-packages/tensorflow/lite/python/interpreter.py:457: UserWarning:     Warning: tf.lite.Interpreter is deprecated and is scheduled for deletion in
+    TF 2.20. Please use the LiteRT interpreter from the ai_edge_litert package.
+    See the [migration guide](https://ai.google.dev/edge/litert/migration)
+    for details.
+    
+  warnings.warn(_INTERPRETER_DELETION_WARNING)
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+TFLite:[0.00072057 0.         0.         0.        ]
+max_abs=4606713366520926167589978112.000000
+BUG REPRODUCED: TFLite transformer_encoder_layer (max_abs=4606713366520926167589978112.000000)

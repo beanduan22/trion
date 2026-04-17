@@ -1,5 +1,7 @@
-W0000 00:00:1776413111.556124  345364 local_rendezvous.cc:412] Local rendezvous is aborting with status: INVALID_ARGUMENT: Matrix size-incompatible: In[0]: [1,4], In[1]: [6,1]
-	 [[{{node MatMul}}]]
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1776431902.601832 2629871 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1776431903.598078 2629871 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
 Input shape : (1, 4), W shape: (6, 1)
 Eager output: None  error=InvalidArgumentError: Exception encountered when calling ModelEager.call().
 

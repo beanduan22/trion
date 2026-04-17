@@ -23,6 +23,10 @@ Exit 0 = BUG REPRODUCED on TFLite
 Exit 1 = not reproduced (TFLite output matches reference)
 Exit 2 = missing deps
 """
+import os
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
+
 import io
 import sys
 

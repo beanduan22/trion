@@ -1,5 +1,10 @@
-Input:    [-0.2 -0.1  0.   0.1  0.2]
-Expected: [False False False False False]
-ORT out:  [ True  True False  True  True]
+Input             : [-0.2 -0.1  0.   0.1  0.2]
+Expected (truncate→bool): [False False False False False]
+ORT_DISABLE_ALL   : [ True  True False  True  True]
+ORT_ENABLE_ALL    : [ True  True False  True  True]
+
+ORT_DISABLE_ALL matches expected : False
+ORT_ENABLE_ALL  matches expected : False
+DISABLE == ENABLE                : True
 PASS=False
-BUG REPRODUCED
+BUG REPRODUCED: ORT's Cast(float→int32)→Cast(int32→bool) chain does not preserve int32 truncation. For -0.2, -0.1, 0.1, 0.2 the spec demands int32 truncation to 0 and therefore bool False, but ORT returns True. ORT_DISABLE_ALL vs ORT_ENABLE_ALL table above shows whether the ORT graph optimizer alone is the culprit on this build.

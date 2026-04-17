@@ -1,8 +1,8 @@
-[1;31m2026-04-17 18:05:49.416999963 [E:onnxruntime:, sequential_executor.cc:572 ExecuteKernel] Non-zero status code returned while running Gather node. Name:'' Status Message: indices element out of data bounds, idx=4 must be within the inclusive range [-4,3][m
+[1;31m2026-04-17 23:18:54.969910107 [E:onnxruntime:, sequential_executor.cc:572 ExecuteKernel] Non-zero status code returned while running Gather node. Name:'' Status Message: indices element out of data bounds, idx=4 must be within the inclusive range [-4,3][m
+[1;31m2026-04-17 23:18:54.983568855 [E:onnxruntime:, sequential_executor.cc:572 ExecuteKernel] Non-zero status code returned while running Gather node. Name:'' Status Message: indices element out of data bounds, idx=4 must be within the inclusive range [-4,3][m
 params  : [3.0, 1.0, 4.0, 1.0]
 indices : [0, 1, 2, 3, 4]  (index 4 is OOB for size-4 tensor)
 
-[1;31m2026-04-17 18:05:49.431068373 [E:onnxruntime:, sequential_executor.cc:572 ExecuteKernel] Non-zero status code returned while running Gather node. Name:'' Status Message: indices element out of data bounds, idx=4 must be within the inclusive range [-4,3][m
 Compiler          Output                            Error
 --------------------------------------------------------------------------------
 ORT_ref           —                                 [ONNXRuntimeError] : 2 : INVALID_ARGUMENT : Non-zero st

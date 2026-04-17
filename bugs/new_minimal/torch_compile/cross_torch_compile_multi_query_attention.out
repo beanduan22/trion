@@ -1,7 +1,8 @@
-ORT: [ 10.246511  -14.433511    6.7743917  -4.539094 ]  (correct)
-eager onnx2torch: [ 10.246511  -14.433511    6.7743917  -4.539094 ]  (correct)
-BUG REPRODUCED: torch.compile crashes on multi_query_attention
+ORT: shape=(1, 8, 64)  first4=[ 0.152995    0.7536946  -1.1665195   0.92092365]
+eager onnx2torch: shape=(1, 8, 64)  first4=[ 0.15299498  0.7536946  -1.1665195   0.9209236 ]
+BUG REPRODUCED: torch.compile crashes while eager succeeds
   InternalTorchDynamoError: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')
 
 from user code:
-   File "/home/binduan/mini
+   File "<eval_with_key>.0", line 6, in forward
+    expand = self.E

@@ -1,5 +1,0 @@
-asymmetric coord mode max abs error vs PyTorch: 0.2947
-ORT   output[:4]: [0.37454012 0.6050098  0.83547944 0.90697014]
-Torch output[:4]: [0.37454012 0.43215755 0.6626272  0.8930969 ]
-PASS=False
-BUG REPRODUCED

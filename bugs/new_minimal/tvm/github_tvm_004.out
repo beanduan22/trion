@@ -1,6 +1,18 @@
-ORT cubic  output[0,0,0,:4]: [0.80208254 0.6395161  0.288994   0.30634046]
-PyTorch bicubic[0,0,0,:4]:   [0.8143504  0.61203825 0.2709736  0.29592   ]
-Max abs error ORT vs PyTorch: 0.053012
-TVM diverged from both references before the fix
-PASS=False
-BUG REPRODUCED
+/home/binduan/miniconda3/envs/clawwork/lib/python3.10/site-packages/tvm/relay/frontend/onnx.py:6195: UserWarning: Field 'shape' of 'type' is required but missing.
+  warnings.warn(str(e))
+input:
+[[0. 1. 2.]
+ [3. 4. 5.]
+ [6. 7. 8.]]
+ORT output [0,0]:
+[[0. 0. 1. 2.]
+ [0. 0. 1. 2.]
+ [3. 3. 4. 5.]
+ [6. 6. 7. 8.]]
+TVM output [0,0]:
+[[0. 1. 1. 2.]
+ [3. 4. 4. 5.]
+ [3. 4. 4. 5.]
+ [6. 7. 7. 8.]]
+max_abs=4.000000e+00  tol=1e-04
+BUG REPRODUCED: TVM Relay Resize(nearest, half_pixel, round_prefer_floor) diverges from ORT

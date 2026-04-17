@@ -2,11 +2,26 @@
 """
 Bug ID     : cross_openvino_sub_self_mul_zero
 Compiler   : OpenVINO CPU
-Oracle     : ORT_DISABLE_ALL
-Patterns   : MatMul(x,W) -> Sub(mm, mm) * const  [sub_self should give near-zero]
-Root cause : OV may optimize Sub(mm,mm)=0 away differently; if OV retains non-zero
-             from fp32 rounding in mm, result differs from ORT's exact zero.
-             Alternatively tests OV fp32 GEMM diff via large MatMul.
+Oracle     : ORT_DISABLE_ALL (CPU EP)
+Patterns   : MatMul fp32 accumulation diff with subtractive cancellation.
+             Graph = Mul( Sub( MatMul(X,W1), MatMul(X,W2) ), const )
+             where W1 ≠ W2. Not a true self-subtraction — we rely on the
+             cancellation between two close-magnitude GEMMs to amplify any
+             order-of-accumulation differences between OpenVINO's CPU GEMM
+             kernel and ORT's reference GEMM.
+Why it's informative:
+             With random 4×512 × 512×128 inputs both matmul products are
+             O(√512) ≈ 22 per element. Taking their difference destroys most
+             of the signal, so any per-kernel fp32 reordering (e.g. AVX2
+             tile blocking vs scalar order) shows up unmasked in the
+             low-order bits. Multiplying by 10.0 then brings the delta
+             above a generous 0.01 tolerance if the backends really do
+             accumulate in different orders.
+Note       : Historically this check was labelled "sub_self should give
+             near-zero". That is incorrect for this graph (W1 ≠ W2); we've
+             relabelled it to reflect what it actually tests — a
+             cancellation-sensitive GEMM cross-check between OpenVINO CPU
+             and ORT CPU.
 Tolerance  : 0.01
 
 Exit 0 = BUG REPRODUCED  |  Exit 1 = not reproduced  |  Exit 2 = missing deps
@@ -54,6 +69,11 @@ print(f"OpenVINO: {ov_out.ravel()[:4]}")
 print(f"max_abs={max_abs:.4f}")
 
 if max_abs > 0.01:
-    print(f"BUG REPRODUCED: OpenVINO sub_self_mul_zero (max_abs={max_abs:.4f})")
+    print(
+        f"BUG REPRODUCED: OpenVINO CPU vs ORT CPU diverge on "
+        f"Sub(MatMul,MatMul)*const  (max_abs={max_abs:.4f}) — "
+        f"fp32 GEMM accumulation-order difference exposed by subtractive "
+        f"cancellation."
+    )
     sys.exit(0)
 print("NOT reproduced"); sys.exit(1)

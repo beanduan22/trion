@@ -1,3 +1,4 @@
+/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/resize.py:149: UserWarning: For linear and cubic interpolation in "asymmetric" and "align_corners" coordinate_transformation_moderesults might differ significantly!
   warnings.warn(
 ORT ref[:4]:      [ 0.49671414  0.24272278 -0.01126862  0.01892632]
 onnx2torch[:4]:   [ 0.49671414  0.43321627  0.17922492 -0.07476648]

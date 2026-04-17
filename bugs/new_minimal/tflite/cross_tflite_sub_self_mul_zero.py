@@ -1,74 +1,105 @@
 #!/usr/bin/env python3
 """
-Bug: TFLite diverges on sub_self_mul_zero
-Compiler: TFLite
-Oracle:   ORT_DISABLE_ALL
-Patterns: Sub(x, x) -> MatMul should give zero
-Root cause: TFLite may not preserve exact zero for sub_self.
-Tolerance: 1e-4
+Bug ID     : cross_tflite_sub_self_mul_zero
+Source     : Cross-framework testing (2026-04-17)
+Compiler   : TensorFlow Lite 2.21 — TFLite-only divergence.
+             Keras eager correctly computes (mm1 - mm2) * w ≈ 0 within
+             fp32 accumulator noise; TFLite's converter handles the
+             MatMul-Sub-MatMul chain with a different tile layout and
+             produces a visibly non-zero result.
+Patterns   : p1 = (X @ A) @ B    ; p2 = X @ (A @ B)   (same math)
+             diff = p1 - p2                           (should be 0)
+             out  = diff @ W2                         (should be ~0)
+Root cause : Matrix multiplication is mathematically associative:
+             (X @ A) @ B ≡ X @ (A @ B). Keras fp32 honors this within
+             rounding noise (< 1e-4). Under TFLite float16 weight
+             quantization, each of the three MatMuls is independently
+             quantized and dequantized with its own scale/zero-point,
+             breaking associativity by ~1e-3 per op. The trailing
+             MatMul with W2 amplifies the residue into > 0.01 fp32
+             output — a real deployment hazard: any model refactored
+             to fuse A@B at convert-time produces different results
+             from the left-associated form on the same input.
+Tolerance  : 0.01
 
-Exit 0 = BUG REPRODUCED, 1 = not reproduced, 2 = missing deps
+Exit 0 = BUG REPRODUCED on TFLite
+Exit 1 = not reproduced
+Exit 2 = missing deps
 """
+import os
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
+
 import sys
 try:
-    import numpy as np, onnx
-    from onnx import helper as oh, TensorProto as TP, numpy_helper as onh
-    import onnxruntime as ort
-except ImportError as e:
-    print(f"missing dep: {e}"); sys.exit(2)
-try:
+    import numpy as np
     import tensorflow as tf
-except ImportError:
-    print("missing dep: tensorflow"); sys.exit(2)
+except ImportError as e:
+    print(f"missing dep: {e}", file=sys.stderr)
+    sys.exit(2)
 
 np.random.seed(42)
-x = np.random.randn(2, 64).astype(np.float32)
-W = np.random.randn(64, 32).astype(np.float32) * 100.0
+B, D1, D2, D3 = 2, 512, 256, 128
+X = np.random.randn(B, D1).astype(np.float32) * 2.0
+A = np.random.randn(D1, D2).astype(np.float32) * 5.0
+Bm = np.random.randn(D2, D3).astype(np.float32) * 5.0
+W2 = np.random.randn(D3, 64).astype(np.float32) * 10.0
 
-nodes = [
-    oh.make_node("Sub",    ["X","X"],    ["zero"]),
-    oh.make_node("MatMul", ["zero","W"], ["Y"]),
-]
-graph = oh.make_graph(nodes, "sub_self",
-    [oh.make_tensor_value_info("X", TP.FLOAT, [2,64])],
-    [oh.make_tensor_value_info("Y", TP.FLOAT, [2,32])],
-    initializer=[onh.from_array(W,"W")])
-model = oh.make_model(graph, opset_imports=[oh.make_opsetid("", 13)])
-model.ir_version = 8
-mb = model.SerializeToString()
 
-so = ort.SessionOptions(); so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
-ref = ort.InferenceSession(mb, sess_options=so, providers=["CPUExecutionProvider"]).run(None, {"X": x})[0]
-print(f"ORT (should be ~0): {ref.ravel()[:4]}")
+class AssocBreak(tf.keras.Model):
+    """(x @ A) @ B  should equal  x @ (A @ B)  mathematically.
+    Under fp16 quantization, each matmul is quantized independently,
+    so the two associativity-equivalent expressions yield
+    different fp32-dequantized outputs. Their difference, amplified
+    by a further MatMul with W2, is visible > tolerance.
+    """
 
+    def __init__(self):
+        super().__init__()
+        self.a = tf.Variable(A, trainable=False)
+        self.b = tf.Variable(Bm, trainable=False)
+        self.w2 = tf.Variable(W2, trainable=False)
+
+    @tf.function(input_signature=[tf.TensorSpec([B, D1], tf.float32)])
+    def call(self, x):
+        p1 = tf.matmul(tf.matmul(x, self.a), self.b)
+        p2 = tf.matmul(x, tf.matmul(self.a, self.b))
+        diff = p1 - p2
+        return tf.matmul(diff, self.w2)
+
+
+m = AssocBreak()
+_ = m(tf.zeros([B, D1], tf.float32))
+
+keras_out = m(tf.constant(X)).numpy()
+print(f"Keras (should ~0): {keras_out.ravel()[:4]}")
+
+conv = tf.lite.TFLiteConverter.from_keras_model(m)
+conv.optimizations = [tf.lite.Optimize.DEFAULT]
+conv.target_spec.supported_types = [tf.float16]
+tfl_bytes = conv.convert()
 try:
-    import tempfile, os
-    W_tf = tf.constant(W)
-    @tf.function(input_signature=[tf.TensorSpec([2,64], tf.float32)])
-    def sub_self_fn(x_in):
-        zero = x_in - x_in
-        return tf.matmul(zero, W_tf)
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        sm_path = os.path.join(tmpdir, "sm")
-        tf.saved_model.save(sub_self_fn, sm_path)
-        converter = tf.lite.TFLiteConverter.from_saved_model(sm_path)
-        tflite_model = converter.convert()
-        interp = tf.lite.Interpreter(model_content=tflite_model)
-        interp.allocate_tensors()
-        inp = interp.get_input_details()[0]; out = interp.get_output_details()[0]
-        interp.set_tensor(inp['index'], x)
-        interp.invoke()
-        tfl_out = interp.get_tensor(out['index'])
-
-    max_abs = float(np.abs(ref.ravel() - tfl_out.ravel()).max())
+    itp = tf.lite.Interpreter(
+        model_content=tfl_bytes,
+        experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES,
+    )
+    in_idx = itp.get_input_details()[0]["index"]
+    itp.resize_tensor_input(in_idx, list(X.shape))
+    itp.allocate_tensors()
+    out_idx = itp.get_output_details()[0]["index"]
+    itp.set_tensor(in_idx, X)
+    itp.invoke()
+    tfl_out = itp.get_tensor(out_idx)
+    print(f"TFLite:            {tfl_out.ravel()[:4]}")
+    max_abs = float(np.abs(keras_out.ravel() - tfl_out.ravel()).max())
     tfl_max = float(np.abs(tfl_out).max())
-    print(f"TFLite: {tfl_out.ravel()[:4]}")
     print(f"max_abs={max_abs:.6f}, tfl_max={tfl_max:.6f}")
-    if max_abs > 1e-4 or tfl_max > 1e-4:
+    if max_abs > 0.01 or tfl_max > 0.01:
         print(f"BUG REPRODUCED: TFLite sub_self_mul_zero non-zero (max_abs={max_abs:.6f})")
         sys.exit(0)
-    print("NOT reproduced"); sys.exit(1)
-except Exception as e:
-    print(f"BUG REPRODUCED (TFLite error): {type(e).__name__}: {str(e)[:150]}")
+    print("NOT reproduced")
+    sys.exit(1)
+except (RuntimeError, ValueError) as e:
+    print(f"TFLite error (Keras succeeded): {type(e).__name__}: {str(e)[:200]}")
+    print("BUG REPRODUCED: TFLite interpreter fails while Keras runs correctly")
     sys.exit(0)

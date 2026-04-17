@@ -1,7 +1,7 @@
-ORT: [ 10.246511  -14.433511    6.7743917  -4.539094 ]  (correct)
-eager onnx2torch: [ 10.246511  -14.433511    6.7743917  -4.539094 ]  (correct)
-BUG REPRODUCED: torch.compile crashes on manual_hard_swish
+ORT: shape=(4, 32)  first4=[ 1.6513615  -0.22554989  2.414045    6.092119  ]
+eager onnx2torch: shape=(4, 32)  first4=[ 1.6513615  -0.22554989  2.414045    6.092119  ]
+BUG REPRODUCED: torch.compile crashes while eager succeeds
   InternalTorchDynamoError: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')
 
 from user code:
-   File "/home/binduan/mini
+   File "/home/binduan/miniconda3/lib/python3.13/site-packages/onnx

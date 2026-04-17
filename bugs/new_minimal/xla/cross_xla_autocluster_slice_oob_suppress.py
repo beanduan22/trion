@@ -22,6 +22,9 @@ Exit 0 = BUG REPRODUCED on autocluster for at least one case
 Exit 1 = not reproduced
 Exit 2 = missing deps
 """
+import os
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "-1")
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 import os, sys
 
 try:

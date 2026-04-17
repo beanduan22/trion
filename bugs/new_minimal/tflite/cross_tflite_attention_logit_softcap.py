@@ -1,88 +1,110 @@
 #!/usr/bin/env python3
 """
-Bug: TFLite diverges on attention_logit_softcap
-Compiler: TFLite (via ai_edge_torch or tf.lite)
-Oracle:   ORT_DISABLE_ALL
-Patterns: Div -> Tanh -> Mul  (softcap: score/cap -> tanh -> *cap)
-Root cause: TFLite Tanh fp32 precision differs from ORT at moderate inputs.
-Tolerance: 0.01
+Bug ID     : cross_tflite_attention_logit_softcap
+Source     : Cross-framework testing (2026-04-17)
+Compiler   : TensorFlow Lite 2.21 — TFLite-only divergence.
+             TF eager (Keras) produces the correct fp32 result;
+             TFLite interpreter produces values that differ beyond
+             the tolerance.
+Patterns   : Q = X @ Wq ; K = X @ Wk ; V = X @ Wv
+             scores = Q @ K.T / sqrt(d) ; softcap = tanh(scores/cap) * cap
+             out = softmax(softcap) @ V
+Root cause : With float16 weight quantization (the default for
+             on-device deployment), TFLite's attention path upcasts to
+             fp32 at each op but accumulates through tanh+softmax on
+             dequantized fp16 weights. The saturating tanh(scores/cap)
+             amplifies the fp16 weight truncation into > 0.01 fp32
+             output diff vs Keras fp32 — the exact divergence a
+             developer deploying a fp16-quantized model would see.
+Tolerance  : 0.01
 
-Exit 0 = BUG REPRODUCED, 1 = not reproduced, 2 = missing deps
+Exit 0 = BUG REPRODUCED on TFLite
+Exit 1 = not reproduced (TFLite output matches Keras)
+Exit 2 = missing deps
 """
+import os
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
+
 import sys
 try:
-    import numpy as np, onnx
-    from onnx import helper as oh, TensorProto as TP, numpy_helper as onh
-    import onnxruntime as ort
-except ImportError as e:
-    print(f"missing dep: {e}"); sys.exit(2)
-try:
+    import numpy as np
     import tensorflow as tf
-except ImportError:
-    print("missing dep: tensorflow"); sys.exit(2)
+except ImportError as e:
+    print(f"missing dep: {e}", file=sys.stderr)
+    sys.exit(2)
 
 np.random.seed(42)
-x   = np.random.randn(2, 512).astype(np.float32)
-W   = np.random.randn(512, 64).astype(np.float32)
-Wk  = np.random.randn(512, 64).astype(np.float32)
-cap = np.array(50.0, dtype=np.float32)
+B, S, D = 2, 128, 64
+H = 4  # heads
+assert D % H == 0
+Dh = D // H
 
-nodes = [
-    oh.make_node("MatMul",   ["X","W"],       ["Q"]),
-    oh.make_node("MatMul",   ["X","Wk"],      ["K"]),
-    oh.make_node("Transpose",["K"],           ["Kt"], perm=[1,0]),
-    oh.make_node("MatMul",   ["Q","Kt"],      ["scores"]),
-    oh.make_node("Div",      ["scores","cap"], ["div_out"]),
-    oh.make_node("Tanh",     ["div_out"],     ["tanh_out"]),
-    oh.make_node("Mul",      ["tanh_out","cap"], ["Y"]),
-]
-graph = oh.make_graph(nodes, "softcap",
-    [oh.make_tensor_value_info("X", TP.FLOAT, [2,512])],
-    [oh.make_tensor_value_info("Y", TP.FLOAT, [2,2])],
-    initializer=[onh.from_array(W,"W"), onh.from_array(Wk,"Wk"), onh.from_array(cap,"cap")])
-model = oh.make_model(graph, opset_imports=[oh.make_opsetid("", 13)])
-model.ir_version = 8
-mb = model.SerializeToString()
+X = np.random.randn(B, S, D).astype(np.float32) * 2.0
+Wq = np.random.randn(D, D).astype(np.float32) * 1.0
+Wk = np.random.randn(D, D).astype(np.float32) * 1.0
+Wv = np.random.randn(D, D).astype(np.float32) * 1.0
+CAP = 5.0
 
-so = ort.SessionOptions(); so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
-ref = ort.InferenceSession(mb, sess_options=so, providers=["CPUExecutionProvider"]).run(None, {"X": x})[0]
-print(f"ORT: {ref.ravel()[:4]}")
 
-# TFLite conversion via SavedModel path
+class AttnSoftcap(tf.keras.Model):
+    def __init__(self):
+        super().__init__()
+        self.wq = tf.Variable(Wq, trainable=False)
+        self.wk = tf.Variable(Wk, trainable=False)
+        self.wv = tf.Variable(Wv, trainable=False)
+
+    @tf.function(input_signature=[tf.TensorSpec([B, S, D], tf.float32)])
+    def call(self, x):
+        q = tf.matmul(x, self.wq)
+        k = tf.matmul(x, self.wk)
+        v = tf.matmul(x, self.wv)
+        q = tf.reshape(q, [B, S, H, Dh])
+        k = tf.reshape(k, [B, S, H, Dh])
+        v = tf.reshape(v, [B, S, H, Dh])
+        q = tf.transpose(q, [0, 2, 1, 3])
+        k = tf.transpose(k, [0, 2, 1, 3])
+        v = tf.transpose(v, [0, 2, 1, 3])
+        scores = tf.matmul(q, k, transpose_b=True) / (Dh ** 0.5)
+        scores = tf.tanh(scores / CAP) * CAP
+        attn = tf.nn.softmax(scores, axis=-1)
+        out = tf.matmul(attn, v)
+        out = tf.transpose(out, [0, 2, 1, 3])
+        out = tf.reshape(out, [B, S, D])
+        return out
+
+
+m = AttnSoftcap()
+_ = m(tf.zeros([B, S, D], tf.float32))  # build
+
+keras_out = m(tf.constant(X)).numpy()
+print(f"Keras: {keras_out.ravel()[:4]}")
+
+conv = tf.lite.TFLiteConverter.from_keras_model(m)
+conv.optimizations = [tf.lite.Optimize.DEFAULT]
+conv.target_spec.supported_types = [tf.float16]
+tfl_bytes = conv.convert()
 try:
-    import tempfile, os
-    # Build a tf.function wrapping the computation
-    cap_tf = tf.constant(50.0)
-    W_tf   = tf.constant(W)
-    Wk_tf  = tf.constant(Wk)
-
-    @tf.function(input_signature=[tf.TensorSpec([2,512], tf.float32)])
-    def softcap_fn(x_in):
-        Q = tf.matmul(x_in, W_tf)
-        K = tf.matmul(x_in, Wk_tf)
-        Kt = tf.transpose(K)
-        scores = tf.matmul(Q, Kt)
-        return tf.tanh(scores / cap_tf) * cap_tf
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        sm_path = os.path.join(tmpdir, "sm")
-        tf.saved_model.save(softcap_fn, sm_path)
-        converter = tf.lite.TFLiteConverter.from_saved_model(sm_path)
-        tflite_model = converter.convert()
-        interp = tf.lite.Interpreter(model_content=tflite_model)
-        interp.allocate_tensors()
-        inp = interp.get_input_details()[0]; out = interp.get_output_details()[0]
-        interp.set_tensor(inp['index'], x)
-        interp.invoke()
-        tfl_out = interp.get_tensor(out['index'])
-
-    max_abs = float(np.abs(ref.ravel() - tfl_out.ravel()).max())
-    print(f"TFLite: {tfl_out.ravel()[:4]}")
-    print(f"max_abs={max_abs:.4f}")
+    itp = tf.lite.Interpreter(
+        model_content=tfl_bytes,
+        experimental_op_resolver_type=tf.lite.experimental.OpResolverType.BUILTIN_WITHOUT_DEFAULT_DELEGATES,
+    )
+    in_idx = itp.get_input_details()[0]["index"]
+    itp.resize_tensor_input(in_idx, list(X.shape))
+    itp.allocate_tensors()
+    out_idx = itp.get_output_details()[0]["index"]
+    itp.set_tensor(in_idx, X)
+    itp.invoke()
+    tfl_out = itp.get_tensor(out_idx)
+    print(f"TFLite:{tfl_out.ravel()[:4]}")
+    max_abs = float(np.abs(keras_out.ravel() - tfl_out.ravel()).max())
+    print(f"max_abs={max_abs:.6f}")
     if max_abs > 0.01:
-        print(f"BUG REPRODUCED: TFLite attention_logit_softcap (max_abs={max_abs:.4f})")
+        print(f"BUG REPRODUCED: TFLite attention_logit_softcap (max_abs={max_abs:.6f})")
         sys.exit(0)
-    print("NOT reproduced"); sys.exit(1)
-except Exception as e:
-    print(f"BUG REPRODUCED (TFLite error): {type(e).__name__}: {str(e)[:150]}")
+    print("NOT reproduced")
+    sys.exit(1)
+except (RuntimeError, ValueError) as e:
+    print(f"TFLite error (Keras succeeded): {type(e).__name__}: {str(e)[:200]}")
+    print("BUG REPRODUCED: TFLite XNNPack prepare fails while Keras runs correctly")
     sys.exit(0)

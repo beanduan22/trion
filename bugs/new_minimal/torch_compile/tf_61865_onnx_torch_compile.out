@@ -1,8 +1,5 @@
-[1;31m2026-04-17 18:04:47.512240237 [E:onnxruntime:, sequential_executor.cc:572 ExecuteKernel] Non-zero status code returned while running Gather node. Name:'' Status Message: indices element out of data bounds, idx=10 must be within the inclusive range [-10,9][m
-[1;31m2026-04-17 18:04:47.524625082 [E:onnxruntime:, sequential_executor.cc:572 ExecuteKernel] Non-zero status code returned while running Gather node. Name:'' Status Message: indices element out of data bounds, idx=10 must be within the inclusive range [-10,9][m
-params  : [0.10000000149011612, 0.20000000298023224, 0.30000001192092896, 0.4000000059604645, 0.5, 0.6000000238418579, 0.699999988079071, 0.800000011920929, 0.8999999761581421, 1.0]
-indices : [1, 4, 7, 9, 10, 0]  (index 10 is OOB for size-10 tensor)
-
+[1;31m2026-04-17 23:17:59.797511496 [E:onnxruntime:, sequential_executor.cc:572 ExecuteKernel] Non-zero status code returned while running Gather node. Name:'' Status Message: indices element out of data bounds, idx=10 must be within the inclusive range [-10,9][m
+[1;31m2026-04-17 23:17:59.814338177 [E:onnxruntime:, sequential_executor.cc:572 ExecuteKernel] Non-zero status code returned while running Gather node. Name:'' Status Message: indices element out of data bounds, idx=10 must be within the inclusive range [-10,9][m
 params  : [0.10000000149011612, 0.20000000298023224, 0.30000001192092896, 0.4000000059604645, 0.5, 0.6000000238418579, 0.699999988079071, 0.800000011920929, 0.8999999761581421, 1.0]
 indices : [1, 4, 7, 9, 10, 0]  (index 10 is OOB for size-10 tensor)
 

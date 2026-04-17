@@ -1,7 +1,7 @@
-ORT: [ 10.246511  -14.433511    6.7743917  -4.539094 ]  (correct)
-eager onnx2torch: [ 10.246511  -14.433511    6.7743917  -4.539094 ]  (correct)
-BUG REPRODUCED: torch.compile crashes on add_self_sub_double
+ORT: first4=[0. 0. 0. 0.]  max|y|=0.00e+00 (should be 0)
+eager onnx2torch: first4=[0. 0. 0. 0.]  max|y|=0.00e+00
+BUG REPRODUCED: torch.compile crashes while eager succeeds
   InternalTorchDynamoError: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')
 
 from user code:
-   File "/home/binduan/mini
+   File "/home/binduan/miniconda3/lib/python3.13/site-packages/onnx

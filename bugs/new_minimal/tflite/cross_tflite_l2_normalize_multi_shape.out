@@ -1,4 +1,8 @@
-W0417 18:01:35.564000 313424 site-packages/torch/onnx/_internal/exporter/_compat.py:114] Setting ONNX exporter to use operator set version 18 because the requested opset_version 17 is a lower version than we have implementations for. Automatic version conversion will be performed, which may not be successful at converting to the requested version. If version conversion is unsuccessful, the opset version of the exported model will be kept at 18. Please consider setting opset_version >=18 to leverage latest ONNX features
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1776431687.908211 2605980 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1776431688.834347 2605980 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+W0417 23:14:50.877000 2605980 site-packages/torch/onnx/_internal/exporter/_compat.py:114] Setting ONNX exporter to use operator set version 18 because the requested opset_version 17 is a lower version than we have implementations for. Automatic version conversion will be performed, which may not be successful at converting to the requested version. If version conversion is unsuccessful, the opset version of the exported model will be kept at 18. Please consider setting opset_version >=18 to leverage latest ONNX features
 The model version conversion is not supported by the onnxscript version converter and fallback is enabled. The model will be converted using the onnx C API (target version: 17).
 ==============================================================================
 Case 3: shape=(2,2,3), half-step floats    shape=(2, 2, 3)
@@ -10,7 +14,7 @@ Case 3: shape=(2,2,3), half-step floats    shape=(2, 2, 3)
 [torch.onnx] Run decomposition... ✅
 [torch.onnx] Translate the graph into ONNX...
 [torch.onnx] Translate the graph into ONNX... ✅
-Saved artifact at '/tmp/tmpl05ovp5j'. The following endpoints are available:
+Saved artifact at '/tmp/tmp13vogy66'. The following endpoints are available:
 
 * Endpoint 'serve'
   args_0 (POSITIONAL_ONLY): TensorSpec(shape=(None, 2, 3), dtype=tf.float32, name=None)
@@ -18,11 +22,15 @@ Output Type:
   TensorSpec(shape=(None, 2, 3), dtype=tf.float32, name=None)
 Captures:
   None
-W0000 00:00:1776412896.677149  313424 tf_tfl_flatbuffer_helpers.cc:364] Ignored output_format.
-W0000 00:00:1776412896.677159  313424 tf_tfl_flatbuffer_helpers.cc:367] Ignored drop_control_dependency.
+/home/binduan/miniconda3/lib/python3.13/site-packages/tensorflow/lite/python/interpreter.py:457: UserWarning:     Warning: tf.lite.Interpreter is deprecated and is scheduled for deletion in
+    TF 2.20. Please use the LiteRT interpreter from the ai_edge_litert package.
+    See the [migration guide](https://ai.google.dev/edge/litert/migration)
     for details.
     
-W0417 18:01:36.829000 313424 site-packages/torch/onnx/_internal/exporter/_compat.py:114] Setting ONNX exporter to use operator set version 18 because the requested opset_version 17 is a lower version than we have implementations for. Automatic version conversion will be performed, which may not be successful at converting to the requested version. If version conversion is unsuccessful, the opset version of the exported model will be kept at 18. Please consider setting opset_version >=18 to leverage latest ONNX features
+  warnings.warn(_INTERPRETER_DELETION_WARNING)
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0417 23:14:52.203000 2605980 site-packages/torch/onnx/_internal/exporter/_compat.py:114] Setting ONNX exporter to use operator set version 18 because the requested opset_version 17 is a lower version than we have implementations for. Automatic version conversion will be performed, which may not be successful at converting to the requested version. If version conversion is unsuccessful, the opset version of the exported model will be kept at 18. Please consider setting opset_version >=18 to leverage latest ONNX features
+WARNING:onnxscript.version_converter:The model version conversion is not supported by the onnxscript version converter and fallback is enabled. The model will be converted using the onnx C API (target version: 17).
   Runtime        Output (rounded 4dp)                                    Match?
   Keras eager    [0.0699, 0.1049, 0.1399, 0.1748, 0.2098, 0.2447, 0.2797, 0.3147, 0.3496, 0.3846, 0.4196, 0.4545] OK
   XLA            [0.0699, 0.1049, 0.1399, 0.1748, 0.2098, 0.2447, 0.2797, 0.3147, 0.3496, 0.3846, 0.4196, 0.4545] OK
@@ -40,7 +48,7 @@ Case 4: shape=(4,1), unit innermost dim    shape=(4, 1)
 [torch.onnx] Run decomposition... ✅
 [torch.onnx] Translate the graph into ONNX...
 [torch.onnx] Translate the graph into ONNX... ✅
-Saved artifact at '/tmp/tmpumeow782'. The following endpoints are available:
+Saved artifact at '/tmp/tmp8l96sm8o'. The following endpoints are available:
 
 * Endpoint 'serve'
   args_0 (POSITIONAL_ONLY): TensorSpec(shape=(None, 1), dtype=tf.float32, name=None)
@@ -48,13 +56,16 @@ Output Type:
   TensorSpec(shape=(None, 1), dtype=tf.float32, name=None)
 Captures:
   None
-W0000 00:00:1776412897.215834  313424 tf_tfl_flatbuffer_helpers.cc:364] Ignored output_format.
-W0000 00:00:1776412897.215845  313424 tf_tfl_flatbuffer_helpers.cc:367] Ignored drop_control_dependency.
+/home/binduan/miniconda3/lib/python3.13/site-packages/tensorflow/lite/python/interpreter.py:457: UserWarning:     Warning: tf.lite.Interpreter is deprecated and is scheduled for deletion in
+    TF 2.20. Please use the LiteRT interpreter from the ai_edge_litert package.
+    See the [migration guide](https://ai.google.dev/edge/litert/migration)
     for details.
     
+  warnings.warn(_INTERPRETER_DELETION_WARNING)
   Runtime        Output (rounded 4dp)                                    Match?
   Keras eager    [0.2722, 0.4082, 0.5443, 0.6804]                        OK
   XLA            [0.2722, 0.4082, 0.5443, 0.6804]                        OK
   PyTorch        [0.2722, 0.4082, 0.5443, 0.6804]                        OK
   ONNX Runtime   [0.2722, 0.4082, 0.5443, 0.6804]                        OK
   TFLite         [1.0, 1.0, 1.0, 1.0]                                    WRONG
+

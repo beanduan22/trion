@@ -1,7 +1,7 @@
-ORT: [ 10.246511  -14.433511    6.7743917  -4.539094 ]  (correct)
-eager onnx2torch: [ 10.246511  -14.433511    6.7743917  -4.539094 ]  (correct)
-BUG REPRODUCED: torch.compile crashes on reduce_l2_last
+ORT: shape=(2, 8, 16)  first4=[ 0.1320254  -0.03675031  0.17215405  0.4048176 ]  row_norm_min=1.000 max=1.000 (expect ~1)
+eager onnx2torch: shape=(2, 8, 16)  first4=[ 0.1320254  -0.03675031  0.17215405  0.4048176 ]
+BUG REPRODUCED: torch.compile crashes while eager succeeds
   InternalTorchDynamoError: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')
 
 from user code:
-   File "/home/binduan/mini
+   File "/home/binduan/miniconda3/lib/python3.13/site-packages/onnx

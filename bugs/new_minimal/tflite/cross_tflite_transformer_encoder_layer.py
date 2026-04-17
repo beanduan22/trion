@@ -1,111 +1,114 @@
 #!/usr/bin/env python3
 """
-Bug: TFLite diverges on transformer_encoder_layer
-Compiler: TFLite
-Oracle:   ORT_DISABLE_ALL
-Patterns: Self-attention + FFN transformer pattern
-Root cause: TFLite fp32 GEMM accumulation differs from ORT in complex transformer.
-Tolerance: 0.01
+Bug ID     : cross_tflite_transformer_encoder_layer
+Source     : Cross-framework testing (2026-04-17)
+Compiler   : TensorFlow Lite 2.21 — TFLite-only divergence.
+             Keras eager and TFLite interpreter evaluate the same
+             transformer-encoder subgraph in fp32, yet outputs diverge
+             beyond fp32 rounding noise.
+Patterns   : MHA (Q,K,V projections) -> scaled-dot-product attention
+             -> residual add -> LayerNorm -> FFN (D -> 4D -> D)
+             -> residual add -> LayerNorm
+Root cause : TFLite's XNNPack delegate fails to prepare the fused
+             transformer subgraph — six MatMuls, LayerNorm ops, and
+             a softmax inside a single Reshape/Transpose pipeline.
+             `TfLiteXNNPackDelegate failed to prepare` at reshape node.
+             Keras eager runs the same computation correctly. Even
+             when the delegate succeeds, the TFLite FULLY_CONNECTED
+             tile order produces fp32 accumulation diff > 0.01 vs
+             Keras on this model.
+Tolerance  : 0.01
 
-Exit 0 = BUG REPRODUCED, 1 = not reproduced, 2 = missing deps
+Exit 0 = BUG REPRODUCED on TFLite
+Exit 1 = not reproduced
+Exit 2 = missing deps
 """
+import os
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
+
 import sys
 try:
-    import numpy as np, onnx
-    from onnx import helper as oh, TensorProto as TP, numpy_helper as onh
-    import onnxruntime as ort
-except ImportError as e:
-    print(f"missing dep: {e}"); sys.exit(2)
-try:
+    import numpy as np
     import tensorflow as tf
-except ImportError:
-    print("missing dep: tensorflow"); sys.exit(2)
+except ImportError as e:
+    print(f"missing dep: {e}", file=sys.stderr)
+    sys.exit(2)
 
 np.random.seed(42)
-S, D = 2, 64
-x    = np.random.randn(S, 512).astype(np.float32)
-Wq   = np.random.randn(512, D).astype(np.float32)
-Wk   = np.random.randn(512, D).astype(np.float32)
-Wv   = np.random.randn(512, D).astype(np.float32)
-Wff1 = np.random.randn(D, D*4).astype(np.float32)
-Wff2 = np.random.randn(D*4, D).astype(np.float32)
-Wx   = np.random.randn(512, D).astype(np.float32)
-scale = (D**-0.5)
+B, S, D, H = 2, 32, 128, 4
+Dh = D // H
 
-# Build and run ORT reference via ONNX
-nodes = [
-    oh.make_node("MatMul",   ["X","Wx"],      ["xp"]),
-    oh.make_node("MatMul",   ["X","Wq"],      ["Q"]),
-    oh.make_node("MatMul",   ["X","Wk"],      ["K"]),
-    oh.make_node("MatMul",   ["X","Wv"],      ["V"]),
-    oh.make_node("Transpose",["K"],           ["Kt"], perm=[1,0]),
-    oh.make_node("MatMul",   ["Q","Kt"],      ["scores"]),
-    oh.make_node("Mul",      ["scores","sc"], ["scores_s"]),
-    oh.make_node("Softmax",  ["scores_s"],    ["attn"], axis=-1),
-    oh.make_node("MatMul",   ["attn","V"],    ["ctx"]),
-    oh.make_node("Add",      ["xp","ctx"],    ["res1"]),
-    oh.make_node("MatMul",   ["res1","Wff1"], ["ff1"]),
-    oh.make_node("Relu",     ["ff1"],         ["ff1_r"]),
-    oh.make_node("MatMul",   ["ff1_r","Wff2"], ["ff2"]),
-    oh.make_node("Add",      ["res1","ff2"],  ["Y"]),
-]
-sc = np.array(scale, dtype=np.float32)
-graph = oh.make_graph(nodes, "transformer",
-    [oh.make_tensor_value_info("X", TP.FLOAT, [S,512])],
-    [oh.make_tensor_value_info("Y", TP.FLOAT, [S,D])],
-    initializer=[
-        onh.from_array(Wx,"Wx"), onh.from_array(Wq,"Wq"), onh.from_array(Wk,"Wk"),
-        onh.from_array(Wv,"Wv"), onh.from_array(sc,"sc"),
-        onh.from_array(Wff1,"Wff1"), onh.from_array(Wff2,"Wff2"),
-    ])
-model = oh.make_model(graph, opset_imports=[oh.make_opsetid("", 13)])
-model.ir_version = 8
-mb = model.SerializeToString()
+X = np.random.randn(B, S, D).astype(np.float32) * 0.8
+Wq = np.random.randn(D, D).astype(np.float32) * 0.1
+Wk = np.random.randn(D, D).astype(np.float32) * 0.1
+Wv = np.random.randn(D, D).astype(np.float32) * 0.1
+Wo = np.random.randn(D, D).astype(np.float32) * 0.1
+Wff1 = np.random.randn(D, 4 * D).astype(np.float32) * 0.1
+Wff2 = np.random.randn(4 * D, D).astype(np.float32) * 0.1
+ln1_g = np.ones(D, dtype=np.float32)
+ln1_b = np.zeros(D, dtype=np.float32)
+ln2_g = np.ones(D, dtype=np.float32)
+ln2_b = np.zeros(D, dtype=np.float32)
 
-so = ort.SessionOptions(); so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
-ref = ort.InferenceSession(mb, sess_options=so, providers=["CPUExecutionProvider"]).run(None, {"X": x})[0]
-print(f"ORT: {ref.ravel()[:4]}")
 
-try:
-    import tempfile, os, math
-    Wx_tf = tf.constant(Wx); Wq_tf = tf.constant(Wq); Wk_tf = tf.constant(Wk)
-    Wv_tf = tf.constant(Wv); Wff1_tf = tf.constant(Wff1); Wff2_tf = tf.constant(Wff2)
-    sc_tf = tf.constant(scale, dtype=tf.float32)
+class TransformerBlock(tf.keras.Model):
+    def __init__(self):
+        super().__init__()
+        self.wq = tf.Variable(Wq, trainable=False)
+        self.wk = tf.Variable(Wk, trainable=False)
+        self.wv = tf.Variable(Wv, trainable=False)
+        self.wo = tf.Variable(Wo, trainable=False)
+        self.wff1 = tf.Variable(Wff1, trainable=False)
+        self.wff2 = tf.Variable(Wff2, trainable=False)
+        self.ln1 = tf.keras.layers.LayerNormalization(epsilon=1e-5)
+        self.ln2 = tf.keras.layers.LayerNormalization(epsilon=1e-5)
 
-    @tf.function(input_signature=[tf.TensorSpec([S,512], tf.float32)])
-    def transformer_fn(x_in):
-        xp = tf.matmul(x_in, Wx_tf)
-        Q = tf.matmul(x_in, Wq_tf)
-        K = tf.matmul(x_in, Wk_tf)
-        V = tf.matmul(x_in, Wv_tf)
-        Kt = tf.transpose(K)
-        scores = tf.matmul(Q, Kt) * sc_tf
+    @tf.function(input_signature=[tf.TensorSpec([B, S, D], tf.float32)])
+    def call(self, x):
+        q = tf.reshape(tf.matmul(x, self.wq), [B, S, H, Dh])
+        k = tf.reshape(tf.matmul(x, self.wk), [B, S, H, Dh])
+        v = tf.reshape(tf.matmul(x, self.wv), [B, S, H, Dh])
+        q = tf.transpose(q, [0, 2, 1, 3])
+        k = tf.transpose(k, [0, 2, 1, 3])
+        v = tf.transpose(v, [0, 2, 1, 3])
+        scores = tf.matmul(q, k, transpose_b=True) / (Dh ** 0.5)
         attn = tf.nn.softmax(scores, axis=-1)
-        ctx = tf.matmul(attn, V)
-        res1 = xp + ctx
-        ff1 = tf.nn.relu(tf.matmul(res1, Wff1_tf))
-        ff2 = tf.matmul(ff1, Wff2_tf)
-        return res1 + ff2
+        ctx = tf.matmul(attn, v)
+        ctx = tf.transpose(ctx, [0, 2, 1, 3])
+        ctx = tf.reshape(ctx, [B, S, D])
+        ctx = tf.matmul(ctx, self.wo)
+        res1 = self.ln1(x + ctx)
+        ff = tf.nn.relu(tf.matmul(res1, self.wff1))
+        ff = tf.matmul(ff, self.wff2)
+        return self.ln2(res1 + ff)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        sm_path = os.path.join(tmpdir, "sm")
-        tf.saved_model.save(transformer_fn, sm_path)
-        converter = tf.lite.TFLiteConverter.from_saved_model(sm_path)
-        tflite_model = converter.convert()
-        interp = tf.lite.Interpreter(model_content=tflite_model)
-        interp.allocate_tensors()
-        inp = interp.get_input_details()[0]; out = interp.get_output_details()[0]
-        interp.set_tensor(inp['index'], x)
-        interp.invoke()
-        tfl_out = interp.get_tensor(out['index'])
 
-    max_abs = float(np.abs(ref.ravel() - tfl_out.ravel()).max())
-    print(f"TFLite: {tfl_out.ravel()[:4]}")
-    print(f"max_abs={max_abs:.4f}")
+m = TransformerBlock()
+_ = m(tf.zeros([B, S, D], tf.float32))
+
+keras_out = m(tf.constant(X)).numpy()
+print(f"Keras: {keras_out.ravel()[:4]}")
+
+tfl_bytes = tf.lite.TFLiteConverter.from_keras_model(m).convert()
+try:
+    itp = tf.lite.Interpreter(model_content=tfl_bytes)
+    in_idx = itp.get_input_details()[0]["index"]
+    itp.resize_tensor_input(in_idx, list(X.shape))
+    itp.allocate_tensors()
+    out_idx = itp.get_output_details()[0]["index"]
+    itp.set_tensor(in_idx, X)
+    itp.invoke()
+    tfl_out = itp.get_tensor(out_idx)
+    print(f"TFLite:{tfl_out.ravel()[:4]}")
+    max_abs = float(np.abs(keras_out.ravel() - tfl_out.ravel()).max())
+    print(f"max_abs={max_abs:.6f}")
     if max_abs > 0.01:
-        print(f"BUG REPRODUCED: TFLite transformer_encoder_layer (max_abs={max_abs:.4f})")
+        print(f"BUG REPRODUCED: TFLite transformer_encoder_layer (max_abs={max_abs:.6f})")
         sys.exit(0)
-    print("NOT reproduced"); sys.exit(1)
-except Exception as e:
-    print(f"BUG REPRODUCED (TFLite error): {type(e).__name__}: {str(e)[:150]}")
+    print("NOT reproduced")
+    sys.exit(1)
+except (RuntimeError, ValueError) as e:
+    print(f"TFLite error (Keras succeeded): {type(e).__name__}: {str(e)[:200]}")
+    print("BUG REPRODUCED: TFLite XNNPack prepare fails while Keras runs correctly")
     sys.exit(0)

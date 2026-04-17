@@ -1,4 +1,6 @@
+E0417 23:18:18.173829 2628509 platform_util.cc:270] Failed to create stream executor for device CUDA:1: : CUDA_ERROR_OUT_OF_MEMORY: out of memory
+E0417 23:18:19.160386 2629085 cuda_timer.cc:87] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
 ORT: [ 41.254436 -22.265532  15.169448  56.25074 ]
-XLA: [ 41.25533  -22.245968  15.195742  56.26139 ]
-max_abs=0.1193
-BUG REPRODUCED: XLA space_to_depth_block (max_abs=0.1193)
+XLA: [ 41.23746  -22.288605  15.182019  56.245975]
+max_abs=0.1256
+BUG REPRODUCED: XLA space_to_depth_block (max_abs=0.1256)

@@ -1,42 +1,7 @@
-W0000 00:00:1776413098.241962  339876 local_rendezvous.cc:412] Local rendezvous is aborting with status: INVALID_ARGUMENT: Expected size[2] in [0, 3], but got 4
-W0000 00:00:1776413098.261181  339876 op_kernel.cc:1858] OP_REQUIRES failed at xla_ops.cc:602 : INVALID_ARGUMENT: Expected size[2] in [0, 3], but got 4
-
-Stack trace for op definition: 
-File "myspace/trion/bugs/new_minimal/xla/cross_xla_autocluster_slice_oob_suppress.py", line 77, in <module>
-File "myspace/trion/bugs/new_minimal/xla/cross_xla_autocluster_slice_oob_suppress.py", line 71, in run
-File "myspace/trion/bugs/new_minimal/xla/cross_xla_autocluster_slice_oob_suppress.py", line 47, in f_jit
-
-	 [[{{node Slice_1}}]]
-	tf2xla conversion failed while converting __inference_f_jit_22[_XlaMustCompile=true,config_proto=7932885297272261767,executor_type=11160318154034397263]. Run with TF_DUMP_GRAPH_PREFIX=/path/to/dump/dir and --vmodule=xla_compiler=2 to obtain a dump of the compiled functions.
-W0000 00:00:1776413098.284457  339876 local_rendezvous.cc:412] Local rendezvous is aborting with status: INVALID_ARGUMENT: Expected size[2] in [0, 3], but got 4
-W0000 00:00:1776413098.286859  339876 op_kernel.cc:1858] OP_REQUIRES failed at xla_ops.cc:602 : INVALID_ARGUMENT: Expected size[2] in [0, 3], but got 4
-
-Stack trace for op definition: 
-File "myspace/trion/bugs/new_minimal/xla/cross_xla_autocluster_slice_oob_suppress.py", line 77, in <module>
-File "myspace/trion/bugs/new_minimal/xla/cross_xla_autocluster_slice_oob_suppress.py", line 71, in run
-File "myspace/trion/bugs/new_minimal/xla/cross_xla_autocluster_slice_oob_suppress.py", line 47, in f_jit
-
-	 [[{{node Slice_1}}]]
-	tf2xla conversion failed while converting __inference_f_jit_55[_XlaMustCompile=true,config_proto=7932885297272261767,executor_type=11160318154034397263]. Run with TF_DUMP_GRAPH_PREFIX=/path/to/dump/dir and --vmodule=xla_compiler=2 to obtain a dump of the compiled functions.
-W0000 00:00:1776413098.298208  339876 op_kernel.cc:1858] OP_REQUIRES failed at xla_ops.cc:602 : INVALID_ARGUMENT: Expected size[2] in [0, 3], but got 4
-
-Stack trace for op definition: 
-File "myspace/trion/bugs/new_minimal/xla/cross_xla_autocluster_slice_oob_suppress.py", line 77, in <module>
-File "myspace/trion/bugs/new_minimal/xla/cross_xla_autocluster_slice_oob_suppress.py", line 71, in run
-File "myspace/trion/bugs/new_minimal/xla/cross_xla_autocluster_slice_oob_suppress.py", line 47, in f_jit
-
-	 [[{{node Slice_1}}]]
-	tf2xla conversion failed while converting __inference_f_jit_88[_XlaMustCompile=true,config_proto=7932885297272261767,executor_type=11160318154034397263]. Run with TF_DUMP_GRAPH_PREFIX=/path/to/dump/dir and --vmodule=xla_compiler=2 to obtain a dump of the compiled functions.
-W0000 00:00:1776413098.308274  339876 local_rendezvous.cc:412] Local rendezvous is aborting with status: INVALID_ARGUMENT: Expected size[2] in [0, 3], but got 4
-W0000 00:00:1776413098.310369  339876 op_kernel.cc:1858] OP_REQUIRES failed at xla_ops.cc:602 : INVALID_ARGUMENT: Expected size[2] in [0, 3], but got 4
-
-Stack trace for op definition: 
-File "myspace/trion/bugs/new_minimal/xla/cross_xla_autocluster_slice_oob_suppress.py", line 77, in <module>
-File "myspace/trion/bugs/new_minimal/xla/cross_xla_autocluster_slice_oob_suppress.py", line 71, in run
-File "myspace/trion/bugs/new_minimal/xla/cross_xla_autocluster_slice_oob_suppress.py", line 47, in f_jit
-
-	 [[{{node Slice_1}}]]
-	tf2xla conversion failed while converting __inference_f_jit_121[_XlaMustCompile=true,config_proto=7932885297272261767,executor_type=11160318154034397263]. Run with TF_DUMP_GRAPH_PREFIX=/path/to/dump/dir and --vmodule=xla_compiler=2 to obtain a dump of the compiled functions.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1776431888.036954 2625392 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1776431888.990957 2625392 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
 Case                   Eager                          XLA jit                        Autocluster
 ----------------------------------------------------------------------------------------------------
 V1: shape=(1,3,3,2)    RAISED InvalidArgumentError    RAISED InvalidArgumentError    OK  [2.0, 3.0, 8.0]...  ← BUG

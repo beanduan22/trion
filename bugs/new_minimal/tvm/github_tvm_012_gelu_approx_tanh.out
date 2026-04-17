@@ -1,22 +1,13 @@
-=== github_tvm_012: ONNX Gelu approx=tanh ignored by TVM ===
-
-     x    gelu_exact     gelu_tanh    abs_diff    rel_diff  bug?
---------------------------------------------------------------------
- -2.00   -0.04550026   -0.04540231    9.80e-05    2.15e-03  ok
- -1.00   -0.15865525   -0.15880801    1.53e-04    9.63e-04  BUG
- -0.50   -0.15426877   -0.15428599    1.72e-05    1.12e-04  ok
-  0.00    0.00000000    0.00000000    0.00e+00    0.00e+00  ok
-  0.50    0.34573123    0.34571401    1.72e-05    4.98e-05  ok
-  1.00    0.84134475    0.84119199    1.53e-04    1.82e-04  BUG
-  2.00    1.95449974    1.95459769    9.80e-05    5.01e-05  ok
-
-Max abs diff: 1.53e-04  tol=1e-04
-
-TVM substitution demo (approx=tanh input → exact erf output):
-  expected (tanh): [-0.10042999684810638, -0.15881000459194183, 0.0, 0.841189980506897, 1.3995699882507324]
-  TVM output (exact erf): [-0.10021000355482101, -0.15865999460220337, 0.0, 0.8413400053977966, 1.3997900485992432]
-  per-element diff: [0.000218, 0.000153, 0.0, 0.000153, 0.000218]
-  any diff > TOL: True
-
-PASS=False
-BUG REPRODUCED: TVM maps ONNX Gelu(approx=tanh) → exact erf, producing systematic error > 1e-4
+-- Control: approximate='none' (exact erf) --
+  ORT: [-0.00404969 -0.04550028 -0.15865526  0.          0.8413447   1.9544997
+  2.9959502 ]
+  TVM: [-0.00404969 -0.04550028 -0.15865526  0.          0.8413447   1.9544997
+  2.9959502 ]
+  max_abs=0.000000e+00
+-- Target: approximate='tanh' --
+  ORT: [-0.00363752 -0.04540235 -0.15880796  0.          0.841192    1.9545977
+  2.9963627 ]
+  TVM: [-0.00404969 -0.04550028 -0.15865526  0.          0.8413447   1.9544997
+  2.9959502 ]
+  max_abs=4.124641e-04  tol=1e-04
+BUG REPRODUCED: TVM Relay Gelu importer ignores approximate='tanh' and returns the exact erf output

@@ -1,5 +1,5 @@
-Expected : [ 1  4  9 16 25 36 49 64] ...
-Buggy    : [ 4  9 16 25 36 49 64 81] ...
-Max diff : 33  (TVM not installed — analytical demo)
-PASS=False
-BUG REPRODUCED: LiftTransformParams corrupts constant binding
+input: [1. 2. 3. 4.]
+ORT  : [nan nan nan nan] (expected all-NaN per IEEE-754)
+TVM  : [0. 0. 0. 0.] (expected to match — but folds a-a to 0)
+max_abs=1.000000e+00  tol=1e-04  (NaN mismatch counted as 1.0)
+BUG REPRODUCED: TVM Relay FoldConstant rewrites inf*X - inf*X to 0, violating IEEE-754 (ORT returns NaN)

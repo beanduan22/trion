@@ -1,16 +1,6 @@
-  PyTorch eager      : 1.234375000000   (✓ bf16 truncated)
-  Inductor           : 1.234567880630   (✗ CAST ELIMINATED)
-  TF eager           : 1.234375000000   (✓ bf16 truncated)
-  TF-XLA (jit=True)  : 1.234567880630   (✗ CAST ELIMINATED)
-  JAX eager          : 1.234375000000   (✓ bf16 truncated)
-  JAX-jit (XLA)      : 1.234567880630   (✗ CAST ELIMINATED)
-
-input       = 1.234567890123
-bf16 ref    = 1.234375000000   (correct truncated value)
-buggy compilers: ['PyTorch Inductor', 'TensorFlow XLA', 'JAX-jit']
-correct compilers (truncate): eager modes of all frameworks + ORT + OV + ONNX-Ref + numpy
-
-BUG REPRODUCED on 3 JIT compiler(s): PyTorch Inductor, TensorFlow XLA, JAX-jit
-Fix (per compiler):
-  - PyTorch Inductor: reject Cast-pair elision when intermediate dtype has fewer bits
-  - TF-XLA / JAX-jit: same fix in xla/service/algebraic_simplifier.cc
+torch bf16 ground truth first 8 : [-2.4046977  -4.1797457   2.3329809  -0.31902635]
+|gt - fp32_no_trunc| max_abs   : 0.0202579  (must be >> tol)
+ORT output first 8             : [-2.4046977  -4.1797457   2.3329809  -0.31902617]
+|ORT - gt| max_abs             : 1.78814e-07
+onnx2torch conversion crashed: NotImplementedError: Conversion to "16" is not implemented
+BUG REPRODUCED: onnx2torch cannot materialise Cast(fp32->bf16)->Cast(bf16->fp32)

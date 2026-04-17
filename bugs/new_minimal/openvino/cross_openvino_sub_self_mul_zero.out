@@ -1,4 +1,4 @@
 ORT:      [-265.7939    -74.557076  159.4417    163.64496 ]
 OpenVINO: [-265.       -75.15625  159.0625   164.375  ]
 max_abs=2.9208
-BUG REPRODUCED: OpenVINO sub_self_mul_zero (max_abs=2.9208)
+BUG REPRODUCED: OpenVINO CPU vs ORT CPU diverge on Sub(MatMul,MatMul)*const  (max_abs=2.9208) — fp32 GEMM accumulation-order difference exposed by subtractive cancellation.

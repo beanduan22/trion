@@ -1,4 +1,8 @@
-W0417 18:01:53.486000 315959 site-packages/torch/onnx/_internal/exporter/_compat.py:114] Setting ONNX exporter to use operator set version 18 because the requested opset_version 17 is a lower version than we have implementations for. Automatic version conversion will be performed, which may not be successful at converting to the requested version. If version conversion is unsuccessful, the opset version of the exported model will be kept at 18. Please consider setting opset_version >=18 to leverage latest ONNX features
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1776431701.751235 2608466 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1776431702.688104 2608466 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+W0417 23:15:04.634000 2608466 site-packages/torch/onnx/_internal/exporter/_compat.py:114] Setting ONNX exporter to use operator set version 18 because the requested opset_version 17 is a lower version than we have implementations for. Automatic version conversion will be performed, which may not be successful at converting to the requested version. If version conversion is unsuccessful, the opset version of the exported model will be kept at 18. Please consider setting opset_version >=18 to leverage latest ONNX features
 The model version conversion is not supported by the onnxscript version converter and fallback is enabled. The model will be converted using the onnx C API (target version: 17).
 input    : [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]
 expected : [1.0, 4.0, 7.0, 10.0, 2.0, 5.0, 8.0, 11.0, 3.0, 6.0, 9.0, 12.0]
@@ -9,7 +13,7 @@ expected : [1.0, 4.0, 7.0, 10.0, 2.0, 5.0, 8.0, 11.0, 3.0, 6.0, 9.0, 12.0]
 [torch.onnx] Run decomposition... ✅
 [torch.onnx] Translate the graph into ONNX...
 [torch.onnx] Translate the graph into ONNX... ✅
-Saved artifact at '/tmp/tmpnvpt8656'. The following endpoints are available:
+Saved artifact at '/tmp/tmpxokncb07'. The following endpoints are available:
 
 * Endpoint 'serve'
   args_0 (POSITIONAL_ONLY): TensorSpec(shape=(None, 3), dtype=tf.float32, name=None)
@@ -17,10 +21,12 @@ Output Type:
   TensorSpec(shape=(4, 3), dtype=tf.float32, name=None)
 Captures:
   None
-W0000 00:00:1776412914.636168  315959 tf_tfl_flatbuffer_helpers.cc:364] Ignored output_format.
-W0000 00:00:1776412914.636186  315959 tf_tfl_flatbuffer_helpers.cc:367] Ignored drop_control_dependency.
+/home/binduan/miniconda3/lib/python3.13/site-packages/tensorflow/lite/python/interpreter.py:457: UserWarning:     Warning: tf.lite.Interpreter is deprecated and is scheduled for deletion in
+    TF 2.20. Please use the LiteRT interpreter from the ai_edge_litert package.
+    See the [migration guide](https://ai.google.dev/edge/litert/migration)
     for details.
     
+  warnings.warn(_INTERPRETER_DELETION_WARNING)
 Runtime        Output                                                       Match?
 --------------------------------------------------------------------------------------
 Keras eager    [1.0, 4.0, 7.0, 10.0, 2.0, 5.0, 8.0, 11.0, 3.0, 6.0, 9.0, 12.0] OK

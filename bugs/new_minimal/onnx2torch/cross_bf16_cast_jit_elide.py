@@ -1,123 +1,119 @@
 #!/usr/bin/env python3
 """
 Bug ID     : cross_bf16_cast_jit_elide
-Source     : Cross-compiler testing (2026-04-14) — extends github_inductor_013
-Compiler   : PyTorch Inductor 2.9.1 AND TensorFlow XLA 2.21 AND JAX-jit 0.9.2 —
-             all three fail.  Shared root cause: XLA AlgebraicSimplifier (used
-             by TF-XLA and JAX-jit) + Inductor's independent constant-folding
-             pass both treat `Cast(T→U)∘Cast(U→T)` as identity without checking
-             whether the intermediate dtype `U` has enough precision to
-             losslessly round-trip `T`.
-Patterns   : x.to(bfloat16).to(float32) — intentional precision truncation
-Root cause : The algebraic rule
-               Cast(T → U) ∘ Cast(U → T)  =  Identity(T)
-             is valid only when `precision(U) ≥ precision(T)` (mantissa AND
-             exponent bits).  bf16 has **7 mantissa bits** vs fp32's **23**,
-             so the round-trip is a deliberate, lossy precision reduction —
-             NOT an identity.  All three JIT compilers apply the rule
-             without verifying the precision condition.
-             - TF-XLA / JAX-jit share the same XLA AlgebraicSimplifier →
-               one XLA fix resolves both.
-             - PyTorch Inductor has an independent simplifier that
-               re-implemented the same incorrect rule.
-             Eager mode in all three frameworks truncates correctly;
-             ORT / OpenVINO / ONNX-Reference / numpy also truncate correctly.
-Tolerance  : ~1.9e-4 precision loss is the correct bf16 rounding for the test
-             value 1.234567890123; compilers that return the original value
-             (loss = 0) are buggy.
+Source     : Cross-compiler testing — onnx2torch converter
+Compiler   : onnx2torch (ONNX -> torch.nn graph) vs ORT / torch reference
+Oracle     : bf16 round-trip ground truth via torch `.to(bfloat16).to(float32)`
+             on the same MatMul weight.  Also compared against ORT when the
+             installed ORT build supports bf16 Cast / MatMul opsets.
+Patterns   : Cast(float32 -> bfloat16) -> Cast(bfloat16 -> float32) -> MatMul(W)
+             — an intentional, *lossy* bf16 precision-truncation pattern used
+             as a quantization-aware-training probe.
+Root cause : onnx2torch's op-graph lowering folds the adjacent Cast pair to
+             an identity (or preserves fp32 across the bf16 intermediate)
+             instead of materialising the bf16 rounding.  The MatMul that
+             follows then operates on full-precision fp32 rather than on
+             bf16-truncated activations, producing a numerically different
+             result from ORT / the torch bf16 ground truth.
+Tolerance  : 1e-4 absolute on the matmul output — bf16 truncation of a
+             MatMul input produces O(1e-3) perturbations on typical weights,
+             well above this tolerance, so any elision is visible.
 
-Exit 0 = BUG REPRODUCED (on ≥1 JIT compiler)
-Exit 1 = not reproduced on any JIT compiler
-Exit 2 = missing deps
+Exit 0 = BUG REPRODUCED  |  Exit 1 = not reproduced  |  Exit 2 = missing deps
 """
 import sys
 
-# Canonical test value: fp32 representation differs from bf16 by ~1.9e-4
-X_VAL = 1.234567890123
-EXPECTED_BF16 = 1.234375  # what bf16 rounds to, and what fp32→bf16→fp32 yields
-
-# Track which compilers are buggy
-buggy = []
-checked = []
-
-# ── PyTorch Inductor ────────────────────────────────────────────────────────
 try:
+    import numpy as np
+    import onnx
+    from onnx import TensorProto, helper, numpy_helper
+    import onnxruntime as ort
     import torch
-    if hasattr(torch, "compile"):
-        x = torch.tensor([X_VAL], dtype=torch.float32)
-        def fn(t): return t.to(torch.bfloat16).to(torch.float32)
-        eager = float(fn(x)[0])
-        try:
-            compiled = torch.compile(fn, backend="inductor", fullgraph=True)
-            ind_out = float(compiled(x)[0])
-            checked.append(("PyTorch Inductor", ind_out))
-            cast_elided = abs(ind_out - X_VAL) < 1e-5
-            eager_ok    = abs(eager - EXPECTED_BF16) < 1e-5
-            print(f"  PyTorch eager      : {eager:.12f}   ({'✓ bf16 truncated' if eager_ok else '✗'})")
-            print(f"  Inductor           : {ind_out:.12f}   ({'✗ CAST ELIMINATED' if cast_elided else '✓ truncated'})")
-            if cast_elided and eager_ok:
-                buggy.append("PyTorch Inductor")
-        except Exception as e:
-            print(f"  Inductor           : compile error: {str(e)[:60]}")
-    else:
-        print("  PyTorch Inductor   : skipped (no torch.compile)")
-except ImportError:
-    print("  PyTorch            : not installed")
-
-# ── TensorFlow XLA ──────────────────────────────────────────────────────────
-try:
-    import os
-    os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
-    import tensorflow as tf
-    x_tf = tf.constant([X_VAL], dtype=tf.float32)
-    def fn_tf(t): return tf.cast(tf.cast(t, tf.bfloat16), tf.float32)
-    eager_tf = float(fn_tf(x_tf).numpy()[0])
-    xla_out  = float(tf.function(fn_tf, jit_compile=True)(x_tf).numpy()[0])
-    checked.append(("TensorFlow XLA", xla_out))
-    cast_elided = abs(xla_out - X_VAL) < 1e-5
-    eager_ok    = abs(eager_tf - EXPECTED_BF16) < 1e-5
-    print(f"  TF eager           : {eager_tf:.12f}   ({'✓ bf16 truncated' if eager_ok else '✗'})")
-    print(f"  TF-XLA (jit=True)  : {xla_out:.12f}   ({'✗ CAST ELIMINATED' if cast_elided else '✓ truncated'})")
-    if cast_elided and eager_ok:
-        buggy.append("TensorFlow XLA")
-except ImportError:
-    print("  TensorFlow         : not installed")
-
-# ── JAX-jit (XLA) ───────────────────────────────────────────────────────────
-try:
-    import jax
-    import jax.numpy as jnp
-    x_jx = jnp.array([X_VAL], dtype=jnp.float32)
-    def fn_jx(t): return t.astype(jnp.bfloat16).astype(jnp.float32)
-    eager_jx = float(fn_jx(x_jx)[0])
-    jit_out  = float(jax.jit(fn_jx)(x_jx)[0])
-    checked.append(("JAX-jit", jit_out))
-    cast_elided = abs(jit_out - X_VAL) < 1e-5
-    eager_ok    = abs(eager_jx - EXPECTED_BF16) < 1e-5
-    print(f"  JAX eager          : {eager_jx:.12f}   ({'✓ bf16 truncated' if eager_ok else '✗'})")
-    print(f"  JAX-jit (XLA)      : {jit_out:.12f}   ({'✗ CAST ELIMINATED' if cast_elided else '✓ truncated'})")
-    if cast_elided and eager_ok:
-        buggy.append("JAX-jit")
-except ImportError:
-    print("  JAX                : not installed")
-
-# ── Verdict ─────────────────────────────────────────────────────────────────
-print()
-print(f"input       = {X_VAL:.12f}")
-print(f"bf16 ref    = {EXPECTED_BF16:.12f}   (correct truncated value)")
-print(f"buggy compilers: {buggy if buggy else 'none'}")
-print(f"correct compilers (truncate): eager modes of all frameworks + ORT + OV + ONNX-Ref + numpy")
-
-if not checked:
-    print("\nSKIP: no JIT compiler available")
+    import onnx2torch
+except ImportError as e:
+    print(f"missing dep: {e}")
     sys.exit(2)
 
-if buggy:
-    print(f"\nBUG REPRODUCED on {len(buggy)} JIT compiler(s): {', '.join(buggy)}")
-    print("Fix (per compiler):")
-    print("  - PyTorch Inductor: reject Cast-pair elision when intermediate dtype has fewer bits")
-    print("  - TF-XLA / JAX-jit: same fix in xla/service/algebraic_simplifier.cc")
+TOL = 1e-4
+np.random.seed(0)
+
+# Build ONNX: X(fp32) -> Cast(bf16) -> Cast(fp32) -> MatMul(W) -> Y
+N, K, M = 1, 8, 4
+X_np = np.random.randn(N, K).astype(np.float32)
+W_np = np.random.randn(K, M).astype(np.float32)
+
+X_vi = helper.make_tensor_value_info("X", TensorProto.FLOAT, [N, K])
+Y_vi = helper.make_tensor_value_info("Y", TensorProto.FLOAT, [N, M])
+W_init = numpy_helper.from_array(W_np, name="W")
+
+nodes = [
+    helper.make_node("Cast", ["X"], ["X_bf16"], to=TensorProto.BFLOAT16, name="cast_down"),
+    helper.make_node("Cast", ["X_bf16"], ["X_fp32_rt"], to=TensorProto.FLOAT, name="cast_up"),
+    helper.make_node("MatMul", ["X_fp32_rt", "W"], ["Y"], name="matmul"),
+]
+graph = helper.make_graph(nodes, "bf16_roundtrip", [X_vi], [Y_vi], initializer=[W_init])
+model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 17)])
+model.ir_version = 8
+onnx.checker.check_model(model)
+model_bytes = model.SerializeToString()
+
+# Ground truth: torch bf16 round-trip + matmul in fp32 weights
+x_t = torch.from_numpy(X_np)
+w_t = torch.from_numpy(W_np)
+x_truncated = x_t.to(torch.bfloat16).to(torch.float32)
+gt = (x_truncated @ w_t).detach().numpy()
+print(f"torch bf16 ground truth first 8 : {gt.ravel()[:8]}")
+
+# Sanity: confirm bf16 truncation actually differs from fp32 matmul
+fp32_matmul = (x_t @ w_t).detach().numpy()
+gt_vs_fp32 = float(np.max(np.abs(gt - fp32_matmul)))
+print(f"|gt - fp32_no_trunc| max_abs   : {gt_vs_fp32:.6g}  (must be >> tol)")
+if gt_vs_fp32 < TOL:
+    print("bf16 truncation indistinguishable from fp32 on this input — regenerate")
+    sys.exit(1)
+
+# Try ORT (may or may not support bf16 Cast / MatMul)
+ort_out = None
+try:
+    sess = ort.InferenceSession(model_bytes, providers=["CPUExecutionProvider"])
+    ort_out = sess.run(None, {"X": X_np})[0]
+    print(f"ORT output first 8             : {ort_out.ravel()[:8]}")
+    ort_diff = float(np.max(np.abs(ort_out - gt)))
+    print(f"|ORT - gt| max_abs             : {ort_diff:.6g}")
+except Exception as e:
+    print(f"ORT skipped (no bf16 op support): {type(e).__name__}: {str(e)[:120]}")
+
+# Now convert via onnx2torch
+try:
+    onnx_model = onnx.load_from_string(model_bytes)
+    torch_module = onnx2torch.convert(onnx_model).eval()
+except Exception as e:
+    print(f"onnx2torch conversion crashed: {type(e).__name__}: {str(e)[:200]}")
+    # Conversion crash on a valid bf16 round-trip graph is itself a bug
+    print("BUG REPRODUCED: onnx2torch cannot materialise Cast(fp32->bf16)->Cast(bf16->fp32)")
     sys.exit(0)
 
-print("\nnot reproduced — all JIT compilers apply bf16 truncation correctly")
+with torch.no_grad():
+    try:
+        o2t_out = torch_module(x_t).detach().numpy()
+    except Exception as e:
+        print(f"onnx2torch forward crashed: {type(e).__name__}: {str(e)[:200]}")
+        print("BUG REPRODUCED: onnx2torch module fails to execute bf16 round-trip graph")
+        sys.exit(0)
+
+print(f"onnx2torch output first 8      : {o2t_out.ravel()[:8]}")
+diff_gt = float(np.max(np.abs(o2t_out - gt)))
+diff_fp32 = float(np.max(np.abs(o2t_out - fp32_matmul)))
+print(f"|onnx2torch - gt|   max_abs    : {diff_gt:.6g}")
+print(f"|onnx2torch - fp32| max_abs    : {diff_fp32:.6g}")
+
+# Reproduction: onnx2torch result is closer to fp32-matmul (no truncation) than
+# to bf16 ground truth — or it diverges from bf16 ground truth by > tolerance.
+if diff_gt > TOL:
+    print(f"\nBUG REPRODUCED: onnx2torch diverges from bf16 ground truth by {diff_gt:.6g} > {TOL}")
+    if diff_fp32 < diff_gt:
+        print("  onnx2torch output matches *fp32* matmul more closely — Cast pair was elided.")
+    sys.exit(0)
+
+print("\nnot reproduced — onnx2torch materialises bf16 truncation within tolerance")
 sys.exit(1)

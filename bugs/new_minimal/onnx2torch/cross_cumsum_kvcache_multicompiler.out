@@ -1,12 +1,13 @@
 /home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/cumsum.py:63: TracerWarning: Converting a tensor to a Python number might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
   axis = axis.item()
 
-Backend           max_abs_diff  bug?
-----------------------------------------
-ORT_opt               0.000000  ok
-OpenVINO              0.321663  BUG
-TorchScript          56.801445  BUG
+Backend           max_abs_diff  bug?  role
+------------------------------------------------------------
+ORT_opt               0.000000  ok    oracle
+OpenVINO              0.321663  BUG   secondary
+TorchScript          56.801445  BUG   TARGET
 
 Tolerance: 0.05
+Primary target: TorchScript (onnx2torch-converted + jit.trace + freeze)
 PASS=False
-BUG REPRODUCED on ['OpenVINO', 'TorchScript']: CumSum→Transpose→MatMul — OpenVINO tiled-GEMM fp32 accumulation order differs from ORT reference
+BUG REPRODUCED on ['OpenVINO', 'TorchScript']. onnx2torch+TorchScript diverges by 56.801 from ORT — matches the cumsum axis.item() trace-constant class of bugs documented elsewhere in this folder.
