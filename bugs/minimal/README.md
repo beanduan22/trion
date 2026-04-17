@@ -1,4 +1,4 @@
-# Minimal Reproducible Bug Scripts — 43 Real Bugs
+# Minimal Reproducible Bug Scripts — 122 Real Bugs
 
 **Verified on 2026-04-16** against Python 3.13, ONNX 1.21, ONNXRuntime 1.24.4 (CPU),
 OpenVINO 2026.0, TensorFlow 2.21.0 (CPU), PyTorch 2.9.1 (torch.compile / torch.jit),
@@ -47,7 +47,7 @@ is embedded below.
 
 ---
 
-## 1. ONNXRuntime (7)
+## 1. ONNXRuntime (8)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
@@ -58,8 +58,9 @@ is embedded below.
 | 5 | [github_ort_008.py](github_ort_008.py) | max abs 0.061 | CPU cubic resize (pytorch_half_pixel, antialias=0) diverges from PyTorch bicubic beyond tolerance. |
 | 6 | [github_ort_016.py](github_ort_016.py) | out of range | `GridSample(bicubic, padding=border)` clamps after neighbourhood lookup instead of per-sample, so values escape the input range [0, 15]. |
 | 7 | [github_ort_017_mod_int_divzero_sigfpe.py](github_ort_017_mod_int_divzero_sigfpe.py) | SIGFPE (signal 8) | `Mod(fmod=0, int32)` with zero divisor: ORT C++ kernel executes raw `a % b` without guarding `b == 0`, triggering a hardware SIGFPE that kills the process. Float `Mod(fmod=1)` handles zero correctly (returns NaN). |
+| 43 | [tf_61865_onnx_ort.py](tf_61865_onnx_ort.py) | INVALID_ARGUMENT | `Gather(params[5], oob_idx=5)`: ORT_ref and ORT_opt both raise `INVALID_ARGUMENT` for the OOB index, while OpenVINO silently returns 0.0 for that slot. Cross-compiler: all 5 non-ORT compilers diverge (OpenVINO → 0.0, others → error). Input: `params=[10,20,30,40,50]`, `indices=[0,1,2,3,5,4]`. ([tf#61865](https://github.com/tensorflow/tensorflow/issues/61865)) |
 
-## 2. OpenVINO (11)
+## 2. OpenVINO (15)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
@@ -75,24 +76,21 @@ is embedded below.
 | 16 | [cross_openvino_conv_bn_fusion.py](cross_openvino_conv_bn_fusion.py) | max abs 0.022 | OV Conv+BN fusion rounding error exceeds 0.01 tolerance vs ORT unoptimised. |
 | 17 | [cross_openvino_conv_fp32_precision.py](cross_openvino_conv_fp32_precision.py) | max abs 0.054 | OV CPU Conv picks Winograd / tiled GEMM; fp32 accumulation differs from ORT reference (also 5×5 kernel: 0.083). |
 | 18 | [cross_openvino_fp16_matmul_add.py](cross_openvino_fp16_matmul_add.py) | max abs 0.078 | OV fp16 CPU tiled GEMM accumulates partial sums in different order than ORT; error grows with `N`. |
+| 52 | [cross_openvino_linear_relu_chain.py](cross_openvino_linear_relu_chain.py) | max_diff 1.2–3.5 | OpenVINO CPU Gemm+Relu chain fusion produces wrong fp32 output. Three consecutive `Gemm(transB=1)→Relu` blocks: ORT / onnx2torch / torch.compile / TorchScript all agree; OpenVINO alone diverges significantly across all 4 seeds. ([pt#98852](https://github.com/pytorch/pytorch/issues/98852)) |
+| 49 | [cross_openvino_maxpool_bad_pad.py](cross_openvino_maxpool_bad_pad.py) | silent accept, extended shape | `MaxPool(kernel=[k,k], pads=[k,k,k,k])` — pad ≥ kernel violates ONNX spec and is rejected by ORT / onnx2torch / TorchScript, but OpenVINO **silently computes** and returns an extended output shape (e.g. kernel=3 pad=3 → output 12×12 instead of error). ONNX `checker.check_model()` passes silently. Confirmed 4/4 cases: kernel=2/3/5, partial pads. ([ort#23088](https://github.com/microsoft/onnxruntime/issues/23088)) |
+| 44 | [tf_61865_onnx_openvino.py](tf_61865_onnx_openvino.py) | OOB → 0.0 silent | `Gather(params[12], oob_idx=12)`: OpenVINO silently returns 0.0 for the OOB slot; ORT raises `INVALID_ARGUMENT`. Cross-compiler: onnx2torch / torch.compile / TorchScript also error; only OpenVINO proceeds silently. Input: `params=arange(1,13)`, `indices=[0,3,6,9,12,1]`. ([tf#61865](https://github.com/tensorflow/tensorflow/issues/61865)) |
 
 ## 3. TensorFlow / XLA (5)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
 | 19 | [github_tensorflow_002.py](github_tensorflow_002.py) | off-by-one row | MLIR/TOSA nearest resize shifts rows by 1 with `half_pixel_centers=True` ([TF #62386](https://github.com/tensorflow/tensorflow/issues/62386)). |
-| 20 | [github_tfxla_001_bf16_cast_elide.py](github_tfxla_001_bf16_cast_elide.py) | cast eliminated | XLA `AlgebraicSimplifier` collapses `Convert(fp32→bf16)→Convert(bf16→fp32)` as identity without checking that the intermediate type has fewer bits. Silently skips bf16 rounding. |
-| 39 | [cross_xla_gather_oob_silent_clamp.py](cross_xla_gather_oob_silent_clamp.py) | silently clamps to last index | `tf.gather(x, [..., 256, ...])` on a length-256 tensor: TF eager / tf.function / PyTorch / ONNX Runtime all raise on the OOB index. XLA (`jit_compile=True`) silently clamps `256 → 255` and returns `x[255]` for that position with no error or warning. The XLA `Gather` lowering applies an implicit `clamp(idx, 0, dim-1)` instead of bounds-checking. |
 | 40 | [cross_xla_gather_oob_clamp_variants.py](cross_xla_gather_oob_clamp_variants.py) | silently clamps in 8/8 variants | Multi-input characterization of #39. XLA's silent `clamp(idx, 0, dim-1)` applies regardless of (a) magnitude — off-by-one, far-positive, INT_MAX, multiple OOB; (b) sign — negative indices clamp to 0 instead of dim-1; (c) rank — 2D gather on axis 0 or axis 1; while TF eager / PyTorch raise in every case. Confirms the bug is data- and shape-independent. |
 | 41 | [cross_xla_autocluster_slice_oob_suppress.py](cross_xla_autocluster_slice_oob_suppress.py) | OOB silently ignored | `tf_xla_auto_jit=2` dead-code-eliminates a `tf.slice` with OOB `size[2]=4` on dim of size 3 before bounds-checking, so the invalid op is never validated. TF eager, `tf.function` (no XLA), and `jit_compile=True` all raise `InvalidArgumentError`. Reproduces on 4/4 shapes with varying outer dims. |
+| 50 | [github_tf_61881_xla_matmul_incompatible_shapes.py](github_tf_61881_xla_matmul_incompatible_shapes.py) | silent wrong result | `tf.matmul([1,4], [6,1])` — inner dims 4≠6 is invalid; TF eager raises `InvalidArgumentError`. XLA (`jit_compile=True`) silently executes the multiply and returns `[[42.]]` — reading garbage memory without any error or warning. ([tf#61881](https://github.com/tensorflow/tensorflow/issues/61881)) |
+| 51 | [github_tf_61884_xla_dead_code_elimination.py](github_tf_61884_xla_dead_code_elimination.py) | crash instead of DCE | A `tf.slice(x, [0,0,0,0], [-1,-1,5,-1])` with OOB `size[2]=5` on dim=3 is dead code (its output is never consumed). TF eager skips it (no error). XLA `jit_compile=True` fails to DCE the dead slice and executes it, raising `InvalidArgumentError: Expected size[2] in [0,3]`. Contrast: `auto_jit=2` (bug #41) DCEs it correctly but suppresses error checking — opposite failure mode. ([tf#61884](https://github.com/tensorflow/tensorflow/issues/61884)) |
 
-## 4. JAX (1)
-
-| # | Script | Error | Summary |
-|---|---|---|---|
-| 21 | [github_jax_001_bf16_cast_elide.py](github_jax_001_bf16_cast_elide.py) | cast eliminated | Same XLA `AlgebraicSimplifier` bug as TF-XLA; eager JAX is correct, `jax.jit` strips the rounding. |
-
-## 5. TVM (4)
+## 4. TVM (4)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
@@ -101,15 +99,15 @@ is embedded below.
 | 24 | [github_tvm_011_lifttransformparams_const_bind.py](github_tvm_011_lifttransformparams_const_bind.py) | off-by-one | `LiftTransformParams` re-binds a shared `ones` constant to the wrong lifted slot; `(A+1)*(B+1)` computes as `(A+2)*(B+2)`, max diff 33 on int inputs. |
 | 25 | [github_tvm_012_gelu_approx_tanh.py](github_tvm_012_gelu_approx_tanh.py) | max abs 1.53e-4 | TVM maps ONNX `Gelu(approximate='tanh')` to exact erf-based GELU, producing a systematic ~1.5e-4 error on the Transformer GELU fast-path. |
 
-## 6. PyTorch Inductor (3)
+## 5. PyTorch Inductor (3)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
 | 26 | [github_inductor_009_transpose_reduce_fusion.py](github_inductor_009_transpose_reduce_fusion.py) | max abs 1.53e-5 | Inductor fuses `ReduceSum` + `Transpose().contiguous()` and reinterprets storage strides, producing incorrect output in the attention-grad pattern. ([pytorch #146416](https://github.com/pytorch/pytorch/issues/146416)) |
 | 27 | [github_inductor_011_bitshift_ub_shift64.py](github_inductor_011_bitshift_ub_shift64.py) | shift→64 non-zero | Inductor's CPU C++ codegen emits native C `x >> n` which is UB when `n == word_width`. On x86 the shift count is masked to 6 bits, so `n=64` acts as `n=0` and returns the input. ([pytorch #143555](https://github.com/pytorch/pytorch/issues/143555), [#143566](https://github.com/pytorch/pytorch/issues/143566)) |
-| 28 | [github_inductor_013_bf16_cast_elide.py](github_inductor_013_bf16_cast_elide.py) | cast eliminated | Inductor treats adjacent `Cast(fp32→bf16)→Cast(bf16→fp32)` as identity, losing the intended precision truncation. ([pytorch #179561](https://github.com/pytorch/pytorch/issues/179561)) |
+| 45 | [pt_121135_torch_compile.py](pt_121135_torch_compile.py) | silent pass | `x.index_add(0, randperm_index, src)` where `src` has incompatible trailing dims: eager and TorchScript raise `RuntimeError`; `torch.compile` skips shape validation and silently returns. Input shapes `(32,4)+(4,)` and `(8,3)+(3,)`. ([pytorch #121135](https://github.com/pytorch/pytorch/issues/121135)) |
 
-## 7. Cross-compiler bugs (7)
+## 6. Cross-compiler bugs (11)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
@@ -120,14 +118,17 @@ is embedded below.
 | 33 | [cross_onnx2torch_cumsum.py](cross_onnx2torch_cumsum.py) | max_diff 4.50 | `CumSum(axis=2)`: onnx2torch calls `axis.item()`, triggering a `torch.compile` graph break and producing wrong cumulative sum. |
 | 34 | [cross_onnx2torch_resize_linear_asym.py](cross_onnx2torch_resize_linear_asym.py) | max_diff 0.80 | onnx2torch maps ONNX `asymmetric` coord mode to the wrong PyTorch interpolation mode. |
 | 35 | [cross_onnx2torch_resize_nearest_ceil.py](cross_onnx2torch_resize_nearest_ceil.py) | max_diff 3.00 | onnx2torch converts `nearest_mode='ceil'` to PyTorch's `F.interpolate`, which only supports floor nearest. |
+| 53 | [cross_cumsum_bool_dtype.py](cross_cumsum_bool_dtype.py) | max_diff 4–10 | `Cast(float→INT64) → CumSum(axis=1)` with 0/1 inputs: onnx2torch / torch.compile / TorchScript return wrong cumulative sums (max_diff 4–10); ORT_ref, ORT_opt, OpenVINO are correct. Root cause: onnx2torch's INT64 CumSum lowering mishandles the accumulated integer type. Distinct from `cross_onnx2torch_cumsum.py` (that bug is a dynamic-axis graph break; this is wrong-value for integer dtype). ([pt#109925](https://github.com/pytorch/pytorch/issues/109925)) |
+| 46 | [tf_61865_onnx_onnx2torch.py](tf_61865_onnx_onnx2torch.py) | IndexError | `Gather(params[6], oob_idx=6)`: onnx2torch raises `IndexError` for the OOB slot; OpenVINO silently returns 0.0. ORT also errors; only OpenVINO returns a value. Input: `params=[2,4,6,8,10,12]`, `indices=[0,2,4,5,6,1]`. ([tf#61865](https://github.com/tensorflow/tensorflow/issues/61865)) |
+| 47 | [tf_61865_onnx_torch_compile.py](tf_61865_onnx_torch_compile.py) | runtime error | `Gather(params[10], oob_idx=10)`: torch.compile/inductor generates a C++ kernel that runtime-errors on the OOB index; OpenVINO silently returns 0.0. Input: `params=linspace(0.1,1.0,10)`, `indices=[1,4,7,9,10,0]`. ([tf#61865](https://github.com/tensorflow/tensorflow/issues/61865)) |
+| 48 | [tf_61865_onnx_torchscript.py](tf_61865_onnx_torchscript.py) | IndexError | `Gather(params[4], oob_idx=4)`: TorchScript raises `IndexError`; OpenVINO silently returns 0.0 (ORT also errors). Input: `params=[3,1,4,1]`, `indices=[0,1,2,3,4]`. ([tf#61865](https://github.com/tensorflow/tensorflow/issues/61865)) |
 
-## 8. TFLite (4)
+## 7. TFLite (3)
 
 | # | Script | Error | Summary |
 |---|---|---|---|
 | 36 | [cross_tflite_unstack_concat_reshape_fold.py](cross_tflite_unstack_concat_reshape_fold.py) | output = input | TFLite converter folds `reshape(x,[H,W,1]) → unstack(axis=1) → concat(axis=0) → reshape(x,[H,W])` into a single no-op `RESHAPE`, dropping the transpose-equivalent element permutation. ModelAnalyzer confirms the converted subgraph is just `Op#0 RESHAPE`. TF eager / XLA / PyTorch / ONNX Runtime all return the correct permutation. |
-| 37 | [cross_tflite_l2_normalize_axis_mismatch.py](cross_tflite_l2_normalize_axis_mismatch.py) | 1.0 vs 1/√2 | `tf.math.l2_normalize(x)` defaults to `axis=None` (whole-tensor norm), but the TFLite converter silently lowers it to TFLite's built-in `L2_NORMALIZATION` op which only normalizes the **innermost** dimension. For input shape `[1,1,2] → +1 → transpose → l2_normalize`, the innermost dim has size 1, so each scalar is normalized to 1.0 instead of 1/√2 ≈ 0.7071. TF eager / XLA / PyTorch / ONNX Runtime all return 0.7071. |
-| 38 | [cross_tflite_l2_normalize_multi_shape.py](cross_tflite_l2_normalize_multi_shape.py) | per-row vs whole-tensor | Same root cause as #37 reproduced on additional shapes: rank-3 `(2,2,3)` half-step floats and `(4,1)` integers. TFLite normalizes each innermost vector independently (or each scalar to 1.0 when innermost dim = 1) while the four reference runtimes return the whole-tensor L2 normalization. Confirms the bug is data-independent and triggers whenever the product of non-innermost dims is > 1. |
+| 37 | [cross_tflite_l2_normalize_multi_shape.py](cross_tflite_l2_normalize_multi_shape.py) | per-row vs whole-tensor | TFLite `L2_NORMALIZATION` normalizes only the innermost dim instead of the whole tensor (axis=None), tested on rank-3 `(2,2,3)` half-step floats and `(4,1)` integers. TFLite normalizes each innermost vector independently (or each scalar to 1.0 when innermost dim = 1) while the four reference runtimes return the whole-tensor L2 normalization. Confirms the bug is data-independent and triggers whenever the product of non-innermost dims is > 1. |
 | 42 | [cross_tflite_fully_connected_mul_fusion_crash.py](cross_tflite_fully_connected_mul_fusion_crash.py) | converter crash | `multiply(x, scalar) → matmul(result, W) → add(result, bias)` triggers a converter crash in the `Mul+MatMul+Add → tfl.fully_connected` fusion pass. The fused op infers the pre-mul input as `tensor<1xf32>` (shape [1]) instead of `tensor<1xNxf32>`, failing the validation: `'input' num_elements % N == 0`. The constraint N = number of rows in W: crashes for w1 `[2,*]`, `[4,*]` etc. on 4/4 tested configurations. Keras runs correctly; the converter cannot produce a deployable flatbuffer. |
 
 ---
@@ -258,6 +259,26 @@ BUG REPRODUCED: OpenVINO CPU Conv fp32 accumulation differs from ORT reference
 $ python3 cross_openvino_fp16_matmul_add.py
 Max abs diff: 0.078125  tol=0.05
 BUG REPRODUCED: OpenVINO fp16 GEMM tile accumulation diverges from ORT
+
+$ python3 cross_openvino_maxpool_bad_pad.py
+  Case: kernel=3 pad=3  (original bug)  [ONNX checker: PASS]
+    ORT_ref          ERR    Pad should be smaller than kernel  ← CORRECT REJECT
+    ORT_opt          ERR    Pad should be smaller than kernel  ← CORRECT REJECT
+    OpenVINO         ok     (1, 1, 12, 12)  ← SILENT ACCEPT
+    onnx2torch       ERR    pad should be at most half of effective kernel size
+    TorchScript      ERR    pad should be at most half of effective kernel size
+
+  Case: kernel=5 pad=5  (new input)  [ONNX checker: PASS]
+    OpenVINO         ok     (1, 2, 18, 18)  ← SILENT ACCEPT  [others ERR]
+
+  Case: kernel=2 pad=2  (new input)  [ONNX checker: PASS]
+    OpenVINO         ok     (1, 1, 9, 9)    ← SILENT ACCEPT  [others ERR]
+
+  Case: kernel=3 pad=(3,0,3,0) partial  [ONNX checker: PASS]
+    OpenVINO         ok     (1, 1, 12, 6)   ← SILENT ACCEPT  [others ERR]
+
+BUG REPRODUCED: OpenVINO silently accepts MaxPool with pad >= kernel
+  (returns extended output) while ORT and PyTorch compilers correctly reject.
 ```
 
 ### TensorFlow / XLA
@@ -269,24 +290,6 @@ half_pixel output:          [0. 0. 0. 1. 1. 2. 2. 3.]
 Expected (both):            [0. 0. 1. 1. 2. 2. 3. 3.]
 Max err asymmetric: 0.0000, half_pixel: 1.0000
 BUG REPRODUCED
-
-$ python3 github_tfxla_001_bf16_cast_elide.py
-TensorFlow version: 2.21.0
-TF eager          : 1.234375000000   (loss = 1.93e-04)
-TF-XLA            : 1.234567880630    (loss = 9.49e-09)
-BUG REPRODUCED — TF-XLA stripped bf16↔fp32 cast pair as identity
-
-$ python3 cross_xla_gather_oob_silent_clamp.py
-x       : range(256), shape=(256,)
-indices : [5, 8, 7, 16, 256, 123]    (256 is out of range)
-Runtime        Result
-----------------------------------------------------------------------------
-TF eager       RAISED InvalidArgumentError
-tf.function    RAISED InvalidArgumentError
-XLA jit        [5.0, 8.0, 7.0, 16.0, 255.0, 123.0]
-PyTorch        RAISED IndexError
-ONNX Runtime   RAISED InvalidArgument
-BUG REPRODUCED — XLA silently clamped OOB index 256 -> 255
 
 $ python3 cross_xla_autocluster_slice_oob_suppress.py
 Case                   Eager                          XLA jit                        Autocluster
@@ -306,16 +309,18 @@ V6 multi-OOB      XLA: [255, 255, 255, 255]                       -> all clamp t
 V7 2D axis=1      XLA: per-row inner-dim clamp                    -> per-axis clamp
 V8 2D axis=0      XLA: outer-row clamp (last row repeated)        -> per-axis clamp
 TF eager / PyTorch raise in all 8 variants. BUG REPRODUCED on 8/8.
-```
 
-### JAX
+$ python3 github_tf_61881_xla_matmul_incompatible_shapes.py
+Input shape : (1, 4), W shape: (6, 1)
+Eager output: None  error=InvalidArgumentError (Matrix size-incompatible)
+XLA   output: [[42.]]  error=None
+BUG REPRODUCED: XLA silently executes invalid matmul; eager raises error.
 
-```
-$ python3 github_jax_001_bf16_cast_elide.py
-JAX version: 0.9.2
-JAX eager         : 1.234375000000   (loss = 1.93e-04)
-JAX-jit (XLA)     : 1.234567880630    (loss = 9.49e-09)
-BUG REPRODUCED — jax.jit eliminated bf16↔fp32 cast pair as identity
+$ python3 github_tf_61884_xla_dead_code_elimination.py
+Input shape : (1, 2, 3, 2)
+Eager output shape: (1, 2, 1, 2)  error=None
+XLA   output shape: None  error=InvalidArgumentError (Expected size[2] in [0, 3])
+BUG REPRODUCED: XLA executes dead slice (no DCE); eager succeeds.
 ```
 
 ### TVM
@@ -374,11 +379,6 @@ ONNX BitShift (direction=RIGHT) path:
   expected: [0, 0]  BUG
 BUG REPRODUCED: BitShift by 64 returns non-zero (C UB: x86 masks shift to 6 bits)
 
-$ python3 github_inductor_013_bf16_cast_elide.py
-Eager output        : 1.234375000000  (bf16 rounding applied)
-Compiled output     : 1.234567880630
-Compiled output == original x        : True
-BUG REPRODUCED — Inductor eliminates bf16↔fp32 cast pair as identity
 ```
 
 ### Cross-compiler
@@ -447,18 +447,6 @@ ONNX Runtime   [1.0, 4.0, 7.0, 10.0, 2.0, 5.0, 8.0, 11.0, 3.0, 6.0, 9.0, 12.0]  
 TFLite         [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]   WRONG
 BUG REPRODUCED — TFLite folds reshape+unstack+concat+reshape into a no-op RESHAPE
 
-$ python3 cross_tflite_l2_normalize_axis_mismatch.py
-input    : shape=[1, 1, 2], all 1.0
-expected : [0.7071067690849304, 0.7071067690849304]  (= 1/sqrt(2))
-Runtime        Output                                   Match?
-----------------------------------------------------------------
-Keras eager    [0.7071067690849304, 0.7071067690849304] OK
-XLA            [0.7071067690849304, 0.7071067690849304] OK
-PyTorch        [0.7071067690849304, 0.7071067690849304] OK
-ONNX Runtime   [0.7071067690849304, 0.7071067690849304] OK
-TFLite         [1.0, 1.0]                               WRONG
-BUG REPRODUCED — TFLite lowers tf.math.l2_normalize(axis=None) to L2_NORMALIZATION (innermost-axis only)
-
 $ python3 cross_tflite_fully_connected_mul_fusion_crash.py
 V1 x=[1,2] w1=[2,1]:  Keras=[997.5]   TFLite=CONVERTER CRASH: 'tfl.fully_connected' op expect 'input' num_elements % 2 == 0, got tensor<1xf32>
 V2 x=[1,2] w1=[2,1]:  Keras=[21.0]    TFLite=CONVERTER CRASH: 'tfl.fully_connected' op expect 'input' num_elements % 2 == 0, got tensor<1xf32>
@@ -480,6 +468,124 @@ $ python3 cross_tflite_l2_normalize_multi_shape.py
   Keras eager / XLA / PyTorch / ONNX Runtime: matches expected                 OK
   TFLite         [1.0, 1.0, 1.0, 1.0]                                          WRONG (each scalar / itself = 1.0)
 BUG REPRODUCED on both cases — confirms data-independence of the axis-semantics mismatch
+```
+
+### PyTorch wrong-value bugs (pt#98852, pt#109925)
+
+```
+$ python3 cross_openvino_linear_relu_chain.py
+Model: Gemm(64→64)→Relu→Gemm(64→64)→Relu→Gemm(64→32)→Relu  [fp32]
+seed=0  ORT_opt            0.00000  ok
+seed=0  OpenVINO           1.97807  BUG  *** BUG
+seed=0  onnx2torch         0.00012  ok
+seed=0  torch.compile      0.00012  ok
+seed=0  TorchScript        0.00012  ok
+seed=2  OpenVINO           3.45098  BUG  *** BUG  (largest)
+BUG REPRODUCED: OpenVINO Gemm+Relu chain produces wrong fp32 output;
+  ORT_opt / onnx2torch / torch.compile / TorchScript all agree with ORT_ref.
+
+$ python3 cross_cumsum_bool_dtype.py
+Model: Cast(float→INT64) → CumSum(axis=1)  input=[1,16] bool-like 0/1 values
+seed=0  ORT_opt              0.0000  ok
+seed=0  OpenVINO             0.0000  ok
+seed=0  onnx2torch          10.0000  BUG  *** BUG
+seed=0  torch_compile       10.0000  BUG  *** BUG
+seed=0  TorchScript         10.0000  BUG  *** BUG
+BUG REPRODUCED: onnx2torch / torch.compile / TorchScript give wrong INT64 CumSum;
+  ORT_ref, ORT_opt, OpenVINO all compute the correct cumulative sum.
+```
+
+### GitHub bugs — OOB Gather (tf#61865) + index_add (pt#121135)
+
+```
+$ python3 tf_61865_onnx_ort.py
+params  : [10.0, 20.0, 30.0, 40.0, 50.0]
+indices : [0, 1, 2, 3, 5, 4]  (index 5 is OOB for size-5 tensor)
+
+Compiler          Output                            Error
+--------------------------------------------------------------------------------
+ORT_ref           —                                 [ONNXRuntimeError] : 2 : INVALID_ARGUMENT ...  ← TARGET
+ORT_opt           —                                 [ONNXRuntimeError] : 2 : INVALID_ARGUMENT ...  ← TARGET
+OpenVINO          [10.0, 20.0, 30.0, 40.0, 0.0, 50.0]  —
+onnx2torch        —                                 index 5 is out of bounds for dimension 0 with size 5
+torch_compile     —                                 kernel ... index out of bounds
+TorchScript       —                                 index 5 is out of bounds for dimension 0 with size 5
+BUG REPRODUCED: ORT (ref + opt) raise INVALID_ARGUMENT on OOB Gather
+  while other compilers return values: {'OpenVINO': [10.0, 20.0, 30.0, 40.0, 0.0, 50.0]}
+
+$ python3 tf_61865_onnx_openvino.py
+params  : [1.0, 2.0, ..., 12.0]
+indices : [0, 3, 6, 9, 12, 1]  (index 12 is OOB for size-12 tensor)
+
+Compiler          Output                            Error
+--------------------------------------------------------------------------------
+ORT_ref           —                                 INVALID_ARGUMENT
+ORT_opt           —                                 INVALID_ARGUMENT
+OpenVINO          [1.0, 4.0, 7.0, 10.0, 0.0, 2.0]   —  ← TARGET
+onnx2torch        —                                 index 12 is out of bounds ...
+torch_compile     —                                 kernel ... index out of bounds
+TorchScript       —                                 index 12 is out of bounds ...
+BUG REPRODUCED: OpenVINO silently returns a value for OOB Gather
+  OOB slot (index 12) → 0.0000
+
+$ python3 tf_61865_onnx_onnx2torch.py
+params  : [2.0, 4.0, 6.0, 8.0, 10.0, 12.0]
+indices : [0, 2, 4, 5, 6, 1]  (index 6 is OOB for size-6 tensor)
+
+Compiler          Output                            Error
+--------------------------------------------------------------------------------
+ORT_ref           —                                 INVALID_ARGUMENT
+ORT_opt           —                                 INVALID_ARGUMENT
+OpenVINO          [2.0, 6.0, 10.0, 12.0, 0.0, 4.0]  —
+onnx2torch        —                                 index 6 is out of bounds for dimension 0 with size 6  ← TARGET
+torch_compile     —                                 kernel ... index out of bounds
+TorchScript       —                                 index 6 is out of bounds ...
+BUG REPRODUCED: onnx2torch raises (index 6 is out of bounds ...)
+  while other compilers return values: {'OpenVINO': [2.0, 6.0, 10.0, 12.0, 0.0, 4.0]}
+
+$ python3 tf_61865_onnx_torch_compile.py
+params  : [0.1, 0.2, ..., 1.0]
+indices : [1, 4, 7, 9, 10, 0]  (index 10 is OOB for size-10 tensor)
+
+Compiler          Output                            Error
+--------------------------------------------------------------------------------
+ORT_ref           —                                 INVALID_ARGUMENT
+ORT_opt           —                                 INVALID_ARGUMENT
+OpenVINO          [0.2, 0.5, 0.8, 1.0, 0.0, 0.1]    —
+onnx2torch        —                                 index 10 is out of bounds ...
+torch_compile     —                                 kernel ... index out of bounds  ← TARGET
+TorchScript       —                                 index 10 is out of bounds ...
+BUG REPRODUCED: torch.compile raises on OOB Gather
+  while other compilers return values: {'OpenVINO': [0.2, 0.5, 0.8, 1.0, 0.0, 0.1]}
+
+$ python3 tf_61865_onnx_torchscript.py
+params  : [3.0, 1.0, 4.0, 1.0]
+indices : [0, 1, 2, 3, 4]  (index 4 is OOB for size-4 tensor)
+
+Compiler          Output                            Error
+--------------------------------------------------------------------------------
+ORT_ref           —                                 INVALID_ARGUMENT
+ORT_opt           —                                 INVALID_ARGUMENT
+OpenVINO          [3.0, 1.0, 4.0, 1.0, 0.0]         —
+onnx2torch        —                                 index 4 is out of bounds ...
+torch_compile     —                                 kernel ... index out of bounds
+TorchScript       —                                 index 4 is out of bounds for dimension 0 with size 4  ← TARGET
+BUG REPRODUCED: TorchScript raises on OOB Gather
+  while other compilers return values: {'OpenVINO': [3.0, 1.0, 4.0, 1.0, 0.0]}
+
+$ python3 pt_121135_torch_compile.py
+Case                  Compiler          Result                Status
+---------------------------------------------------------------------------
+(32, 4)+(4,)          eager             —                     RuntimeError: source tensor shape must match ...
+(32, 4)+(4,)          torch.compile     shape=[32, 4]         OK  ← BUG
+(32, 4)+(4,)          TorchScript       —                     RuntimeError: source tensor shape must match ...
+
+(8, 3)+(3,)           eager             —                     RuntimeError: source tensor shape must match ...
+(8, 3)+(3,)           torch.compile     shape=[8, 3]          OK  ← BUG
+(8, 3)+(3,)           TorchScript       —                     RuntimeError: source tensor shape must match ...
+
+BUG REPRODUCED: torch.compile skips shape validation in index_add;
+  eager and TorchScript correctly raise RuntimeError.
 ```
 
 ---
