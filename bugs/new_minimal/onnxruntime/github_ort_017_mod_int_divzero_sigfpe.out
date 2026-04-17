@@ -1,0 +1,4 @@
+OnnxRuntime version: 1.24.4
+Child exit code: -8
+Child killed by SIGFPE (signal 8)
+BUG REPRODUCED — ORT Mod(fmod=0, int32) with B=0 triggers SIGFPE

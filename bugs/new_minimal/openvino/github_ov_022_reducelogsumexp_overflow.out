@@ -1,0 +1,9 @@
+Input x  : [[100.  88.  50.]
+ [200. -10.   1.]]
+OV out   : [inf inf]
+Ref      : [100.00001 200.     ]
+has_inf  : True
+max_diff : inf
+
+PASS=True
+BUG REPRODUCED — OV ReduceLogSumExp overflows for inputs ≥ 88.7 (fp32 exp limit)

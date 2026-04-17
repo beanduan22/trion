@@ -1,0 +1,27 @@
+Model: Gemm(64→64)→Relu→Gemm(64→64)→Relu→Gemm(64→32)→Relu  [fp32]
+
+Seed   Compiler           max_diff  Status
+--------------------------------------------------
+seed=0   ORT_opt             0.00000  ok
+seed=0   OpenVINO            1.97807  BUG  *** BUG
+seed=0   onnx2torch          0.00012  ok
+seed=0   torch.compile       0.00012  ok
+seed=0   TorchScript         0.00012  ok
+seed=1   ORT_opt             0.00000  ok
+seed=1   OpenVINO            1.88255  BUG  *** BUG
+seed=1   onnx2torch          0.00018  ok
+seed=1   torch.compile       0.00018  ok
+seed=1   TorchScript         0.00018  ok
+seed=2   ORT_opt             0.00000  ok
+seed=2   OpenVINO            3.45098  BUG  *** BUG
+seed=2   onnx2torch          0.00018  ok
+seed=2   torch.compile       0.00018  ok
+seed=2   TorchScript         0.00018  ok
+seed=3   ORT_opt             0.00000  ok
+seed=3   OpenVINO            1.76013  BUG  *** BUG
+seed=3   onnx2torch          0.00015  ok
+seed=3   torch.compile       0.00015  ok
+seed=3   TorchScript         0.00015  ok
+
+BUG REPRODUCED: OpenVINO Gemm+Relu chain produces wrong fp32 output;
+  ORT_opt / onnx2torch / torch.compile / TorchScript all agree with ORT_ref.

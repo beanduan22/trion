@@ -1,0 +1,4 @@
+ORT:      [  3.395184 -11.441774 -24.340858   9.490486]
+OpenVINO: [  3.3566203 -11.426291  -24.376686    9.516493 ]
+max_abs=0.2586
+BUG REPRODUCED: OpenVINO multi_scale_conv_branch (max_abs=0.2586)

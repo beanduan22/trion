@@ -1,0 +1,4 @@
+ORT:      [ 33.828735 -46.024643 -31.184195  27.007572]
+OpenVINO: [ 33.72981  -46.16304  -31.118114  26.986526]
+max_abs=0.1797
+BUG REPRODUCED: OpenVINO triple_add_residual (max_abs=0.1797)

@@ -1,0 +1,4 @@
+ORT: [16.35682   0.        0.       14.601542]
+XLA: [16.356249  0.        0.       14.611672]
+max_abs=0.0678
+BUG REPRODUCED: XLA matmul_add_biasgelu_bcast (max_abs=0.0678)

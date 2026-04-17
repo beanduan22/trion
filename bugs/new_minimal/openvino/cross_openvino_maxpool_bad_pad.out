@@ -1,0 +1,180 @@
+2026-04-17 16:54:48.929913970 [E:onnxruntime:, inference_session.cc:2619 operator()] Exception during initialization: /onnxruntime_src/onnxruntime/core/providers/cpu/nn/pool_attributes.h:78 onnxruntime::PoolAttributes::PoolAttributes(const onnxruntime::OpNodeProtoHelper<onnxruntime::ProtoHelperNodeContext>&, const std::string&, int) pads[dim] < kernel_shape[dim] && pads[dim + kernel_shape.size()] < kernel_shape[dim] was false. Pad should be smaller than kernel.
+
+2026-04-17 16:54:48.945625837 [E:onnxruntime:, inference_session.cc:2619 operator()] Exception during initialization: /onnxruntime_src/onnxruntime/core/providers/cpu/nn/pool_attributes.h:78 onnxruntime::PoolAttributes::PoolAttributes(const onnxruntime::OpNodeProtoHelper<onnxruntime::ProtoHelperNodeContext>&, const std::string&, int) pads[dim] < kernel_shape[dim] && pads[dim + kernel_shape.size()] < kernel_shape[dim] was false. Pad should be smaller than kernel.
+
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0] failed while attempting to run meta for aten.max_pool2d_with_indices.default
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0] Traceback (most recent call last):
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_subclasses/fake_tensor.py", line 2755, in _dispatch_impl
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     r = func(*args, **kwargs)
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_ops.py", line 841, in __call__
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     return self._op(*args, **kwargs)
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]            ~~~~~~~~^^^^^^^^^^^^^^^^^
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_meta_registrations.py", line 4855, in meta_max_pool2d_with_indices
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     ) = max_pool2d_checks_and_compute_shape(
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]         input, kernel_size, stride, padding, dilation, ceil_mode
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     )
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     ^
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_meta_registrations.py", line 4774, in max_pool2d_checks_and_compute_shape
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     outputHeight = pooling_output_shape(inputHeight, kH, padH, dH, dilationH, ceil_mode)
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_meta_registrations.py", line 4440, in pooling_output_shape
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     torch._check(
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     ~~~~~~~~~~~~^
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]         pad <= ((kernelSize - 1) * dilation + 1) // 2,
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     ...<3 lines>...
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]         ),
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]         ^^
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     )
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     ^
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/__init__.py", line 1695, in _check
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     _check_with(RuntimeError, cond, message)
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/__init__.py", line 1677, in _check_with
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0]     raise error_type(message_evaluated)
+E0417 16:54:50.967000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [0/0] RuntimeError: pad should be at most half of effective kernel size, but got pad=3, kernel_size=3 and dilation=1
+2026-04-17 16:54:50.985144871 [E:onnxruntime:, inference_session.cc:2619 operator()] Exception during initialization: /onnxruntime_src/onnxruntime/core/providers/cpu/nn/pool_attributes.h:78 onnxruntime::PoolAttributes::PoolAttributes(const onnxruntime::OpNodeProtoHelper<onnxruntime::ProtoHelperNodeContext>&, const std::string&, int) pads[dim] < kernel_shape[dim] && pads[dim + kernel_shape.size()] < kernel_shape[dim] was false. Pad should be smaller than kernel.
+
+2026-04-17 16:54:50.999624747 [E:onnxruntime:, inference_session.cc:2619 operator()] Exception during initialization: /onnxruntime_src/onnxruntime/core/providers/cpu/nn/pool_attributes.h:78 onnxruntime::PoolAttributes::PoolAttributes(const onnxruntime::OpNodeProtoHelper<onnxruntime::ProtoHelperNodeContext>&, const std::string&, int) pads[dim] < kernel_shape[dim] && pads[dim + kernel_shape.size()] < kernel_shape[dim] was false. Pad should be smaller than kernel.
+
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0] failed while attempting to run meta for aten.max_pool2d_with_indices.default
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0] Traceback (most recent call last):
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_subclasses/fake_tensor.py", line 2755, in _dispatch_impl
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     r = func(*args, **kwargs)
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_ops.py", line 841, in __call__
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     return self._op(*args, **kwargs)
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]            ~~~~~~~~^^^^^^^^^^^^^^^^^
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_meta_registrations.py", line 4855, in meta_max_pool2d_with_indices
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     ) = max_pool2d_checks_and_compute_shape(
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]         input, kernel_size, stride, padding, dilation, ceil_mode
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     )
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     ^
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_meta_registrations.py", line 4774, in max_pool2d_checks_and_compute_shape
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     outputHeight = pooling_output_shape(inputHeight, kH, padH, dH, dilationH, ceil_mode)
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_meta_registrations.py", line 4440, in pooling_output_shape
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     torch._check(
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     ~~~~~~~~~~~~^
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]         pad <= ((kernelSize - 1) * dilation + 1) // 2,
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     ...<3 lines>...
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]         ),
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]         ^^
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     )
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     ^
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/__init__.py", line 1695, in _check
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     _check_with(RuntimeError, cond, message)
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/__init__.py", line 1677, in _check_with
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0]     raise error_type(message_evaluated)
+E0417 16:54:51.026000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [1/0] RuntimeError: pad should be at most half of effective kernel size, but got pad=5, kernel_size=5 and dilation=1
+2026-04-17 16:54:51.058671603 [E:onnxruntime:, inference_session.cc:2619 operator()] Exception during initialization: /onnxruntime_src/onnxruntime/core/providers/cpu/nn/pool_attributes.h:78 onnxruntime::PoolAttributes::PoolAttributes(const onnxruntime::OpNodeProtoHelper<onnxruntime::ProtoHelperNodeContext>&, const std::string&, int) pads[dim] < kernel_shape[dim] && pads[dim + kernel_shape.size()] < kernel_shape[dim] was false. Pad should be smaller than kernel.
+
+2026-04-17 16:54:51.076109528 [E:onnxruntime:, inference_session.cc:2619 operator()] Exception during initialization: /onnxruntime_src/onnxruntime/core/providers/cpu/nn/pool_attributes.h:78 onnxruntime::PoolAttributes::PoolAttributes(const onnxruntime::OpNodeProtoHelper<onnxruntime::ProtoHelperNodeContext>&, const std::string&, int) pads[dim] < kernel_shape[dim] && pads[dim + kernel_shape.size()] < kernel_shape[dim] was false. Pad should be smaller than kernel.
+
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0] failed while attempting to run meta for aten.max_pool2d_with_indices.default
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0] Traceback (most recent call last):
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_subclasses/fake_tensor.py", line 2755, in _dispatch_impl
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     r = func(*args, **kwargs)
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_ops.py", line 841, in __call__
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     return self._op(*args, **kwargs)
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]            ~~~~~~~~^^^^^^^^^^^^^^^^^
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_meta_registrations.py", line 4855, in meta_max_pool2d_with_indices
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     ) = max_pool2d_checks_and_compute_shape(
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]         input, kernel_size, stride, padding, dilation, ceil_mode
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     )
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     ^
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_meta_registrations.py", line 4774, in max_pool2d_checks_and_compute_shape
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     outputHeight = pooling_output_shape(inputHeight, kH, padH, dH, dilationH, ceil_mode)
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_meta_registrations.py", line 4440, in pooling_output_shape
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     torch._check(
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     ~~~~~~~~~~~~^
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]         pad <= ((kernelSize - 1) * dilation + 1) // 2,
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     ...<3 lines>...
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]         ),
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]         ^^
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     )
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     ^
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/__init__.py", line 1695, in _check
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     _check_with(RuntimeError, cond, message)
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/__init__.py", line 1677, in _check_with
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0]     raise error_type(message_evaluated)
+E0417 16:54:51.102000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [2/0] RuntimeError: pad should be at most half of effective kernel size, but got pad=2, kernel_size=2 and dilation=1
+2026-04-17 16:54:51.123467660 [E:onnxruntime:, inference_session.cc:2619 operator()] Exception during initialization: /onnxruntime_src/onnxruntime/core/providers/cpu/nn/pool_attributes.h:78 onnxruntime::PoolAttributes::PoolAttributes(const onnxruntime::OpNodeProtoHelper<onnxruntime::ProtoHelperNodeContext>&, const std::string&, int) pads[dim] < kernel_shape[dim] && pads[dim + kernel_shape.size()] < kernel_shape[dim] was false. Pad should be smaller than kernel.
+
+2026-04-17 16:54:51.138131018 [E:onnxruntime:, inference_session.cc:2619 operator()] Exception during initialization: /onnxruntime_src/onnxruntime/core/providers/cpu/nn/pool_attributes.h:78 onnxruntime::PoolAttributes::PoolAttributes(const onnxruntime::OpNodeProtoHelper<onnxruntime::ProtoHelperNodeContext>&, const std::string&, int) pads[dim] < kernel_shape[dim] && pads[dim + kernel_shape.size()] < kernel_shape[dim] was false. Pad should be smaller than kernel.
+
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0] failed while attempting to run meta for aten.max_pool2d_with_indices.default
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0] Traceback (most recent call last):
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_subclasses/fake_tensor.py", line 2755, in _dispatch_impl
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     r = func(*args, **kwargs)
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_ops.py", line 841, in __call__
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     return self._op(*args, **kwargs)
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]            ~~~~~~~~^^^^^^^^^^^^^^^^^
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_meta_registrations.py", line 4855, in meta_max_pool2d_with_indices
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     ) = max_pool2d_checks_and_compute_shape(
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]         input, kernel_size, stride, padding, dilation, ceil_mode
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     )
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     ^
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_meta_registrations.py", line 4774, in max_pool2d_checks_and_compute_shape
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     outputHeight = pooling_output_shape(inputHeight, kH, padH, dH, dilationH, ceil_mode)
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/_meta_registrations.py", line 4440, in pooling_output_shape
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     torch._check(
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     ~~~~~~~~~~~~^
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]         pad <= ((kernelSize - 1) * dilation + 1) // 2,
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     ...<3 lines>...
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]         ),
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]         ^^
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     )
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     ^
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/__init__.py", line 1695, in _check
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     _check_with(RuntimeError, cond, message)
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/torch/__init__.py", line 1677, in _check_with
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0]     raise error_type(message_evaluated)
+E0417 16:54:51.165000 4154472 site-packages/torch/_subclasses/fake_tensor.py:2759] [3/0] RuntimeError: pad should be at most half of effective kernel size, but got pad=3, kernel_size=3 and dilation=1
+Bug #23088 — MaxPool pad ≥ kernel: passes ONNX checker, rejected by ORT
+
+  Case: kernel=3 pad=3  (original bug)  [ONNX checker: PASS]
+    ORT_ref          ERR    [ONNXRuntimeError] : 1 : FAIL : Exception during initializat  ← CORRECT REJECT
+    ORT_opt          ERR    [ONNXRuntimeError] : 1 : FAIL : Exception during initializat  ← CORRECT REJECT
+    OpenVINO         ok     (1, 1, 12, 12)  ← SILENT ACCEPT
+    onnx2torch       ERR    pad should be at most half of effective kernel size, but got  ← CORRECT REJECT
+    torch_compile    ERR    Dynamo failed to run FX node with fake tensors: call_functio  ← CORRECT REJECT
+    TorchScript      ERR    pad should be at most half of effective kernel size, but got  ← CORRECT REJECT
+
+  Case: kernel=5 pad=5  (new input)  [ONNX checker: PASS]
+    ORT_ref          ERR    [ONNXRuntimeError] : 1 : FAIL : Exception during initializat  ← CORRECT REJECT
+    ORT_opt          ERR    [ONNXRuntimeError] : 1 : FAIL : Exception during initializat  ← CORRECT REJECT
+    OpenVINO         ok     (1, 2, 18, 18)  ← SILENT ACCEPT
+    onnx2torch       ERR    pad should be at most half of effective kernel size, but got  ← CORRECT REJECT
+    torch_compile    ERR    Dynamo failed to run FX node with fake tensors: call_functio  ← CORRECT REJECT
+    TorchScript      ERR    pad should be at most half of effective kernel size, but got  ← CORRECT REJECT
+
+  Case: kernel=2 pad=2  (new input)  [ONNX checker: PASS]
+    ORT_ref          ERR    [ONNXRuntimeError] : 1 : FAIL : Exception during initializat  ← CORRECT REJECT
+    ORT_opt          ERR    [ONNXRuntimeError] : 1 : FAIL : Exception during initializat  ← CORRECT REJECT
+    OpenVINO         ok     (1, 1, 9, 9)  ← SILENT ACCEPT
+    onnx2torch       ERR    pad should be at most half of effective kernel size, but got  ← CORRECT REJECT
+    torch_compile    ERR    Dynamo failed to run FX node with fake tensors: call_functio  ← CORRECT REJECT
+    TorchScript      ERR    pad should be at most half of effective kernel size, but got  ← CORRECT REJECT
+
+  Case: kernel=3 pad=(3,0,3,0) partial  [ONNX checker: PASS]
+    ORT_ref          ERR    [ONNXRuntimeError] : 1 : FAIL : Exception during initializat  ← CORRECT REJECT
+    ORT_opt          ERR    [ONNXRuntimeError] : 1 : FAIL : Exception during initializat  ← CORRECT REJECT
+    OpenVINO         ok     (1, 1, 12, 6)  ← SILENT ACCEPT
+    onnx2torch       ERR    pad should be at most half of effective kernel size, but got  ← CORRECT REJECT
+    torch_compile    ERR    Dynamo failed to run FX node with fake tensors: call_functio  ← CORRECT REJECT
+    TorchScript      ERR    pad should be at most half of effective kernel size, but got  ← CORRECT REJECT
+
+BUG REPRODUCED: OpenVINO silently accepts MaxPool with pad >= kernel
+  (returns extended output) while ORT and PyTorch compilers correctly reject.

@@ -1,0 +1,5 @@
+ORT ref (first 4): [ 5.207 -0.85   4.332 -7.043]
+OpenVINO (first 4): [ 5.22  -0.875  4.312 -7.062]
+Max abs diff: 0.078125  tol=0.05
+PASS=False
+BUG REPRODUCED: OpenVINO fp16 GEMM tile accumulation diverges from ORT

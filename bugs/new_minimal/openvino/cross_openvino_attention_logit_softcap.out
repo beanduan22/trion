@@ -1,0 +1,4 @@
+ORT:      [ 2792.551     599.92145 -5608.0615    753.3436 ]
+OpenVINO: [ 2768.1167    611.7286  -5585.166     762.72314]
+max_abs=38.6729
+BUG REPRODUCED: OpenVINO attention_logit_softcap (max_abs=38.6729)

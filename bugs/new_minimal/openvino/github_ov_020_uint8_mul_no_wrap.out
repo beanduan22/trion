@@ -1,0 +1,12 @@
+a        : [200 100  50  10]
+b        : [200   3   6  30]
+a*b      : [40000   300   300   300]
+OV out   : [255 255 255 255]
+wrap ref : [64 44 44 44]  (correct — ONNX modular)
+sat  ref : [255 255 255 255]   (wrong  — saturation)
+
+Matches wrap (correct)? False
+Matches sat  (wrong)?   True
+
+PASS=True
+BUG REPRODUCED — OV uint8 Mul saturates instead of wrapping

@@ -1,0 +1,6 @@
+ORT: [ 35.098927 -45.611603 -28.941078  26.396048]  (correct)
+eager: [ 35.098927 -45.6116   -28.941076  26.396042]  (correct)
+BUG REPRODUCED: torch.compile crashes on redundant_reshape: InternalTorchDynamoError: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')
+
+from user code:
+   File

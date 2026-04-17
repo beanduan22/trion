@@ -1,0 +1,4 @@
+ORT:      [ 35.598927 -45.111603 -28.441078  26.896048]
+OpenVINO: [ 35.55108  -45.12861  -28.352718  26.84306 ]
+max_abs=0.1404
+BUG REPRODUCED: OpenVINO broadcast_1d_scalar (max_abs=0.1404)

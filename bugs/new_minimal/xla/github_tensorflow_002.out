@@ -1,0 +1,7 @@
+asymmetric output:          [0. 0. 1. 1. 2. 2. 3. 3.]
+half_pixel output:          [0. 0. 0. 1. 1. 2. 2. 3.]
+Expected (both):            [0. 0. 1. 1. 2. 2. 3. 3.]
+Max err asymmetric: 0.0000, half_pixel: 1.0000
+TOSA bug: wrong scale/offset shifted row index by 1 in compiled (not eager) path
+PASS=False
+BUG REPRODUCED

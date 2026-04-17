@@ -1,0 +1,4 @@
+ORT:      [ 21.168224 -24.423386  20.916695  17.117714]
+OpenVINO: [ 21.125 -24.375  20.875  17.   ]
+max_abs=0.1724
+BUG REPRODUCED: OpenVINO attention_with_sink_token (max_abs=0.1724)

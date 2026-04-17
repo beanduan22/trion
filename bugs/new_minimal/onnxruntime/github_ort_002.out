@@ -1,0 +1,5 @@
+ORT   output[30:35]: [12. 12. 13. 13. 14.]
+Torch output[30:35]: [12. 12. 13. 13. 13.]
+Mismatched elements: 12/64
+PASS=False
+BUG REPRODUCED

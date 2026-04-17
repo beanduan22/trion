@@ -1,0 +1,14 @@
+Input values: [1000, 255, 1, 42]
+Shift amount: [64, 64, 64, 64] (all 64)
+Expected:     [0, 0, 0, 0] (all 0)
+
+Backend                 max_diff  bug?
+----------------------------------------
+ORT_noopt                   1000  BUG
+ORT_opt                     1000  BUG
+OpenVINO                       0  ok
+ORT_noopt_LEFT              1000  BUG
+OpenVINO_LEFT         2147483648  BUG
+
+PASS=False
+BUG REPRODUCED on ['ORT_noopt', 'ORT_opt', 'ORT_noopt_LEFT', 'OpenVINO_LEFT']: BitShift by 64 returns non-zero (C UB — x86 masks shift to 6 bits)

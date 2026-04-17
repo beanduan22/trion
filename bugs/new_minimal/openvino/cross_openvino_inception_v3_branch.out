@@ -1,0 +1,4 @@
+ORT:      [ 1.9989679   4.023582   -3.8524904   0.55001694]
+OpenVINO: [ 1.984375  4.       -3.875     0.578125]
+max_abs=0.3883
+BUG REPRODUCED: OpenVINO inception_v3_branch (max_abs=0.3883)

@@ -1,0 +1,4 @@
+ORT:      [ 12.645439  -35.535053    3.0442579  -2.6048763]
+OpenVINO: [ 12.581936  -35.535927    3.081318   -2.5640929]
+max_abs=0.1484
+BUG REPRODUCED: OpenVINO expm1_bounded (max_abs=0.1484)

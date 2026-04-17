@@ -1,0 +1,4 @@
+ORT:      [  7.4057403 -25.58705     9.93622     4.4996433]
+OpenVINO: [  7.346116 -25.596539   9.922224   4.521668]
+max_abs=0.1808
+BUG REPRODUCED: OpenVINO pad_conv (max_abs=0.1808)

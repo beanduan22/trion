@@ -1,0 +1,6 @@
+ORT cubic  output[0,0,0,:4]: [0.80208254 0.6395161  0.288994   0.30634046]
+PyTorch bicubic[0,0,0,:4]:   [0.8143504  0.61203825 0.2709736  0.29592   ]
+Max abs error ORT vs PyTorch: 0.053012
+TVM diverged from both references before the fix
+PASS=False
+BUG REPRODUCED

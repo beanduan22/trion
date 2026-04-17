@@ -1,0 +1,4 @@
+ORT:      [ 14.232545   30.698551  -30.721355    3.2935975]
+OpenVINO: [ 14.125   30.625  -30.75     3.3125]
+max_abs=0.1714
+BUG REPRODUCED: OpenVINO transpose_matmul_transpose (max_abs=0.1714)

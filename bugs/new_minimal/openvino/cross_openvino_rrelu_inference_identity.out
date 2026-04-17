@@ -1,0 +1,4 @@
+ORT:      [-1.4135344 -2.1028607 -3.1716204 10.104586 ]
+OpenVINO: [-1.4143701 -2.0955994 -3.1746764 10.108147 ]
+max_abs=0.1230
+BUG REPRODUCED: OpenVINO rrelu_inference_identity (max_abs=0.1230)

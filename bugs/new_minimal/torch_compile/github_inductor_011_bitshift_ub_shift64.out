@@ -1,0 +1,27 @@
+=== github_inductor_011: BitShift UB — shift by 64 produces non-zero ===
+
+     value   shift       correct     C_UB(x86)  bug?
+----------------------------------------------------------
+      1000      64             0          1000  BUG(UB)
+       255      64             0           255  BUG(UB)
+       -42      64             0           -42  BUG(UB)
+         1      63             0             0  ok
+         1      65             0             0  ok
+
+Left-shift equivalent (pytorch/pytorch#143566):
+  1000 << 64: correct=0  C_UB=1000  BUG
+  1 << 64: correct=0  C_UB=1  BUG
+  255 << 64: correct=0  C_UB=255  BUG
+
+PyTorch runtime check:
+  eager: [1000, 255, -42] >> [64, 64, 64] = [0, 0, -1]
+  expected: [0, 0, 0]  BUG
+  compile: [1000, 255, -42] >> [64, 64, 64] = [0, 0, -1]
+  expected: [0, 0, 0]  BUG
+
+ONNX BitShift (direction=RIGHT) path:
+  ORT: [1000, 255] >> [64, 64] = [1000, 255]
+  expected: [0, 0]  BUG
+
+PASS=False
+BUG REPRODUCED: BitShift by 64 returns non-zero (C UB: x86 masks shift to 6 bits)

@@ -1,0 +1,9 @@
+a        : [ 100  127 -128 -100]
+b        : [100  10 -10 -50]
+a+b(i16) : [ 200  137 -138 -150]
+OV out   : [ 127  127 -128 -128]
+wrap ref : [ -56 -119  118  106]  (correct — two's complement)
+sat  ref : [ 127  127 -128 -128]   (wrong  — saturation)
+
+PASS=True
+BUG REPRODUCED — OV int8 Add saturates instead of two's-complement wrapping

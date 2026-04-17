@@ -1,0 +1,4 @@
+ORT:      [   24.235746  -443.3107   -7963.6655   -1343.5315  ]
+OpenVINO: [   27.563232  -439.86133  -8005.1084   -1337.834   ]
+max_abs=41.4429
+BUG REPRODUCED: OpenVINO reciprocal_mul (max_abs=41.4429)

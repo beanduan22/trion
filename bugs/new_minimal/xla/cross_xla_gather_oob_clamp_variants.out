@@ -1,0 +1,64 @@
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+==============================================================================
+V1: 1D, off-by-one OOB (idx 256)
+  x.shape=(256,)  axis=0  indices=[5, 8, 7, 16, 256, 123]
+  TF eager : [5.0, 8.0, 7.0, 16.0, 0.0, 123.0]
+  PyTorch  : RAISED IndexError
+  XLA jit  : [5.0, 8.0, 7.0, 16.0, 255.0, 123.0]
+  -> BUG: XLA silently produced output instead of erroring
+
+==============================================================================
+V2: 1D, far-OOB (idx 1000)
+  x.shape=(256,)  axis=0  indices=[5, 8, 1000, 123]
+  TF eager : [5.0, 8.0, 0.0, 123.0]
+  PyTorch  : RAISED IndexError
+  XLA jit  : [5.0, 8.0, 255.0, 123.0]
+  -> BUG: XLA silently produced output instead of erroring
+
+==============================================================================
+V3: 1D, negative OOB (idx -1)
+  x.shape=(256,)  axis=0  indices=[5, -1, 7, 16, 123]
+  TF eager : [5.0, 0.0, 7.0, 16.0, 123.0]
+  PyTorch  : RAISED IndexError
+  XLA jit  : [5.0, 0.0, 7.0, 16.0, 123.0]
+  -> BUG: XLA silently produced output instead of erroring
+
+==============================================================================
+V4: 1D, negative far-OOB (idx -300)
+  x.shape=(256,)  axis=0  indices=[5, -300, 7, 123]
+  TF eager : [5.0, 0.0, 7.0, 123.0]
+  PyTorch  : RAISED IndexError
+  XLA jit  : [5.0, 0.0, 7.0, 123.0]
+  -> BUG: XLA silently produced output instead of erroring
+
+==============================================================================
+V5: 1D, INT_MAX
+  x.shape=(256,)  axis=0  indices=[5, 2147483647]
+  TF eager : [5.0, 0.0]
+  PyTorch  : RAISED IndexError
+  XLA jit  : [5.0, 255.0]
+  -> BUG: XLA silently produced output instead of erroring
+
+==============================================================================
+V6: 1D, multiple OOB indices
+  x.shape=(256,)  axis=0  indices=[256, 257, 999, 1000000]
+  TF eager : [0.0, 0.0, 0.0, 0.0]
+  PyTorch  : RAISED IndexError
+  XLA jit  : [255.0, 255.0, 255.0, 255.0]
+  -> BUG: XLA silently produced output instead of erroring
+
+==============================================================================
+V7: 2D, axis=1 OOB on inner dim
+  x.shape=(4, 5)  axis=1  indices=[0, 1, 5, 4]
+  TF eager : [[0.0, 1.0, 0.0, 4.0], [5.0, 6.0, 0.0, 9.0], [10.0, 11.0, 0.0, 14.0], [15.0, 16.0, 0.0, 19.0]]
+  PyTorch  : RAISED RuntimeError
+  XLA jit  : [[0.0, 1.0, 4.0, 4.0], [5.0, 6.0, 9.0, 9.0], [10.0, 11.0, 14.0, 14.0], [15.0, 16.0, 19.0, 19.0]]
+  -> BUG: XLA silently produced output instead of erroring
+
+==============================================================================
+V8: 2D, axis=0 OOB on outer dim
+  x.shape=(4, 5)  axis=0  indices=[0, 1, 4, 3]
+  TF eager : [[0.0, 1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0, 9.0], [0.0, 0.0, 0.0, 0.0, 0.0], [15.0, 16.0, 17.0, 18.0, 19.0]]
+  PyTorch  : RAISED IndexError
+  XLA jit  : [[0.0, 1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0, 9.0], [15.0, 16.0, 17.0, 18.0, 19.0], [15.0, 16.0, 17.0, 18.0, 19.0]]
+  -> BUG: XLA silently produced output instead of erroring

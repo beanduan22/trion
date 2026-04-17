@@ -1,0 +1,4 @@
+ORT:      [ -3.3332217   3.0382774   7.048198  -13.206124 ]
+OpenVINO: [ -3.2892637   3.0823588   7.0204124 -13.21917  ]
+max_abs=0.0890
+BUG REPRODUCED: OpenVINO transpose_transpose_squash (max_abs=0.0890)

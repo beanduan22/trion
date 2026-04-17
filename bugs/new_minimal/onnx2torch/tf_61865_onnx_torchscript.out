@@ -1,0 +1,16 @@
+2026-04-17 17:01:54.314232748 [E:onnxruntime:, sequential_executor.cc:572 ExecuteKernel] Non-zero status code returned while running Gather node. Name:'' Status Message: indices element out of data bounds, idx=4 must be within the inclusive range [-4,3]
+2026-04-17 17:01:54.335844800 [E:onnxruntime:, sequential_executor.cc:572 ExecuteKernel] Non-zero status code returned while running Gather node. Name:'' Status Message: indices element out of data bounds, idx=4 must be within the inclusive range [-4,3]
+params  : [3.0, 1.0, 4.0, 1.0]
+indices : [0, 1, 2, 3, 4]  (index 4 is OOB for size-4 tensor)
+
+Compiler          Output                            Error
+--------------------------------------------------------------------------------
+ORT_ref           —                                 [ONNXRuntimeError] : 2 : INVALID_ARGUMENT : Non-zero st
+ORT_opt           —                                 [ONNXRuntimeError] : 2 : INVALID_ARGUMENT : Non-zero st
+OpenVINO          [3.0, 1.0, 4.0, 1.0, 0.0]         —
+onnx2torch        —                                 index 4 is out of bounds for dimension 0 with size 4
+torch_compile     —                                 kernel, /tmp/torchinductor_binduan/7d/c7dlgn3qp7jmlxdu7
+TorchScript       —                                 index 4 is out of bounds for dimension 0 with size 4  ← TARGET
+
+BUG REPRODUCED: TorchScript raises on OOB Gather
+  while other compilers return values: {'OpenVINO': [3.0, 1.0, 4.0, 1.0, 0.0]}

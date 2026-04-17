@@ -1,0 +1,12 @@
+Case                  Compiler          Result                Status
+---------------------------------------------------------------------------
+(32, 4)+(4,)          eager             —                     RuntimeError: source tensor shape m
+(32, 4)+(4,)          torch.compile     shape=[32, 4]         OK  ← BUG
+(32, 4)+(4,)          TorchScript       —                     RuntimeError: source tensor shape m
+
+(8, 3)+(3,)           eager             —                     RuntimeError: source tensor shape m
+(8, 3)+(3,)           torch.compile     shape=[8, 3]          OK  ← BUG
+(8, 3)+(3,)           TorchScript       —                     RuntimeError: source tensor shape m
+
+BUG REPRODUCED: torch.compile skips shape validation in index_add;
+  eager and TorchScript correctly raise RuntimeError.

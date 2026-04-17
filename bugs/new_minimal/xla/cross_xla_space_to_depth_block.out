@@ -1,0 +1,4 @@
+ORT: [ 41.254436 -22.265532  15.169448  56.25074 ]
+XLA: [ 41.23465  -22.29825   15.150137  56.23701 ]
+max_abs=0.1047
+BUG REPRODUCED: XLA space_to_depth_block (max_abs=0.1047)

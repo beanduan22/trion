@@ -1,0 +1,5 @@
+Input:    [-0.2 -0.1  0.   0.1  0.2]
+Expected: [False False False False False]
+ORT out:  [ True  True False  True  True]
+PASS=False
+BUG REPRODUCED

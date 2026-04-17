@@ -1,0 +1,5 @@
+ORT:      [  5.   3.  10.   1.   2.   8. 200. 100.]
+OpenVINO: [  5.   3.  10.   1.   2.   8. 200. 100.]
+max_abs=0.000000
+NOT reproduced - trying MatMul pattern instead
+BUG REPRODUCED: OpenVINO ia_sat_sub_uint8 (MatMul pattern, max_abs=0.1404)

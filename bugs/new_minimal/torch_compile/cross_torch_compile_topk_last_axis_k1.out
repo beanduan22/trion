@@ -1,0 +1,7 @@
+ORT: [1.5792128  0.54256004 1.4656488  1.8522782 ]  (correct)
+eager onnx2torch: [1.5792128  0.54256004 1.4656488  1.8522782 ]  (correct)
+BUG REPRODUCED: torch.compile crashes on topk_last_axis_k1
+  InternalTorchDynamoError: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')
+
+from user code:
+   File "/home/binduan/mini

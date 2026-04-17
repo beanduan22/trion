@@ -1,0 +1,5 @@
+bicubic+border output[0,0,0,:]: [-0.5400001  2.6759987 12.323996  15.539993 ]
+bicubic+zeros  output[0,0,0,:]: [-0.33048013  0.92534363  4.692814    5.9486337 ]
+Bicubic+border values in [0,15] range: False
+PASS=False
+BUG REPRODUCED

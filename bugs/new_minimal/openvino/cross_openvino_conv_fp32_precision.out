@@ -1,0 +1,6 @@
+ORT ref (first 4): [ 4.2668686  9.879526   4.723992  -1.4073367]
+OpenVINO (first 4): [ 4.2729235  9.873534   4.7310348 -1.4000506]
+Max abs diff: 0.053732  tol=0.02
+5×5 kernel max abs diff: 0.083416  tol=0.02
+PASS=False
+BUG REPRODUCED: OpenVINO CPU Conv fp32 accumulation differs from ORT reference

@@ -1,0 +1,4 @@
+ORT:      [ -5.6541376  -8.411443  -12.686481   10.104586 ]
+OpenVINO: [ -5.6574802  -8.382398  -12.698706   10.108147 ]
+max_abs=0.1471
+BUG REPRODUCED: OpenVINO tile_conv (max_abs=0.1471)
