@@ -1,5 +1,4 @@
-To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-W0000 00:00:1776409225.518570   28666 op_kernel.cc:1858] OP_REQUIRES failed at xla_ops.cc:602 : INVALID_ARGUMENT: Expected size[2] in [0, 3], but got 5
+W0000 00:00:1776413114.976465  345522 op_kernel.cc:1858] OP_REQUIRES failed at xla_ops.cc:602 : INVALID_ARGUMENT: Expected size[2] in [0, 3], but got 5
 
 Stack trace for op definition: 
 File "myspace/trion/bugs/new_minimal/xla/github_tf_61884_xla_dead_code_elimination.py", line 64, in <module>
@@ -16,5 +15,5 @@ Input shape : (1, 2, 3, 2)
 Eager output shape: (1, 2, 1, 2)  error=None
 XLA   output shape: None  error=InvalidArgumentError: Exception encountered when calling ModelXLA.call().
 
-Expected size[2] in [0,
+[1mExpected size[2] in [0,
 BUG REPRODUCED: XLA executes dead slice (no DCE); eager succeeds.

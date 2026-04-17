@@ -1,9 +1,8 @@
-To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-W0000 00:00:1776409221.806511   27752 local_rendezvous.cc:412] Local rendezvous is aborting with status: INVALID_ARGUMENT: Matrix size-incompatible: In[0]: [1,4], In[1]: [6,1]
+W0000 00:00:1776413111.556124  345364 local_rendezvous.cc:412] Local rendezvous is aborting with status: INVALID_ARGUMENT: Matrix size-incompatible: In[0]: [1,4], In[1]: [6,1]
 	 [[{{node MatMul}}]]
 Input shape : (1, 4), W shape: (6, 1)
 Eager output: None  error=InvalidArgumentError: Exception encountered when calling ModelEager.call().
 
-Graph execution error
-XLA   output: [[42.000004]]  error=None
+[1mGraph execution error
+XLA   output: [[42.]]  error=None
 BUG REPRODUCED: XLA silently executes invalid matmul; eager raises error.

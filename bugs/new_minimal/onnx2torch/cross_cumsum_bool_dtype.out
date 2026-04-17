@@ -4,19 +4,19 @@ Seed   Compiler           max_diff  Status
 --------------------------------------------------
 seed=0    input=[0, 1, 1, 0, 1, 1]...  ref=[0, 1, 2, 2, 3, 4]...
        ORT_opt              0.0000  ok
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] Graph break from `Tensor.item()`, consider setting:
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0]     torch._dynamo.config.capture_scalar_outputs = True
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] or:
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0]     env TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] to include these operations in the captured graph.
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] 
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] Graph break: from user code at:
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0]   File "<eval_with_key>.1", line 7, in forward
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0]     cum_sum = self.CumSum(cast, initializers_onnx_initializer_0);  cast = initializers_onnx_initializer_0 = None
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/cumsum.py", line 63, in forward
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0]     axis = axis.item()
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] 
-W0417 17:01:31.591000 37841 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] 
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] Graph break from `Tensor.item()`, consider setting:
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0]     torch._dynamo.config.capture_scalar_outputs = True
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] or:
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0]     env TORCHDYNAMO_CAPTURE_SCALAR_OUTPUTS=1
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] to include these operations in the captured graph.
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] 
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] Graph break: from user code at:
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0]   File "<eval_with_key>.1", line 7, in forward
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0]     cum_sum = self.CumSum(cast, initializers_onnx_initializer_0);  cast = initializers_onnx_initializer_0 = None
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0]   File "/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/cumsum.py", line 63, in forward
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0]     axis = axis.item()
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] 
+W0417 18:05:29.823000 347922 site-packages/torch/_dynamo/variables/tensor.py:1048] [0/0] 
 /home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/cumsum.py:63: TracerWarning: Converting a tensor to a Python number might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!
   axis = axis.item()
        OpenVINO             0.0000  ok

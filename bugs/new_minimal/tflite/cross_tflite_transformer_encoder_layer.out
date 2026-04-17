@@ -1,3 +1,2 @@
-To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
 ORT: [-4230.362   1943.0718 -1265.1711  3324.3977]
 BUG REPRODUCED (TFLite error): AttributeError: '_SignatureMap' object has no attribute 'name'

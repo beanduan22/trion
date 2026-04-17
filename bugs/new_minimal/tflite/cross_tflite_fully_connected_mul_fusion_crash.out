@@ -1,75 +1,74 @@
-To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-Saved artifact at '/tmp/tmp7_k7uxw3'. The following endpoints are available:
+Saved artifact at '/tmp/tmpfyo14kua'. The following endpoints are available:
 
 * Endpoint 'serve'
   args_0 (POSITIONAL_ONLY): TensorSpec(shape=(None, 2), dtype=tf.float32, name=None)
 Output Type:
   TensorSpec(shape=(None, 1), dtype=tf.float32, name=None)
 Captures:
-  140644195493136: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140644195492560: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140644195490064: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140644195492368: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140644195493328: TensorSpec(shape=(), dtype=tf.resource, name=None)
-W0000 00:00:1776408929.902860 4167641 tf_tfl_flatbuffer_helpers.cc:364] Ignored output_format.
-W0000 00:00:1776408929.902874 4167641 tf_tfl_flatbuffer_helpers.cc:367] Ignored drop_control_dependency.
+  136727335741456: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727335740880: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727335738384: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727335740688: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727335741648: TensorSpec(shape=(), dtype=tf.resource, name=None)
+W0000 00:00:1776412890.266432  312807 tf_tfl_flatbuffer_helpers.cc:364] Ignored output_format.
+W0000 00:00:1776412890.266441  312807 tf_tfl_flatbuffer_helpers.cc:367] Ignored drop_control_dependency.
 loc(fused[callsite(fused["Mul:", "m_1/Mul@__inference_function_99"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_130"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"])), callsite(fused["MatMul:", "m_1/MatMul@__inference_function_99"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_130"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"])), callsite(fused["AddV2:", "m_1/Add_1@__inference_function_99"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_130"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"]))]): error: 'tfl.fully_connected' op expect 'input' num_elements % 2 == 0, got input type 'tensor<1xf32>'
 V1: x=[1,2] w1=[2,1] original:
   Keras =[997.5]
   TFLite=CONVERTER CRASH: <unknown>:0: error: loc(fused[callsite(fused["Mul:", "m_1/Mul@__inference_function_99"] at callsite(fused["StatefulParti
 
-Saved artifact at '/tmp/tmpr47xt74z'. The following endpoints are available:
+Saved artifact at '/tmp/tmp7jlwari_'. The following endpoints are available:
 
 * Endpoint 'serve'
   args_0 (POSITIONAL_ONLY): TensorSpec(shape=(None, 2), dtype=tf.float32, name=None)
 Output Type:
   TensorSpec(shape=(None, 1), dtype=tf.float32, name=None)
 Captures:
-  140644195497936: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140644195498128: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140644195499472: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140644195496016: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140644195496592: TensorSpec(shape=(), dtype=tf.resource, name=None)
-W0000 00:00:1776408930.019316 4167641 tf_tfl_flatbuffer_helpers.cc:364] Ignored output_format.
-W0000 00:00:1776408930.019332 4167641 tf_tfl_flatbuffer_helpers.cc:367] Ignored drop_control_dependency.
+  136727335743568: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727335743952: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727335747024: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727335742224: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727335744336: TensorSpec(shape=(), dtype=tf.resource, name=None)
+W0000 00:00:1776412890.409736  312807 tf_tfl_flatbuffer_helpers.cc:364] Ignored output_format.
+W0000 00:00:1776412890.409753  312807 tf_tfl_flatbuffer_helpers.cc:367] Ignored drop_control_dependency.
 loc(fused[callsite(fused["Mul:", "m_1/Mul@__inference_function_506"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_537"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"])), callsite(fused["MatMul:", "m_1/MatMul@__inference_function_506"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_537"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"])), callsite(fused["Mul:", "m_1/Mul_1@__inference_function_506"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_537"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"])), callsite(fused["AddV2:", "m_1/Add_2@__inference_function_506"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_537"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"]))]): error: 'tfl.fully_connected' op expect 'input' num_elements % 2 == 0, got input type 'tensor<1xf32>'
 V2: x=[1,2] w1=[2,1] diff weights:
   Keras =[21.0]
   TFLite=CONVERTER CRASH: <unknown>:0: error: loc(fused[callsite(fused["Mul:", "m_1/Mul@__inference_function_506"] at callsite(fused["StatefulPart
 
-Saved artifact at '/tmp/tmprmhu8kuh'. The following endpoints are available:
+Saved artifact at '/tmp/tmpqaksuyx7'. The following endpoints are available:
 
 * Endpoint 'serve'
   args_0 (POSITIONAL_ONLY): TensorSpec(shape=(None, 4), dtype=tf.float32, name=None)
 Output Type:
   TensorSpec(shape=(None, 1), dtype=tf.float32, name=None)
 Captures:
-  140643740517968: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140643740516624: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140644195495632: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140644195498512: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140643740518736: TensorSpec(shape=(), dtype=tf.resource, name=None)
-W0000 00:00:1776408930.116692 4167641 tf_tfl_flatbuffer_helpers.cc:364] Ignored output_format.
-W0000 00:00:1776408930.116704 4167641 tf_tfl_flatbuffer_helpers.cc:367] Ignored drop_control_dependency.
+  136727333914960: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727333915728: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727335746448: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727333913616: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727333913424: TensorSpec(shape=(), dtype=tf.resource, name=None)
+W0000 00:00:1776412890.565484  312807 tf_tfl_flatbuffer_helpers.cc:364] Ignored output_format.
+W0000 00:00:1776412890.565498  312807 tf_tfl_flatbuffer_helpers.cc:367] Ignored drop_control_dependency.
 loc(fused[callsite(fused["Mul:", "m_1/Mul@__inference_function_913"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_944"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"])), callsite(fused["MatMul:", "m_1/MatMul@__inference_function_913"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_944"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"])), callsite(fused["AddV2:", "m_1/Add_1@__inference_function_913"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_944"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"]))]): error: 'tfl.fully_connected' op expect 'input' num_elements % 4 == 0, got input type 'tensor<1xf32>'
 V3: x=[1,4] w1=[4,1]:
   Keras =[13860.0]
   TFLite=CONVERTER CRASH: <unknown>:0: error: loc(fused[callsite(fused["Mul:", "m_1/Mul@__inference_function_913"] at callsite(fused["StatefulPart
 
-Saved artifact at '/tmp/tmp27a0r6gc'. The following endpoints are available:
+Saved artifact at '/tmp/tmpvc8qyskp'. The following endpoints are available:
 
 * Endpoint 'serve'
   args_0 (POSITIONAL_ONLY): TensorSpec(shape=(None, 2), dtype=tf.float32, name=None)
 Output Type:
   TensorSpec(shape=(None, 2), dtype=tf.float32, name=None)
 Captures:
-  140643740520656: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140643740518352: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140643740519120: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140643740519504: TensorSpec(shape=(), dtype=tf.resource, name=None)
-  140643740522000: TensorSpec(shape=(), dtype=tf.resource, name=None)
-W0000 00:00:1776408930.230470 4167641 tf_tfl_flatbuffer_helpers.cc:364] Ignored output_format.
-W0000 00:00:1776408930.230491 4167641 tf_tfl_flatbuffer_helpers.cc:367] Ignored drop_control_dependency.
+  136727333917648: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727333915344: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727333916112: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727333916496: TensorSpec(shape=(), dtype=tf.resource, name=None)
+  136727333918992: TensorSpec(shape=(), dtype=tf.resource, name=None)
+W0000 00:00:1776412890.729053  312807 tf_tfl_flatbuffer_helpers.cc:364] Ignored output_format.
+W0000 00:00:1776412890.729067  312807 tf_tfl_flatbuffer_helpers.cc:367] Ignored drop_control_dependency.
 loc(fused[callsite(fused["Mul:", "m_1/Mul@__inference_function_1320"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_1351"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"])), callsite(fused["MatMul:", "m_1/MatMul@__inference_function_1320"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_1351"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"])), callsite(fused["AddV2:", "m_1/Add_1@__inference_function_1320"] at callsite(fused["StatefulPartitionedCall:", "StatefulPartitionedCall@__inference_signature_wrapper_1351"] at fused["StatefulPartitionedCall:", "StatefulPartitionedCall_1"]))]): error: 'tfl.fully_connected' op expect 'input' num_elements % 2 == 0, got input type 'tensor<1xf32>'
 V4: x=[1,2] w1=[2,2] wider output:
   Keras =[483.0, 2198.0]
