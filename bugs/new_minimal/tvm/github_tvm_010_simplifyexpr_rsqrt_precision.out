@@ -1,8 +1,0 @@
-/home/binduan/miniconda3/envs/clawwork/lib/python3.10/site-packages/tvm/relay/frontend/onnx.py:6195: UserWarning: Field 'shape' of 'type' is required but missing.
-  warnings.warn(str(e))
-ORT[0,0,:]: [0.6476003  0.680636   0.2975294  0.6975541  0.5666482  0.30768085
- 0.49313858 0.44409746]
-TVM[0,0,:]: [0.6062307  0.63081366 0.22761177 0.62207025 0.43770045 0.4528265
- 0.5918484  0.31075302]
-max_abs=1.451457e-01  tol=1e-04
-BUG REPRODUCED: TVM Relay RoiAlign ignores coordinate_transformation_mode='half_pixel' and diverges from ORT

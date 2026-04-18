@@ -1,9 +1,0 @@
-a        : [200 100 255 128]
-b        : [100 200  10 200]
-a+b      : [300 300 265 328]
-OV out   : [255 255 255 255]
-wrap ref : [44 44  9 72]  (correct)
-sat  ref : [255 255 255 255]   (wrong)
-
-PASS=True
-BUG REPRODUCED — OV uint8 Add saturates instead of wrapping

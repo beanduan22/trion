@@ -23,16 +23,17 @@ class ExpandAddMul(OTP):
     def instantiate(self, input_name, ctx, rng, node_id):
         N, C, H, W = ctx.shape
         p = self._p(node_id, "eam")
-        # Broadcast a [1, C, 1, 1] tensor to [N, C, H, W]
-        scale = np.ones((1, C, 1, 1), dtype=np.float32)
-        shift = np.zeros((1, C, 1, 1), dtype=np.float32)
+        # Broadcast a [1, C, 1, 1] channel-wise scale to [N, C, H, W], then add
+        # shift.  Using non-trivial values so the output is never trivially zero.
+        scale = np.full((1, C, 1, 1), 0.9, dtype=np.float32)
+        shift = np.full((1, C, 1, 1), 0.1, dtype=np.float32)
         target_shape = np.array([N, C, H, W], dtype=np.int64)
 
-        exp_o = f"{p}_exp"; add_o = f"{p}_add"; out = f"{p}_out"
+        exp_o = f"{p}_exp"; mul_o = f"{p}_mul"; out = f"{p}_out"
         nodes = [
             helper.make_node("Expand", [f"{p}_scale", f"{p}_tshape"], [exp_o]),
-            helper.make_node("Add",    [input_name, exp_o], [add_o]),
-            helper.make_node("Mul",    [add_o, f"{p}_shift"], [out]),
+            helper.make_node("Mul",    [input_name, exp_o], [mul_o]),
+            helper.make_node("Add",    [mul_o, f"{p}_shift"], [out]),
         ]
         inits = [numpy_helper.from_array(scale,        f"{p}_scale"),
                  numpy_helper.from_array(target_shape, f"{p}_tshape"),
@@ -232,7 +233,6 @@ class L2Norm(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "l2n")
-        two  = np.array([2.0], dtype=np.float32)
         eps  = np.array([1e-8], dtype=np.float32)
         # opset 13+: ReduceSum takes axes as a 1-D int64 input, not attribute
         axes = np.array([-1], dtype=np.int64)
@@ -240,14 +240,13 @@ class L2Norm(OTP):
         sq_o = f"{p}_sq"; sum_o = f"{p}_sum"; add_o = f"{p}_add"
         sqrt_o = f"{p}_sqrt"; out = f"{p}_out"
         nodes = [
-            helper.make_node("Pow",       [input_name, f"{p}_two"], [sq_o]),
+            helper.make_node("Mul",       [input_name, input_name], [sq_o]),
             helper.make_node("ReduceSum", [sq_o, f"{p}_axes"], [sum_o], keepdims=1),
             helper.make_node("Add",       [sum_o, f"{p}_eps"], [add_o]),
             helper.make_node("Sqrt",      [add_o], [sqrt_o]),
             helper.make_node("Div",       [input_name, sqrt_o], [out]),
         ]
-        inits = [numpy_helper.from_array(two,  f"{p}_two"),
-                 numpy_helper.from_array(eps,  f"{p}_eps"),
+        inits = [numpy_helper.from_array(eps,  f"{p}_eps"),
                  numpy_helper.from_array(axes, f"{p}_axes")]
         return PatternInstance(self.name, self.category, nodes, inits,
                                input_name, out,
@@ -399,7 +398,13 @@ class LogSumExpStep(OTP):
 
 # ── 14. Abs → Neg → Relu (piecewise rectification) ───────────────────────
 class AbsNegReLU(OTP):
-    """Abs + Neg + ReLU pattern. Tests piecewise arithmetic rewriting."""
+    """Neg + Abs + ReLU pattern.
+
+    Computes ReLU(Abs(Neg(x))) * alpha = Abs(x) * alpha.
+    Tests piecewise arithmetic rewriting (abs/relu interaction).
+    Note: order is Neg → Abs → ReLU (not Abs → Neg → ReLU which
+    always outputs zero since Abs gives ≥0, Neg gives ≤0, ReLU clips to 0).
+    """
     name = "abs_neg_relu"
     category = CAT_BROADCAST
     target_optimization = "abs_arithmetic_simplification"
@@ -409,13 +414,13 @@ class AbsNegReLU(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "anr")
-        alpha = np.ones(ctx.shape, dtype=np.float32)
+        alpha = np.full(ctx.shape, 0.5, dtype=np.float32)
 
-        abs_o = f"{p}_abs"; neg_o = f"{p}_neg"; relu_o = f"{p}_relu"; out = f"{p}_out"
+        neg_o = f"{p}_neg"; abs_o = f"{p}_abs"; relu_o = f"{p}_relu"; out = f"{p}_out"
         nodes = [
-            helper.make_node("Abs",  [input_name], [abs_o]),
-            helper.make_node("Neg",  [abs_o], [neg_o]),
-            helper.make_node("Relu", [neg_o], [relu_o]),
+            helper.make_node("Neg",  [input_name], [neg_o]),
+            helper.make_node("Abs",  [neg_o], [abs_o]),
+            helper.make_node("Relu", [abs_o], [relu_o]),
             helper.make_node("Mul",  [relu_o, f"{p}_alpha"], [out]),
         ]
         inits = [numpy_helper.from_array(alpha, f"{p}_alpha")]
@@ -437,7 +442,6 @@ class EuclideanNormBroadcast(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "enb")
-        two  = np.array([2.0], dtype=np.float32)
         eps  = np.array([1e-8], dtype=np.float32)
         bias = np.zeros(ctx.shape, dtype=np.float32)
         axes = np.array([-1], dtype=np.int64)
@@ -446,14 +450,13 @@ class EuclideanNormBroadcast(OTP):
         sm_o = f"{p}_sm"; add_o = f"{p}_add"; sqrt_o = f"{p}_sqrt"; out = f"{p}_out"
         nodes = [
             helper.make_node("Sub",       [input_name, f"{p}_bias"], [diff_o]),
-            helper.make_node("Pow",       [diff_o, f"{p}_two"], [sq_o]),
+            helper.make_node("Mul",       [diff_o, diff_o], [sq_o]),
             helper.make_node("ReduceSum", [sq_o, f"{p}_axes"], [sm_o], keepdims=1),
             helper.make_node("Add",       [sm_o, f"{p}_eps"], [add_o]),
             helper.make_node("Sqrt",      [add_o], [sqrt_o]),
             helper.make_node("Div",       [diff_o, sqrt_o], [out]),
         ]
-        inits = [numpy_helper.from_array(two,  f"{p}_two"),
-                 numpy_helper.from_array(eps,  f"{p}_eps"),
+        inits = [numpy_helper.from_array(eps,  f"{p}_eps"),
                  numpy_helper.from_array(bias, f"{p}_bias"),
                  numpy_helper.from_array(axes, f"{p}_axes")]
         return PatternInstance(self.name, self.category, nodes, inits,
@@ -538,20 +541,277 @@ class FloorCeilRound(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "fcr")
-        alpha = np.ones(ctx.shape, dtype=np.float32)
+        # scale by 3.7 so values span several integers → floor/ceil differ per element
+        scale = np.full(ctx.shape, 3.7, dtype=np.float32)
+        half  = np.full(ctx.shape, 0.5, dtype=np.float32)
 
-        mul_o = f"{p}_mul"; fl_o = f"{p}_fl"; cl_o = f"{p}_cl"; out = f"{p}_out"
+        sc_o = f"{p}_sc"; fl_o = f"{p}_fl"; add_o = f"{p}_add"; out = f"{p}_out"
         nodes = [
-            helper.make_node("Mul",   [input_name, f"{p}_alpha"], [mul_o]),
-            helper.make_node("Floor", [mul_o], [fl_o]),
-            helper.make_node("Ceil",  [input_name], [cl_o]),
-            helper.make_node("Sub",   [cl_o, fl_o], [out]),
+            helper.make_node("Mul",   [input_name, f"{p}_scale"], [sc_o]),
+            helper.make_node("Floor", [sc_o],  [fl_o]),
+            helper.make_node("Add",   [fl_o, f"{p}_half"], [add_o]),
+            helper.make_node("Round", [add_o], [out]),
         ]
-        inits = [numpy_helper.from_array(alpha, f"{p}_alpha")]
+        inits = [numpy_helper.from_array(scale, f"{p}_scale"),
+                 numpy_helper.from_array(half,  f"{p}_half")]
         return PatternInstance(self.name, self.category, nodes, inits,
                                input_name, out,
                                StructuralContext(ctx.rank, list(ctx.shape),
                                                  ctx.dtype, ctx.layout))
+
+
+# ── 19. GELU approximation (tanh-based) ──────────────────────────────────
+class GeluApprox(OTP):
+    """Tanh-based GELU approximation: x * 0.5 * (1 + tanh(sqrt(2/π)*(x + 0.044715*x³))).
+    Tests non-linear composition optimization."""
+    name = "gelu_approx"
+    category = CAT_BROADCAST
+    target_optimization = "gelu_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "gelu")
+        c1    = np.array([0.044715], dtype=np.float32)
+        c2    = np.array([np.sqrt(2.0 / np.pi)], dtype=np.float32)
+        one   = np.array([1.0], dtype=np.float32)
+        half  = np.array([0.5], dtype=np.float32)
+
+        x3_o  = f"{p}_x3";  sc_o  = f"{p}_sc"
+        inn_o = f"{p}_inn"; mlt_o = f"{p}_mlt"
+        th_o  = f"{p}_th";  add_o = f"{p}_add"
+        hf_o  = f"{p}_hf";  out   = f"{p}_out"
+        # x^3 via Mul-chain: Pow(x, 3.0) on negative base is implementation-
+        # defined (some backends lower via exp/log → NaN). Mul is unambiguous.
+        x2_o = f"{p}_x2"
+        nodes = [
+            helper.make_node("Mul",  [input_name, input_name], [x2_o]),
+            helper.make_node("Mul",  [x2_o, input_name], [x3_o]),
+            helper.make_node("Mul",  [x3_o, f"{p}_c1"], [sc_o]),
+            helper.make_node("Add",  [input_name, sc_o], [inn_o]),
+            helper.make_node("Mul",  [inn_o, f"{p}_c2"], [mlt_o]),
+            helper.make_node("Tanh", [mlt_o], [th_o]),
+            helper.make_node("Add",  [th_o, f"{p}_one"], [add_o]),
+            helper.make_node("Mul",  [input_name, f"{p}_half"], [hf_o]),
+            helper.make_node("Mul",  [hf_o, add_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(c1,    f"{p}_c1"),
+                 numpy_helper.from_array(c2,    f"{p}_c2"),
+                 numpy_helper.from_array(one,   f"{p}_one"),
+                 numpy_helper.from_array(half,  f"{p}_half")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape),
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 20. Mish activation: x * tanh(softplus(x)) ───────────────────────────
+class MishActivation(OTP):
+    """Mish: x * tanh(log(1+exp(x))). Tests chained non-linear fusions."""
+    name = "mish_activation"
+    category = CAT_BROADCAST
+    target_optimization = "mish_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "mish")
+        one = np.ones(ctx.shape, dtype=np.float32)
+
+        exp_o = f"{p}_exp"; sp_o = f"{p}_sp"
+        log_o = f"{p}_log"; th_o = f"{p}_th"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Exp",  [input_name], [exp_o]),
+            helper.make_node("Add",  [exp_o, f"{p}_one"], [sp_o]),
+            helper.make_node("Log",  [sp_o], [log_o]),
+            helper.make_node("Tanh", [log_o], [th_o]),
+            helper.make_node("Mul",  [input_name, th_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(one, f"{p}_one")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape),
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 21. HardSwish: x * ReLU6(x+3) / 6 ───────────────────────────────────
+class HardSwish(OTP):
+    """HardSwish activation. Tests min/max/clip fused with mul."""
+    name = "hard_swish"
+    category = CAT_BROADCAST
+    target_optimization = "hardswish_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "hsw")
+        three = np.array([3.0], dtype=np.float32)
+        six   = np.array([6.0], dtype=np.float32)
+        lo    = np.array([0.0], dtype=np.float32)
+        hi    = np.array([6.0], dtype=np.float32)
+
+        add_o = f"{p}_add"; clip_o = f"{p}_clip"
+        div_o = f"{p}_div"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Add",  [input_name, f"{p}_three"], [add_o]),
+            helper.make_node("Clip", [add_o, f"{p}_lo", f"{p}_hi"], [clip_o]),
+            helper.make_node("Div",  [clip_o, f"{p}_six"], [div_o]),
+            helper.make_node("Mul",  [input_name, div_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(three, f"{p}_three"),
+                 numpy_helper.from_array(six,   f"{p}_six"),
+                 numpy_helper.from_array(lo,    f"{p}_lo"),
+                 numpy_helper.from_array(hi,    f"{p}_hi")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape),
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 22. Variance normalization ────────────────────────────────────────────
+class VarianceNorm(OTP):
+    """x / (std(x) + eps): tests variance + sqrt + reciprocal chain."""
+    name = "variance_norm"
+    category = CAT_BROADCAST
+    target_optimization = "variance_normalization"
+
+    def is_compatible(self, ctx):
+        return ctx.dtype == "float32" and ctx.rank >= 2
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "vn")
+        eps  = np.array([1e-6], dtype=np.float32)
+        axes = np.array([-1], dtype=np.int64)
+
+        sq_o = f"{p}_sq"; sm_o = f"{p}_sm"
+        add_o = f"{p}_add"; sqrt_o = f"{p}_sqrt"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Mul",       [input_name, input_name], [sq_o]),
+            helper.make_node("ReduceSum", [sq_o, f"{p}_axes"], [sm_o], keepdims=1),
+            helper.make_node("Add",       [sm_o, f"{p}_eps"], [add_o]),
+            helper.make_node("Sqrt",      [add_o], [sqrt_o]),
+            helper.make_node("Div",       [input_name, sqrt_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(eps,  f"{p}_eps"),
+                 numpy_helper.from_array(axes, f"{p}_axes")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape),
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 23. PReLU (learnable negative slope) ─────────────────────────────────
+class PReLU(OTP):
+    """PReLU: max(0,x) + slope*min(0,x). Tests per-channel slope fusion."""
+    name = "prelu"
+    category = CAT_BROADCAST
+    target_optimization = "prelu_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "prl")
+        slope = np.full(ctx.shape, 0.01, dtype=np.float32)
+        zero  = np.zeros(ctx.shape, dtype=np.float32)
+
+        pos_o=f"{p}_pos"; neg_o=f"{p}_neg"; sl_o=f"{p}_sl"; out=f"{p}_out"
+        nodes = [
+            helper.make_node("Relu",  [input_name], [pos_o]),
+            helper.make_node("Min",   [input_name, f"{p}_zero"], [neg_o]),
+            helper.make_node("Mul",   [neg_o, f"{p}_slope"], [sl_o]),
+            helper.make_node("Add",   [pos_o, sl_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(slope, f"{p}_slope"),
+                 numpy_helper.from_array(zero,  f"{p}_zero")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape), ctx.dtype, ctx.layout))
+
+
+# ── 24. Sigmoid + Scale (binary cross-entropy logit transform) ────────────
+class SigmoidScale(OTP):
+    """Sigmoid(x) * 2 - 1 → maps to [-1,1]. Tests sigmoid+affine fusion."""
+    name = "sigmoid_scale"
+    category = CAT_BROADCAST
+    target_optimization = "sigmoid_affine_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "sigs")
+        two = np.full(ctx.shape, 2.0, dtype=np.float32)
+        one = np.full(ctx.shape, 1.0, dtype=np.float32)
+
+        sig_o=f"{p}_sig"; sc_o=f"{p}_sc"; out=f"{p}_out"
+        nodes = [
+            helper.make_node("Sigmoid", [input_name], [sig_o]),
+            helper.make_node("Mul",     [sig_o, f"{p}_two"], [sc_o]),
+            helper.make_node("Sub",     [sc_o, f"{p}_one"], [out]),
+        ]
+        inits = [numpy_helper.from_array(two, f"{p}_two"),
+                 numpy_helper.from_array(one, f"{p}_one")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape), ctx.dtype, ctx.layout))
+
+
+# ── 25. Elu + Scale (EfficientNet activation variant) ─────────────────────
+class EluScale(OTP):
+    """ELU(x) + 1: shifts ELU to be non-negative. Tests ELU offset fold."""
+    name = "elu_scale"
+    category = CAT_BROADCAST
+    target_optimization = "elu_offset_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "elus")
+        one = np.full(ctx.shape, 1.0, dtype=np.float32)
+
+        elu_o=f"{p}_elu"; out=f"{p}_out"
+        nodes = [
+            helper.make_node("Elu", [input_name], [elu_o], alpha=1.0),
+            helper.make_node("Add", [elu_o, f"{p}_one"], [out]),
+        ]
+        inits = [numpy_helper.from_array(one, f"{p}_one")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape), ctx.dtype, ctx.layout))
+
+
+# ── 26. Reduce + Broadcast (softmax-like normalization) ───────────────────
+class ReduceBroadcastNorm(OTP):
+    """x / ReduceSum(x, keepdims): probability simplex projection."""
+    name = "reduce_broadcast_norm"
+    category = CAT_BROADCAST
+    target_optimization = "reduce_broadcast_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank >= 2 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "rbn")
+        eps = np.array([1e-7], dtype=np.float32)
+        axes = np.array([-1], dtype=np.int64)
+
+        abs_o=f"{p}_abs"; rs_o=f"{p}_rs"; add_o=f"{p}_add"; out=f"{p}_out"
+        nodes = [
+            helper.make_node("Abs",       [input_name], [abs_o]),
+            helper.make_node("ReduceSum", [abs_o, f"{p}_axes"], [rs_o], keepdims=1),
+            helper.make_node("Add",       [rs_o, f"{p}_eps"], [add_o]),
+            helper.make_node("Div",       [abs_o, add_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(eps,  f"{p}_eps"),
+                 numpy_helper.from_array(axes, f"{p}_axes")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape), ctx.dtype, ctx.layout))
 
 
 ALL_BROADCAST_PATTERNS = [
@@ -565,7 +825,6 @@ ALL_BROADCAST_PATTERNS = [
     L2Norm(),
     HardClampNorm(),
     Swish(),
-    # New patterns
     WhereMask(),
     CumSumOp(),
     LogSumExpStep(),
@@ -574,4 +833,12 @@ ALL_BROADCAST_PATTERNS = [
     SoftmaxMul(),
     ClippedAffine(),
     FloorCeilRound(),
+    GeluApprox(),
+    MishActivation(),
+    HardSwish(),
+    VarianceNorm(),
+    PReLU(),
+    SigmoidScale(),
+    EluScale(),
+    ReduceBroadcastNorm(),
 ]

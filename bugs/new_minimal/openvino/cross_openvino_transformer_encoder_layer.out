@@ -1,4 +1,0 @@
-ORT:      [ 0.0053039 -0.5674004 -1.1994314  1.8477817]
-OpenVINO: [ 0.00602648 -0.56125975 -1.2004263   1.8446367 ]
-max_abs=0.0135
-BUG REPRODUCED: OpenVINO transformer_encoder_layer (max_abs=0.0135)

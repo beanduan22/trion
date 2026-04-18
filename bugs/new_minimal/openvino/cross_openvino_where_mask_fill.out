@@ -1,4 +1,0 @@
-ORT:      [-1.0000000e+09 -1.0000000e+09 -2.8941078e+01 -1.0000000e+09]
-OpenVINO: [-1.0000e+09 -1.0000e+09 -2.8875e+01 -1.0000e+09]
-max_abs=0.1797
-BUG REPRODUCED: OpenVINO where_mask_fill (max_abs=0.1797)

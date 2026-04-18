@@ -1,8 +1,0 @@
-/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/resize.py:137: UserWarning: Pytorch's nearest neighbor interpolate uses the "floor" nearest_mode. For others modes, the results might differ significantly!
-  warnings.warn(
-/home/binduan/miniconda3/lib/python3.13/site-packages/onnx2torch/node_converters/resize.py:143: UserWarning: Pytorch's nearest neighbor interpolation uses "asymmetric" coordinate_transformation_mode. For others modes, the results might differ significantly!
-  warnings.warn(
-ORT ref[:4]:      [ 0.49671414 -0.1382643  -0.1382643   0.64768857]
-onnx2torch[:4]:   [ 0.49671414  0.49671414 -0.1382643  -0.1382643 ]
-max_diff=3.003272  tol=0.01
-BUG REPRODUCED

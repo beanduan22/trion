@@ -67,10 +67,15 @@ class TFLiteBackend(BackendBase):
             converter = tf.lite.TFLiteConverter.from_concrete_functions(
                 [model_fn.get_concrete_function()], model_fn
             )
+            # Always enforce float32 to avoid quantization-induced divergence.
+            # Optimize.DEFAULT without float32 target triggers post-training
+            # integer quantization which is expected to diverge — not a compiler
+            # bug.  We want graph-level optimizations (op fusion, const folding)
+            # while keeping precision comparable to the reference.
+            converter.target_spec.supported_types = [tf.float32]
             if optimized:
                 converter.optimizations = [tf.lite.Optimize.DEFAULT]
-            else:
-                converter.target_spec.supported_types = [tf.float32]
+            # unoptimized: no converter.optimizations set (empty = reference ops)
             tflite_flat = converter.convert()
 
             # Run with TFLite interpreter

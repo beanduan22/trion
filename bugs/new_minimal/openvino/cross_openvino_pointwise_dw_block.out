@@ -1,4 +1,0 @@
-ORT:      [  77.25082       0.72612983  -10.597239   -179.6164    ]
-OpenVINO: [  77.203         0.49180603  -10.749359   -179.40517   ]
-max_abs=2.1500
-BUG REPRODUCED: OpenVINO pointwise_dw_block (max_abs=2.1500)

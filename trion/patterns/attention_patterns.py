@@ -257,9 +257,9 @@ class TransformerFFN(OTP):
         ffn_D = D * 4   # standard 4x expansion
         p = self._p(node_id, "tffn")
 
-        W1 = self._make_linear_weight(ffn_D, D)
+        W1 = self._make_linear_weight(D, ffn_D)
         b1 = np.zeros(ffn_D, dtype=np.float32)
-        W2 = self._make_linear_weight(D, ffn_D)
+        W2 = self._make_linear_weight(ffn_D, D)
         b2 = np.zeros(D, dtype=np.float32)
 
         lin1_nodes, lin1_inits, lin1_out = _linear(input_name, W1, b1, p, "l1")
@@ -295,9 +295,9 @@ class TransformerEncoderLayer(OTP):
         Wq = self._make_linear_weight(D, D)
         Wk = self._make_linear_weight(D, D)
         Wv = self._make_linear_weight(D, D)
-        W1 = self._make_linear_weight(ffn_D, D)
+        W1 = self._make_linear_weight(D, ffn_D)
         b1 = np.zeros(ffn_D, dtype=np.float32)
-        W2 = self._make_linear_weight(D, ffn_D)
+        W2 = self._make_linear_weight(ffn_D, D)
         b2 = np.zeros(D, dtype=np.float32)
         ln1_names, ln1_inits = _ln_params(D, f"{p}_ln1")
         ln2_names, ln2_inits = _ln_params(D, f"{p}_ln2")
@@ -480,9 +480,9 @@ class GroupQueryAttention(OTP):
         dg = D // G      # K/V head dim = G * dh
         p  = self._p(node_id, "gqa")
 
-        Wq = self._make_linear_weight(H * dh, D)
-        Wk = self._make_linear_weight(G * dh, D)
-        Wv = self._make_linear_weight(G * dh, D)
+        Wq = self._make_linear_weight(D, H * dh)
+        Wk = self._make_linear_weight(D, G * dh)
+        Wv = self._make_linear_weight(D, G * dh)
         scale = np.array([1.0 / float(np.sqrt(dh))], dtype=np.float32)
 
         q_shape  = np.array([B, S, H, dh],       dtype=np.int64)
@@ -785,10 +785,10 @@ class MultiQueryAttention(OTP):
         scale = np.array([1.0 / float(np.sqrt(dh))], dtype=np.float32)
 
         # H Q projections, but only 1 K/V projection
-        Wq = self._make_linear_weight(H * dh, D)
-        Wk = self._make_linear_weight(dh, D)
-        Wv = self._make_linear_weight(dh, D)
-        Wo = self._make_linear_weight(D, H * dh)
+        Wq = self._make_linear_weight(D, H * dh)
+        Wk = self._make_linear_weight(D, dh)
+        Wv = self._make_linear_weight(D, dh)
+        Wo = self._make_linear_weight(H * dh, D)
 
         q_shape   = np.array([B, S, H, dh], dtype=np.int64)
         out_shape = np.array([B, S, H * dh], dtype=np.int64)
@@ -840,6 +840,236 @@ class MultiQueryAttention(OTP):
                                StructuralContext(3, [B, S, D], ctx.dtype, "NLC"))
 
 
+# ── 13. Attention with additive relative position bias ────────────────────
+class RelativePositionBiasAttention(OTP):
+    """SDPA + learned relative position bias matrix added before softmax.
+    Tests attention rewriting when a non-trivial additive bias is present."""
+    name = "relative_position_bias_attention"
+    category = CAT_ATTENTION
+    target_optimization = "attention_with_position_bias_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 3 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        B, S, D = ctx.shape
+        p     = self._p(node_id, "rpba")
+        scale = np.array([1.0 / float(np.sqrt(D))], dtype=np.float32)
+        Wq = self._make_linear_weight(D, D)
+        Wk = self._make_linear_weight(D, D)
+        Wv = self._make_linear_weight(D, D)
+        # Relative position bias: [1, S, S] broadcastable to [B, S, S]
+        pos_bias = np.zeros((1, S, S), dtype=np.float32)
+
+        q_o = f"{p}_q"; k_o = f"{p}_k"; v_o = f"{p}_v"
+        kt_o = f"{p}_kt"; raw = f"{p}_raw"; sc_o = f"{p}_sc"
+        pb_o = f"{p}_pb"; sm_o = f"{p}_sm"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("MatMul",    [input_name, f"{p}_wq"], [q_o]),
+            helper.make_node("MatMul",    [input_name, f"{p}_wk"], [k_o]),
+            helper.make_node("MatMul",    [input_name, f"{p}_wv"], [v_o]),
+            helper.make_node("Transpose", [k_o], [kt_o], perm=[0, 2, 1]),
+            helper.make_node("MatMul",    [q_o, kt_o], [raw]),
+            helper.make_node("Mul",       [raw, f"{p}_scale"], [sc_o]),
+            helper.make_node("Add",       [sc_o, f"{p}_pos_bias"], [pb_o]),
+            helper.make_node("Softmax",   [pb_o], [sm_o], axis=2),
+            helper.make_node("MatMul",    [sm_o, v_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(Wq,      f"{p}_wq"),
+                 numpy_helper.from_array(Wk,      f"{p}_wk"),
+                 numpy_helper.from_array(Wv,      f"{p}_wv"),
+                 numpy_helper.from_array(scale,   f"{p}_scale"),
+                 numpy_helper.from_array(pos_bias, f"{p}_pos_bias")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(3, [B, S, D], ctx.dtype, "NLC"))
+
+
+# ── 14. SwiGLU FFN (LLaMA-style): gate * silu(gate) + up_proj ────────────
+class SwiGLUFFN(OTP):
+    """SwiGLU: gate_proj → SiLU, up_proj → multiply, then down_proj.
+    Critical transformer block in LLaMA/Mistral; stresses gate fusion."""
+    name = "swiglu_ffn"
+    category = CAT_ATTENTION
+    target_optimization = "swiglu_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 3 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        B, S, D = ctx.shape
+        ff = D * 4
+        p  = self._p(node_id, "swgl")
+        Wg = self._make_linear_weight(D, ff)
+        Wu = self._make_linear_weight(D, ff)
+        Wd = self._make_linear_weight(ff, D)
+        bg = np.zeros(ff, dtype=np.float32)
+        bu = np.zeros(ff, dtype=np.float32)
+        bd = np.zeros(D,  dtype=np.float32)
+
+        g_o = f"{p}_g"; u_o = f"{p}_u"
+        sig_o = f"{p}_sig"; silu_o = f"{p}_silu"
+        h_o = f"{p}_h"; mm_o = f"{p}_mm"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("MatMul",  [input_name, f"{p}_wg"], [g_o]),
+            helper.make_node("Add",     [g_o, f"{p}_bg"], [f"{p}_ga"]),
+            helper.make_node("MatMul",  [input_name, f"{p}_wu"], [u_o]),
+            helper.make_node("Add",     [u_o, f"{p}_bu"], [f"{p}_ua"]),
+            # SiLU on gate: x * sigmoid(x)
+            helper.make_node("Sigmoid", [f"{p}_ga"], [sig_o]),
+            helper.make_node("Mul",     [f"{p}_ga", sig_o], [silu_o]),
+            # Element-wise multiply gated activation with up path
+            helper.make_node("Mul",     [silu_o, f"{p}_ua"], [h_o]),
+            helper.make_node("MatMul",  [h_o, f"{p}_wd"], [mm_o]),
+            helper.make_node("Add",     [mm_o, f"{p}_bd"], [out]),
+        ]
+        inits = [numpy_helper.from_array(Wg, f"{p}_wg"),
+                 numpy_helper.from_array(Wu, f"{p}_wu"),
+                 numpy_helper.from_array(Wd, f"{p}_wd"),
+                 numpy_helper.from_array(bg, f"{p}_bg"),
+                 numpy_helper.from_array(bu, f"{p}_bu"),
+                 numpy_helper.from_array(bd, f"{p}_bd")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(3, [B, S, D], ctx.dtype, "NLC"))
+
+
+# ── 15. Cross-Attention (encoder-decoder) ─────────────────────────────────
+class CrossAttention(OTP):
+    """Decoder cross-attention: Q from input, KV from fixed memory tensor."""
+    name = "cross_attention"
+    category = CAT_ATTENTION
+    target_optimization = "cross_attention_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 3 and ctx.dtype == "float32" and ctx.shape[2] >= 32
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        B, T, D = ctx.shape   # target sequence
+        S = T * 2             # encoder memory length
+        p = self._p(node_id, "ca")
+        scale = np.array([1.0 / float(np.sqrt(D))], dtype=np.float32)
+
+        Wq = self._make_linear_weight(D, D)
+        Wk = self._make_linear_weight(D, D)
+        Wv = self._make_linear_weight(D, D)
+        Wo = self._make_linear_weight(D, D)
+        # Fixed encoder memory
+        memory = np.random.default_rng(node_id).standard_normal((B, S, D)).astype(np.float32) * 0.02
+
+        q_o=f"{p}_q"; k_o=f"{p}_k"; v_o=f"{p}_v"
+        kt=f"{p}_kt"
+        raw=f"{p}_raw"; sc_o=f"{p}_sc"; sm_o=f"{p}_sm"
+        att=f"{p}_att"; out=f"{p}_out"
+        # Q: [B,T,D]; K,V: [B,S,D] (from memory).
+        # Scores = Q @ K^T → [B,T,S]; Context = softmax(scores) @ V → [B,T,D].
+        nodes = [
+            helper.make_node("MatMul", [input_name,     f"{p}_wq"], [q_o]),
+            helper.make_node("MatMul", [f"{p}_mem",     f"{p}_wk"], [k_o]),
+            helper.make_node("MatMul", [f"{p}_mem",     f"{p}_wv"], [v_o]),
+            helper.make_node("Transpose", [k_o], [kt], perm=[0,2,1]),   # [B,D,S]
+            helper.make_node("MatMul",    [q_o, kt], [raw]),            # [B,T,S]
+            helper.make_node("Mul",       [raw, f"{p}_scale"], [sc_o]),
+            helper.make_node("Softmax",   [sc_o], [sm_o], axis=-1),
+            helper.make_node("MatMul",    [sm_o, v_o], [att]),          # [B,T,D]
+            helper.make_node("MatMul",    [att, f"{p}_wo"], [out]),
+        ]
+        inits = [numpy_helper.from_array(Wq,     f"{p}_wq"),
+                 numpy_helper.from_array(Wk,     f"{p}_wk"),
+                 numpy_helper.from_array(Wv,     f"{p}_wv"),
+                 numpy_helper.from_array(Wo,     f"{p}_wo"),
+                 numpy_helper.from_array(memory, f"{p}_mem"),
+                 numpy_helper.from_array(scale,  f"{p}_scale")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(3, [B,T,D], ctx.dtype, ctx.layout))
+
+
+# ── 16. ALiBi Attention (linear position bias, no learned embedding) ───────
+class ALiBiAttention(OTP):
+    """SDPA with additive ALiBi position bias: head-specific slope * distance."""
+    name = "alibi_attention"
+    category = CAT_ATTENTION
+    target_optimization = "alibi_position_bias_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 3 and ctx.dtype == "float32" and ctx.shape[2] >= 32
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        B, S, D = ctx.shape
+        p = self._p(node_id, "alibi")
+        scale = np.array([1.0 / float(np.sqrt(D))], dtype=np.float32)
+
+        Wq = self._make_linear_weight(D, D)
+        Wk = self._make_linear_weight(D, D)
+        Wv = self._make_linear_weight(D, D)
+        # ALiBi bias: [1, S, S] — slope * (j - i) for causal mask
+        positions = np.arange(S, dtype=np.float32)
+        bias = (positions[None, :] - positions[:, None]) * (-0.125)
+        bias = np.clip(bias, -1e4, 0).astype(np.float32)[None]  # [1,S,S]
+
+        q_o=f"{p}_q"; k_o=f"{p}_k"; v_o=f"{p}_v"
+        qt=f"{p}_qt"; raw=f"{p}_raw"; sc_o=f"{p}_sc"
+        biased=f"{p}_biased"; sm_o=f"{p}_sm"; out=f"{p}_out"
+        nodes = [
+            helper.make_node("MatMul",    [input_name, f"{p}_wq"], [q_o]),
+            helper.make_node("MatMul",    [input_name, f"{p}_wk"], [k_o]),
+            helper.make_node("MatMul",    [input_name, f"{p}_wv"], [v_o]),
+            helper.make_node("Transpose", [k_o], [qt], perm=[0,2,1]),
+            helper.make_node("MatMul",    [q_o, qt], [raw]),
+            helper.make_node("Mul",       [raw, f"{p}_scale"], [sc_o]),
+            helper.make_node("Add",       [sc_o, f"{p}_bias"], [biased]),
+            helper.make_node("Softmax",   [biased], [sm_o], axis=-1),
+            helper.make_node("MatMul",    [sm_o, v_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(Wq,   f"{p}_wq"),
+                 numpy_helper.from_array(Wk,   f"{p}_wk"),
+                 numpy_helper.from_array(Wv,   f"{p}_wv"),
+                 numpy_helper.from_array(scale, f"{p}_scale"),
+                 numpy_helper.from_array(bias,  f"{p}_bias")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(3, [B,S,D], ctx.dtype, ctx.layout))
+
+
+# ── 17. FFN with Dropout (training pattern) ───────────────────────────────
+class FFNWithDropout(OTP):
+    """Linear → GELU → Dropout(p=0) → Linear: training-graph residual FFN."""
+    name = "ffn_with_dropout"
+    category = CAT_ATTENTION
+    target_optimization = "ffn_dropout_elim"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 3 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        B, S, D = ctx.shape
+        ff = D * 4
+        p  = self._p(node_id, "ffnd")
+        W1 = self._make_linear_weight(D, ff)
+        b1 = np.zeros(ff, dtype=np.float32)
+        W2 = self._make_linear_weight(ff, D)
+        b2 = np.zeros(D, dtype=np.float32)
+        sqrt2 = np.array([np.sqrt(2.0)], dtype=np.float32)
+        half  = np.array([0.5], dtype=np.float32)
+        one   = np.array([1.0], dtype=np.float32)
+
+        lin1_nodes, lin1_inits, lin1_out = _linear(input_name, W1, b1, p, "l1")
+        gelu_nodes, gelu_inits, gelu_out = _gelu_nodes(lin1_out, p, "ge")
+        # Dropout with ratio=0 (identity at inference, but graph has the node)
+        drop_out = f"{p}_drop"
+        ratio = np.array(0.0, dtype=np.float32)
+        drop_nodes = [helper.make_node("Dropout", [gelu_out, f"{p}_ratio"], [drop_out])]
+        drop_inits = [numpy_helper.from_array(ratio, f"{p}_ratio")]
+        lin2_nodes, lin2_inits, lin2_out = _linear(drop_out, W2, b2, p, "l2")
+
+        all_nodes = lin1_nodes + gelu_nodes + drop_nodes + lin2_nodes
+        all_inits = lin1_inits + gelu_inits + drop_inits + lin2_inits
+        return PatternInstance(self.name, self.category, all_nodes, all_inits,
+                               input_name, lin2_out,
+                               StructuralContext(3, [B,S,D], ctx.dtype, ctx.layout))
+
+
 ALL_ATTENTION_PATTERNS = [
     ScaledDotProductAttention(),
     MultiHeadSelfAttention(),
@@ -853,4 +1083,9 @@ ALL_ATTENTION_PATTERNS = [
     RotaryEmbeddingAttention(),
     SelfAttentionResidual(),
     MultiQueryAttention(),
+    RelativePositionBiasAttention(),
+    SwiGLUFFN(),
+    CrossAttention(),
+    ALiBiAttention(),
+    FFNWithDropout(),
 ]

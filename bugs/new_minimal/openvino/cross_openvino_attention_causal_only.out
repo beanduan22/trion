@@ -1,4 +1,0 @@
-ORT:      [-16.701406   -4.9059258   7.8918476  -7.864847 ]
-OpenVINO: [-16.625    -4.8125    7.78125  -7.875  ]
-max_abs=0.2295
-BUG REPRODUCED: OpenVINO attention_causal_only (max_abs=0.2295)

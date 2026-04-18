@@ -1,4 +1,0 @@
-ORT:      [0. 6. 6. 6.]
-OpenVINO: [0. 6. 6. 6.]
-max_abs=0.3779
-BUG REPRODUCED: OpenVINO conv_bn_relu6 (max_abs=0.3779)

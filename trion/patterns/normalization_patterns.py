@@ -150,7 +150,6 @@ class RMSNorm(OTP):
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "rms")
         eps = np.array([1e-6], dtype=np.float32)
-        two = np.array([2.0],  dtype=np.float32)
         axes = [-1]
 
         sq_o = f"{p}_sq"; mean_o = f"{p}_mean"
@@ -161,7 +160,10 @@ class RMSNorm(OTP):
         g = np.ones(norm_dim, dtype=np.float32)
 
         nodes = [
-            helper.make_node("Pow",        [input_name, f"{p}_two"], [sq_o]),
+            # Use Mul(x,x) instead of Pow(x, 2.0): Pow with float exponent on
+            # negative base is undefined; some backends lower it via exp/log
+            # and produce NaN, which would be a model bug, not a compiler bug.
+            helper.make_node("Mul",        [input_name, input_name], [sq_o]),
             helper.make_node("ReduceMean", [sq_o], [mean_o],
                              axes=axes, keepdims=1),
             helper.make_node("Add",        [mean_o, f"{p}_eps"], [add_o]),
@@ -170,7 +172,6 @@ class RMSNorm(OTP):
             helper.make_node("Mul",        [sc_o, f"{p}_g"], [out]),
         ]
         inits = [numpy_helper.from_array(eps, f"{p}_eps"),
-                 numpy_helper.from_array(two, f"{p}_two"),
                  numpy_helper.from_array(g,   f"{p}_g")]
         return PatternInstance(self.name, self.category, nodes, inits,
                                input_name, out,
@@ -444,7 +445,6 @@ class PowerNorm(OTP):
 
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "pnm")
-        two  = np.array([2.0],  dtype=np.float32)
         half = np.array([0.5],  dtype=np.float32)
         eps  = np.array([1e-6], dtype=np.float32)
         scale = np.ones(ctx.shape, dtype=np.float32)
@@ -452,15 +452,16 @@ class PowerNorm(OTP):
         sq_o = f"{p}_sq"; mean_o = f"{p}_mean"; add_o = f"{p}_add"
         pow_o = f"{p}_pow"; div_o = f"{p}_div"; out = f"{p}_out"
         nodes = [
-            helper.make_node("Pow",       [input_name, f"{p}_two"], [sq_o]),
+            # Mul(x,x) avoids Pow-on-negative-base UB (would NaN on some backends).
+            helper.make_node("Mul",       [input_name, input_name], [sq_o]),
             helper.make_node("ReduceMean",[sq_o], [mean_o], axes=[-1], keepdims=1),
             helper.make_node("Add",       [mean_o, f"{p}_eps"], [add_o]),
+            # add_o is mean(x^2)+eps > 0, so Pow(.,0.5) is well-defined here.
             helper.make_node("Pow",       [add_o, f"{p}_half"], [pow_o]),
             helper.make_node("Div",       [input_name, pow_o], [div_o]),
             helper.make_node("Mul",       [div_o, f"{p}_scale"], [out]),
         ]
-        inits = [numpy_helper.from_array(two,   f"{p}_two"),
-                 numpy_helper.from_array(half,  f"{p}_half"),
+        inits = [numpy_helper.from_array(half,  f"{p}_half"),
                  numpy_helper.from_array(eps,   f"{p}_eps"),
                  numpy_helper.from_array(scale, f"{p}_scale")]
         return PatternInstance(self.name, self.category, nodes, inits,
@@ -558,7 +559,6 @@ class VarianceWhitening(OTP):
     def instantiate(self, input_name, ctx, rng, node_id):
         p = self._p(node_id, "vw")
         eps = np.array([1e-5], dtype=np.float32)
-        two = np.array([2.0], dtype=np.float32)
         half = np.array([0.5], dtype=np.float32)
         sc = np.ones([1]*ctx.rank, dtype=np.float32)
 
@@ -568,7 +568,7 @@ class VarianceWhitening(OTP):
         nodes = [
             helper.make_node("ReduceMean", [input_name], [mean_o], axes=[-1], keepdims=1),
             helper.make_node("Sub",        [input_name, mean_o], [diff_o]),
-            helper.make_node("Pow",        [diff_o, f"{p}_two"], [sq_o]),
+            helper.make_node("Mul",        [diff_o, diff_o], [sq_o]),
             helper.make_node("ReduceMean", [sq_o], [var_o], axes=[-1], keepdims=1),
             helper.make_node("Add",        [var_o, f"{p}_eps"], [add_o]),
             helper.make_node("Pow",        [add_o, f"{p}_half"], [std_o]),
@@ -576,7 +576,6 @@ class VarianceWhitening(OTP):
             helper.make_node("Mul",        [div_o, f"{p}_sc"], [out]),
         ]
         inits = [numpy_helper.from_array(eps,  f"{p}_eps"),
-                 numpy_helper.from_array(two,  f"{p}_two"),
                  numpy_helper.from_array(half, f"{p}_half"),
                  numpy_helper.from_array(sc,   f"{p}_sc")]
         return PatternInstance(self.name, self.category, nodes, inits,
@@ -660,6 +659,266 @@ class LayerNormTemperature(OTP):
                                                  ctx.dtype, ctx.layout))
 
 
+# ── 19. ScaledRMSNorm with learnable gamma + beta ────────────────────────
+class ScaledRMSNorm(OTP):
+    """RMSNorm(x) * gamma + beta: full affine variant used in LLaMA/Mistral."""
+    name = "scaled_rmsnorm"
+    category = CAT_NORMALIZATION
+    target_optimization = "rmsnorm_affine_lowering"
+
+    def is_compatible(self, ctx):
+        return ctx.rank >= 2 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "srms")
+        D   = ctx.shape[-1]
+        eps = np.array([1e-6], dtype=np.float32)
+        g   = np.ones(D,  dtype=np.float32)
+        b   = np.zeros(D, dtype=np.float32)
+
+        sq_o = f"{p}_sq"; mn_o = f"{p}_mn"; add_o = f"{p}_add"
+        sq2_o = f"{p}_sq2"; rc_o = f"{p}_rc"; nm_o = f"{p}_nm"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Mul",        [input_name, input_name], [sq_o]),
+            helper.make_node("ReduceMean", [sq_o], [mn_o], axes=[-1], keepdims=1),
+            helper.make_node("Add",        [mn_o, f"{p}_eps"], [add_o]),
+            helper.make_node("Sqrt",       [add_o], [sq2_o]),
+            helper.make_node("Reciprocal", [sq2_o], [rc_o]),
+            helper.make_node("Mul",        [input_name, rc_o], [nm_o]),
+            helper.make_node("Mul",        [nm_o, f"{p}_g"], [f"{p}_gm"]),
+            helper.make_node("Add",        [f"{p}_gm", f"{p}_b"], [out]),
+        ]
+        inits = [numpy_helper.from_array(eps, f"{p}_eps"),
+                 numpy_helper.from_array(g,   f"{p}_g"),
+                 numpy_helper.from_array(b,   f"{p}_b")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape),
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 20. Pre-norm FFN block: LN → Linear → GELU → Linear ─────────────────
+class PreNormFFN(OTP):
+    """LayerNorm + Linear + GELU + Linear: standard transformer FFN block."""
+    name = "prenorm_ffn"
+    category = CAT_NORMALIZATION
+    target_optimization = "prenorm_ffn_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 3 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        B, S, D = ctx.shape
+        ff_dim = D * 4
+        p = self._p(node_id, "pnffn")
+        g  = np.ones(D, dtype=np.float32)
+        b  = np.zeros(D, dtype=np.float32)
+        w1 = self._make_linear_weight(D, ff_dim)
+        b1 = np.zeros(ff_dim, dtype=np.float32)
+        w2 = self._make_linear_weight(ff_dim, D)
+        b2 = np.zeros(D, dtype=np.float32)
+        sqrt2 = np.array([float(np.sqrt(2.0))], dtype=np.float32)
+        half  = np.array([0.5], dtype=np.float32)
+        one   = np.array([1.0], dtype=np.float32)
+
+        ln_o  = f"{p}_ln";  mm1_o = f"{p}_mm1"; a1_o = f"{p}_a1"
+        gd_o  = f"{p}_gd";  erf_o = f"{p}_erf"; ep1_o = f"{p}_ep1"
+        hf_o  = f"{p}_hf";  ge_o  = f"{p}_ge";  mm2_o = f"{p}_mm2"
+        out   = f"{p}_out"
+
+        nodes = [
+            helper.make_node("LayerNormalization",
+                             [input_name, f"{p}_g", f"{p}_b"], [ln_o],
+                             axis=-1, epsilon=1e-5),
+            helper.make_node("MatMul", [ln_o, f"{p}_w1"], [mm1_o]),
+            helper.make_node("Add",    [mm1_o, f"{p}_b1"], [a1_o]),
+            # GELU activation
+            helper.make_node("Div",    [a1_o, f"{p}_sqrt2"], [gd_o]),
+            helper.make_node("Erf",    [gd_o], [erf_o]),
+            helper.make_node("Add",    [erf_o, f"{p}_one"], [ep1_o]),
+            helper.make_node("Mul",    [a1_o, f"{p}_half"], [hf_o]),
+            helper.make_node("Mul",    [hf_o, ep1_o], [ge_o]),
+            helper.make_node("MatMul", [ge_o, f"{p}_w2"], [mm2_o]),
+            helper.make_node("Add",    [mm2_o, f"{p}_b2"], [out]),
+        ]
+        inits = [numpy_helper.from_array(g,     f"{p}_g"),
+                 numpy_helper.from_array(b,     f"{p}_b"),
+                 numpy_helper.from_array(w1,    f"{p}_w1"),
+                 numpy_helper.from_array(b1,    f"{p}_b1"),
+                 numpy_helper.from_array(w2,    f"{p}_w2"),
+                 numpy_helper.from_array(b2,    f"{p}_b2"),
+                 numpy_helper.from_array(sqrt2, f"{p}_sqrt2"),
+                 numpy_helper.from_array(half,  f"{p}_half"),
+                 numpy_helper.from_array(one,   f"{p}_one")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(3, [B, S, D], ctx.dtype, ctx.layout))
+
+
+# ── 21. Double LayerNorm (sandwiched normalization) ───────────────────────
+class DoubleLayerNorm(OTP):
+    """LN → transform → LN: used in some ViT/Swin variants. Tests LN-LN fusion."""
+    name = "double_layernorm"
+    category = CAT_NORMALIZATION
+    target_optimization = "double_layernorm_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank >= 2 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        p = self._p(node_id, "dln")
+        D = ctx.shape[-1]
+        g1 = np.ones(D,  dtype=np.float32)
+        b1 = np.zeros(D, dtype=np.float32)
+        g2 = np.ones(D,  dtype=np.float32)
+        b2 = np.zeros(D, dtype=np.float32)
+        scale = np.full(list(ctx.shape), 1.1, dtype=np.float32)
+
+        ln1_o = f"{p}_ln1"; sc_o = f"{p}_sc"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("LayerNormalization",
+                             [input_name, f"{p}_g1", f"{p}_b1"], [ln1_o],
+                             axis=-1, epsilon=1e-5),
+            helper.make_node("Mul", [ln1_o, f"{p}_scale"], [sc_o]),
+            helper.make_node("LayerNormalization",
+                             [sc_o, f"{p}_g2", f"{p}_b2"], [out],
+                             axis=-1, epsilon=1e-5),
+        ]
+        inits = [numpy_helper.from_array(g1,    f"{p}_g1"),
+                 numpy_helper.from_array(b1,    f"{p}_b1"),
+                 numpy_helper.from_array(g2,    f"{p}_g2"),
+                 numpy_helper.from_array(b2,    f"{p}_b2"),
+                 numpy_helper.from_array(scale, f"{p}_scale")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape),
+                                                 ctx.dtype, ctx.layout))
+
+
+# ── 22. Conditional RMSNorm (scale from context) ──────────────────────────
+class CRMSNorm(OTP):
+    """RMSNorm + element-wise multiply by learned scale: conditional norm."""
+    name = "crms_norm"
+    category = CAT_NORMALIZATION
+    target_optimization = "conditional_rmsnorm_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank >= 2 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        D = ctx.shape[-1]
+        p = self._p(node_id, "crms")
+        g  = np.ones(D,  dtype=np.float32)
+        g2 = (np.random.default_rng(node_id).standard_normal(D) * 0.1 + 1.0).astype(np.float32)
+        eps = np.array([1e-6], dtype=np.float32)
+
+        sq_o=f"{p}_sq"; ms_o=f"{p}_ms"; add_o=f"{p}_add"
+        rt_o=f"{p}_rt"; n_o=f"{p}_n"; sc_o=f"{p}_sc"; out=f"{p}_out"
+        # opset 17 keeps ReduceMean `axes` as an ATTRIBUTE (axes-as-input
+        # was added only in opset 18).
+        nodes = [
+            helper.make_node("Mul",       [input_name, input_name], [sq_o]),
+            helper.make_node("ReduceMean",[sq_o], [ms_o], axes=[-1], keepdims=1),
+            helper.make_node("Add",       [ms_o, f"{p}_eps"], [add_o]),
+            helper.make_node("Sqrt",      [add_o], [rt_o]),
+            helper.make_node("Div",       [input_name, rt_o], [n_o]),
+            helper.make_node("Mul",       [n_o, f"{p}_g"], [sc_o]),
+            helper.make_node("Mul",       [sc_o, f"{p}_g2"], [out]),
+        ]
+        inits = [numpy_helper.from_array(g,    f"{p}_g"),
+                 numpy_helper.from_array(g2,   f"{p}_g2"),
+                 numpy_helper.from_array(eps,  f"{p}_eps")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape), ctx.dtype, ctx.layout))
+
+
+# ── 23. LayerNorm → Gate ────────────────────────────────────────────────────
+class LayerNormGate(OTP):
+    """LayerNorm → Sigmoid gate → Mul: gated layer norm pattern."""
+    name = "layernorm_gate"
+    category = CAT_NORMALIZATION
+    target_optimization = "layernorm_gate_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank >= 2 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        D = ctx.shape[-1]
+        p = self._p(node_id, "lng")
+        g = np.ones(D, dtype=np.float32)
+        b = np.zeros(D, dtype=np.float32)
+
+        ln_o=f"{p}_ln"; sig_o=f"{p}_sig"; out=f"{p}_out"
+        nodes = [
+            helper.make_node("LayerNormalization",
+                             [input_name, f"{p}_g", f"{p}_b"], [ln_o],
+                             axis=-1, epsilon=1e-5),
+            helper.make_node("Sigmoid", [ln_o], [sig_o]),
+            helper.make_node("Mul",     [ln_o, sig_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(g, f"{p}_g"),
+                 numpy_helper.from_array(b, f"{p}_b")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(ctx.rank, list(ctx.shape), ctx.dtype, ctx.layout))
+
+
+# ── 24. GroupNorm + SiLU ────────────────────────────────────────────────────
+class GroupNormSiLU(OTP):
+    """Manual group norm + SiLU: stable diffusion U-Net pattern."""
+    name = "groupnorm_silu"
+    category = CAT_NORMALIZATION
+    target_optimization = "groupnorm_silu_fusion"
+
+    def is_compatible(self, ctx):
+        if ctx.rank != 4 or ctx.dtype != "float32":
+            return False
+        C = ctx.shape[1]
+        return C >= 8 and C % 8 == 0
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        G = min(8, C)
+        p = self._p(node_id, "gns")
+        # Channel affine broadcast to [N,C,H,W] requires shape (1,C,1,1).
+        g = np.ones((1, C, 1, 1), dtype=np.float32)
+        b = np.zeros((1, C, 1, 1), dtype=np.float32)
+        rs1 = np.array([N, G, C//G, H, W],  dtype=np.int64)
+        rs2 = np.array([N, C, H, W],         dtype=np.int64)
+        eps  = np.array([1e-5], dtype=np.float32)
+
+        r1_o=f"{p}_r1"; mu_o=f"{p}_mu"; sq_o=f"{p}_sq"
+        ms_o=f"{p}_ms"; add_o=f"{p}_add"; rt_o=f"{p}_rt"
+        sub_o=f"{p}_sub"; div_o=f"{p}_div"; r2_o=f"{p}_r2"
+        sc_o=f"{p}_sc"; sig_o=f"{p}_sig"; out=f"{p}_out"
+        # opset 17 ReduceMean takes `axes` as an ATTRIBUTE, not an input.
+        nodes = [
+            helper.make_node("Reshape",    [input_name, f"{p}_rs1"], [r1_o]),
+            helper.make_node("ReduceMean", [r1_o], [mu_o], axes=[2, 3, 4], keepdims=1),
+            helper.make_node("Sub",        [r1_o, mu_o], [sub_o]),
+            helper.make_node("Mul",        [sub_o, sub_o], [sq_o]),
+            helper.make_node("ReduceMean", [sq_o], [ms_o], axes=[2, 3, 4], keepdims=1),
+            helper.make_node("Add",        [ms_o, f"{p}_eps"], [add_o]),
+            helper.make_node("Sqrt",       [add_o], [rt_o]),
+            helper.make_node("Div",        [sub_o, rt_o], [div_o]),
+            helper.make_node("Reshape",    [div_o, f"{p}_rs2"], [r2_o]),
+            helper.make_node("Mul",        [r2_o, f"{p}_g"], [sc_o]),
+            helper.make_node("Add",        [sc_o, f"{p}_b"], [f"{p}_gn"]),
+            # SiLU: x * sigmoid(x)
+            helper.make_node("Sigmoid",    [f"{p}_gn"], [sig_o]),
+            helper.make_node("Mul",        [f"{p}_gn", sig_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(g,    f"{p}_g"),
+                 numpy_helper.from_array(b,    f"{p}_b"),
+                 numpy_helper.from_array(rs1,  f"{p}_rs1"),
+                 numpy_helper.from_array(rs2,  f"{p}_rs2"),
+                 numpy_helper.from_array(eps,  f"{p}_eps")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N,C,H,W], ctx.dtype, ctx.layout))
+
+
 ALL_NORMALIZATION_PATTERNS = [
     ManualLayerNorm(),
     LayerNormReLU(),
@@ -671,7 +930,6 @@ ALL_NORMALIZATION_PATTERNS = [
     StableSoftmax(),
     SpatialReduceMean(),
     LayerNormDropout(),
-    # New patterns
     ManualGroupNorm(),
     L2Normalize(),
     PowerNorm(),
@@ -680,4 +938,10 @@ ALL_NORMALIZATION_PATTERNS = [
     VarianceWhitening(),
     InstanceNorm1D(),
     LayerNormTemperature(),
+    ScaledRMSNorm(),
+    PreNormFFN(),
+    DoubleLayerNorm(),
+    CRMSNorm(),
+    LayerNormGate(),
+    GroupNormSiLU(),
 ]

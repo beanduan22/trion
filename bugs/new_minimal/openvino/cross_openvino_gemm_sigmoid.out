@@ -1,4 +1,0 @@
-ORT:      [1.        0.9999969 0.9999851 0.985062 ]
-OpenVINO: [1.         0.9999969  0.99998575 0.9843617 ]
-max_abs=0.0250
-BUG REPRODUCED: OpenVINO gemm_sigmoid (max_abs=0.0250)

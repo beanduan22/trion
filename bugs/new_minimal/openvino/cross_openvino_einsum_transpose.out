@@ -1,4 +1,0 @@
-ORT:      [-55.143017 -45.517612  19.589365  28.159199]
-OpenVINO: [-54.9281   -45.43213   19.549316  28.169434]
-max_abs=0.5448
-BUG REPRODUCED: OpenVINO einsum_transpose (max_abs=0.5448)

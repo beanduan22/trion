@@ -1,9 +1,0 @@
-=== github_inductor_009: Transpose+ReduceSum fusion bug ===
-
-Input [4,64,128] row_sum*scale→transpose
-eager vs torch.compile: max_diff=7.63e-06  ok
-Attention grad pattern [8,256,256] scale→transpose
-eager vs torch.compile: max_diff=1.53e-05  BUG
-
-PASS=False
-BUG REPRODUCED: Inductor transpose+reduce fusion reinterprets storage strides

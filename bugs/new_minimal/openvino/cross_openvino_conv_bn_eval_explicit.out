@@ -1,4 +1,0 @@
-ORT:      [-20.431755   15.919664   21.226522    6.4293294]
-OpenVINO: [-20.5      15.9375   21.25      6.40625]
-max_abs=0.7198
-BUG REPRODUCED: OpenVINO conv_bn_eval_explicit (max_abs=0.7198)

@@ -1,4 +1,0 @@
-ORT:      [ 35.098927 -45.611603 -28.941078  26.396048]
-OpenVINO: [ 35.05108  -45.62861  -28.852718  26.34306 ]
-max_abs=0.1404
-BUG REPRODUCED: OpenVINO redundant_reshape (max_abs=0.1404)

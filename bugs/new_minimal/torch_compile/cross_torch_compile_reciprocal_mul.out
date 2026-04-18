@@ -1,7 +1,0 @@
-ORT: [-588.35785  556.4601  -443.40463 -903.6573 ]  (correct)
-eager onnx2torch: [-588.35785  556.45996 -443.40475 -903.65735]  (correct)
-BUG REPRODUCED: torch.compile crashes on reciprocal_mul
-  InternalTorchDynamoError: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')
-
-from user code:
-   File "/home/binduan/mini

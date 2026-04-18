@@ -1,7 +1,0 @@
-ORT: shape=(1, 4, 256)  first4=[ 0.46789968 -0.10940707 -0.2925325   0.13100025]
-eager onnx2torch: shape=(1, 4, 256)  first4=[ 0.46789968 -0.10940707 -0.2925325   0.13100025]
-BUG REPRODUCED: torch.compile crashes while eager succeeds
-  InternalTorchDynamoError: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')
-
-from user code:
-   File "/home/binduan/miniconda3/lib/python3.13/site-packages/onnx

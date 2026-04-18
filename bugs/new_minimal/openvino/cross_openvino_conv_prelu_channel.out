@@ -1,4 +1,0 @@
-ORT:      [-1.3507019 18.11512   24.266878   7.113834 ]
-OpenVINO: [-1.3505647 18.040651  24.258022   7.0619965]
-max_abs=0.1462
-BUG REPRODUCED: OpenVINO conv_prelu_channel (max_abs=0.1462)

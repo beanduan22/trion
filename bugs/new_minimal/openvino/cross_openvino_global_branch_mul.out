@@ -1,4 +1,0 @@
-ORT:      [-204.5154   -159.69688   -88.1904    -26.530653]
-OpenVINO: [-204.      -158.625    -87.90625  -26.15332]
-max_abs=5.3273
-BUG REPRODUCED: OpenVINO global_branch_mul (max_abs=5.3273)

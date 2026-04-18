@@ -2,6 +2,7 @@
 numpy>=1.24
 onnx>=1.14
 onnxruntime>=1.16         # reference + ORT target backend
+coverage>=7.0             # Python line+branch coverage tracking
 
 # PyTorch eager reference (recommended)
 torch>=2.0

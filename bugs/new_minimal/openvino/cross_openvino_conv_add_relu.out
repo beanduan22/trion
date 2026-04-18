@@ -1,4 +1,0 @@
-ORT:      [ 0.        18.485115  24.636873   7.4838285]
-OpenVINO: [ 0.       18.410646 24.628017  7.431991]
-max_abs=0.1462
-BUG REPRODUCED: OpenVINO conv_add_relu (max_abs=0.1462)

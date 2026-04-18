@@ -79,15 +79,26 @@ class PatternAwareSearchSpace:
 
     # ── Sampling helpers ──────────────────────────────────────────────────────
 
-    def _softmax_sample(self, logits: dict[str, float], temperature: float = 2.0) -> str:
-        """Sample from a softmax distribution over logits.
+    def _softmax_sample(self, logits: dict[str, float], temperature: float = 1.0) -> str:
+        """Sample from a softmax distribution over UCB utility logits.
 
-        temperature > 1 flattens the distribution → broader pattern coverage.
-        temperature = 1 is standard softmax (concentrates on high-utility patterns).
+        UCB values cluster near λ (≈1.0) so raw logits have tiny spread.
+        Z-score normalise first so relative UCB differences drive selection,
+        then apply temperature for residual exploration control.
+        temperature < 1 concentrates on high-utility items;
+        temperature = 1 is standard softmax over z-scored utilities.
         """
         keys = list(logits.keys())
+        if len(keys) == 1:
+            return keys[0]
         vals = np.array([logits[k] for k in keys], dtype=float)
-        vals = (vals - vals.max()) / max(temperature, 1e-6)   # stability + temperature
+        std = vals.std()
+        if std > 1e-9:
+            vals = (vals - vals.mean()) / std   # z-score: full spread regardless of scale
+        else:
+            vals = vals - vals.mean()           # all equal → uniform after softmax
+        vals = vals / max(temperature, 1e-6)
+        vals -= vals.max()                      # numerical stability
         probs = np.exp(vals)
         probs /= probs.sum()
         return keys[self.rng.choice(len(keys), p=probs)]
@@ -123,17 +134,26 @@ class PatternAwareSearchSpace:
             if not adm_cats:
                 break
 
-            # ── 1. Sample category ────────────────────────────────────────
-            cat_logits = {c: self._cat_logits[c] for c in adm_cats}
-            cat = self._softmax_sample(cat_logits)
+            strategy = getattr(cfg, "sampling_strategy", "ucb")
 
-            # ── 2. Sample pattern ─────────────────────────────────────────
-            adm_pats = self._admissible_patterns(cat, ctx)
-            if not adm_pats:
-                continue
-            pat_logits = {p.name: self._pat_logits[cat][p.name] for p in adm_pats}
-            pat_name = self._softmax_sample(pat_logits)
-            pat = next(p for p in adm_pats if p.name == pat_name)
+            if strategy == "uniform":
+                # ── Uniform random category + pattern (broad coverage) ──
+                cat = adm_cats[self.rng.integers(0, len(adm_cats))]
+                adm_pats = self._admissible_patterns(cat, ctx)
+                if not adm_pats:
+                    continue
+                pat = adm_pats[self.rng.integers(0, len(adm_pats))]
+            else:
+                # ── UCB-driven softmax sampling ──
+                cat_logits = {c: self._cat_logits[c] for c in adm_cats}
+                cat = self._softmax_sample(cat_logits)
+
+                adm_pats = self._admissible_patterns(cat, ctx)
+                if not adm_pats:
+                    continue
+                pat_logits = {p.name: self._pat_logits[cat][p.name] for p in adm_pats}
+                pat_name = self._softmax_sample(pat_logits)
+                pat = next(p for p in adm_pats if p.name == pat_name)
 
             # ── 3. Instantiate ────────────────────────────────────────────
             instance: Optional[PatternInstance] = None
@@ -234,7 +254,10 @@ class PatternAwareSearchSpace:
             onnx_dtype = dtype_map.get(input_dtype, TensorProto.FLOAT)
 
             input_vi  = helper.make_tensor_value_info(input_name,  onnx_dtype, input_shape)
-            output_vi = helper.make_tensor_value_info(output_name, TensorProto.FLOAT, output_shape)
+            # Output dtype must match the dtype that flows out of the final
+            # pattern, not be hardcoded to FLOAT — otherwise non-fp32 graphs
+            # produce ValueInfo type mismatches that backends report as bugs.
+            output_vi = helper.make_tensor_value_info(output_name, onnx_dtype, output_shape)
 
             graph = helper.make_graph(
                 nodes,

@@ -85,21 +85,20 @@ class OTP(ABC):
         in_c: int,
         k: int,
     ) -> np.ndarray:
-        """Fixed kaiming-uniform initialisation — deterministic, no rng."""
+        """Deterministic full-rank Kaiming-normal initialisation."""
+        seed = int((out_c * 131071 + in_c * 511 + k) % (2 ** 31))
+        rng_local = np.random.default_rng(seed)
         fan_in = in_c * k * k
-        val = np.sqrt(2.0 / fan_in)
-        w = np.full((out_c, in_c, k, k), val, dtype=np.float32)
-        # Alternate sign across output channels so the kernel is non-degenerate.
-        w[1::2] = -val
-        return w
+        scale = np.float32(np.sqrt(2.0 / fan_in))
+        return (rng_local.standard_normal((out_c, in_c, k, k)) * scale).astype(np.float32)
 
     @staticmethod
     def _make_linear_weight(out_f: int, in_f: int) -> np.ndarray:
-        """Fixed Xavier-uniform initialisation — deterministic, no rng."""
-        val = np.sqrt(2.0 / (in_f + out_f))
-        w = np.full((out_f, in_f), val, dtype=np.float32)
-        w[1::2] = -val
-        return w
+        """Deterministic full-rank Xavier-normal initialisation."""
+        seed = int((out_f * 65537 + in_f) % (2 ** 31))
+        rng_local = np.random.default_rng(seed)
+        scale = np.float32(np.sqrt(2.0 / (in_f + out_f)))
+        return (rng_local.standard_normal((out_f, in_f)) * scale).astype(np.float32)
 
     @staticmethod
     def _make_bias(size: int, val: float = 0.0) -> np.ndarray:

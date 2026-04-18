@@ -1,4 +1,0 @@
-ORT:      [16.35682   0.        0.       14.601542]
-OpenVINO: [16.33356   0.        0.       14.573442]
-max_abs=0.1941
-BUG REPRODUCED: OpenVINO matmul_add_biasgelu_bcast (max_abs=0.1941)

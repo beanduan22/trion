@@ -186,8 +186,12 @@ def _gen_op(op: str, node, ins: list[Optional[str]],
     if op == "Unsqueeze":
         axes = _attr(node, "axes", None)
         if axes is None:
+            # ONNX opset 13+: axes provided as input tensor; handle multiple axes
             axes_val = i(1)
-            return f"(lambda _x, _ax: jnp.expand_dims(_x, axis=int(_ax.flat[0])))({i(0)}, {axes_val})"
+            return (f"(lambda _x, _axes: "
+                    f"__import__('functools').reduce(lambda a, ax: jnp.expand_dims(a, axis=int(ax)), "
+                    f"sorted(int(v) for v in _axes.flat), _x))"
+                    f"({i(0)}, {axes_val})")
         x = i(0)
         for ax in sorted(int(a) for a in axes):
             x = f"jnp.expand_dims({x}, axis={ax})"
@@ -623,6 +627,48 @@ def _gen_op(op: str, node, ins: list[Optional[str]],
     if op == "Identity":
         return i(0)
 
+    # ── Math (extended) ───────────────────────────────────────────────────────
+    if op == "Acosh":
+        return f"jnp.arccosh({i(0)})"
+    if op == "Atanh":
+        return f"jnp.arctanh({i(0)})"
+
+    # ── Activations (extended) ────────────────────────────────────────────────
+    if op == "ThresholdedRelu":
+        theta = float(_attr(node, "alpha", 1.0))
+        return f"jnp.where({i(0)} > np.float32({theta!r}), {i(0)}, np.float32(0.0))"
+    if op == "Shrink":
+        lambd = float(_attr(node, "lambd", 0.5))
+        bias  = float(_attr(node, "bias",  0.0))
+        x = i(0)
+        return (f"jnp.where({x} < -np.float32({lambd!r}), {x} + np.float32({bias!r}), "
+                f"jnp.where({x} > np.float32({lambd!r}), {x} - np.float32({bias!r}), "
+                f"np.float32(0.0)))")
+    if op == "LogSoftmax":
+        axis = int(_attr(node, "axis", -1))
+        x = i(0)
+        return (f"(lambda _x: _x - jnp.log(jnp.sum(jnp.exp(_x - jnp.max(_x, axis={axis}, keepdims=True)), "
+                f"axis={axis}, keepdims=True)) - jnp.max(_x, axis={axis}, keepdims=True))({x})")
+
+    # ── Tensor construction (extended) ────────────────────────────────────────
+    if op == "EyeLike":
+        dtype_attr = _attr(node, "k", None)  # Note: "k" is the diagonal offset attr
+        k = int(_attr(node, "k", 0))
+        x = i(0)
+        return (f"(lambda _x: jnp.array(np.eye(int(_x.shape[0]), int(_x.shape[1]), k={k}, dtype=np.float32)))"
+                f"({x})")
+    if op == "Trilu":
+        k_v = i(1)
+        upper = int(_attr(node, "upper", 1))
+        x = i(0)
+        k_expr = f"int({k_v}.flat[0])" if k_v else "0"
+        if upper:
+            return (f"(lambda _x, _k: jnp.where(np.triu(np.ones((_x.shape[-2], _x.shape[-1]), dtype=bool), k=_k), "
+                    f"_x, jnp.zeros_like(_x)))({x}, {k_expr})")
+        else:
+            return (f"(lambda _x, _k: jnp.where(np.tril(np.ones((_x.shape[-2], _x.shape[-1]), dtype=bool), k=_k), "
+                    f"_x, jnp.zeros_like(_x)))({x}, {k_expr})")
+
     if op in ("Split",):
         raise _NotSupported(op)  # multi-output; handled separately below
 
@@ -720,6 +766,24 @@ def _build_jax_body(model: onnx.ModelProto) -> tuple[list[str], list[str], bool]
     final_var = var_map.get(model.graph.output[0].name, _vname(model.graph.output[0].name))
     fn_body.append(f"return jnp.asarray({final_var}, dtype=jnp.float32)")
     return weight_lines, fn_body, True
+
+
+def _build_tf_body(model: onnx.ModelProto) -> tuple[list[str], list[str], bool]:
+    """
+    Like _build_jax_body but emits tensorflow.experimental.numpy (tnp) code.
+    Falls back (ok=False) if the model uses lax-specific ops (Conv/Pool via lax).
+    """
+    weight_lines, fn_body, ok = _build_jax_body(model)
+    if not ok:
+        return weight_lines, fn_body, False
+
+    # Reject if any generated line requires JAX-only lax primitives
+    if any("lax." in line for line in fn_body):
+        return weight_lines, fn_body, False
+
+    # Swap jnp.→tnp. in function body (tnp mirrors numpy API)
+    fn_body_tf = [line.replace("jnp.", "tnp.") for line in fn_body]
+    return weight_lines, fn_body_tf, True
 
 
 # ── Repro generators ──────────────────────────────────────────────────────────
@@ -928,6 +992,195 @@ if __name__ == "__main__":
 '''
 
 
+def make_tf_repro(uid: int, model: onnx.ModelProto, inp: np.ndarray,
+                  patterns: list, inp_name: str,
+                  weight_lines: list[str], fn_body: list[str],
+                  expected: Optional[np.ndarray] = None) -> str:
+    fn_src  = "\n".join(f"    {l}" for l in fn_body)
+    weights = "\n".join(weight_lines)
+    inp_line = _inp_line(inp_name, inp)
+
+    if expected is not None:
+        exp_arr  = np.ascontiguousarray(expected.astype(np.float32))
+        exp_line = (f'EXPECTED = np.frombuffer(bytes.fromhex("{exp_arr.tobytes().hex()}"), '
+                    f'dtype=np.float32)  # pytorch_eager reference')
+        bug_desc = "tf.function(jit_compile=True) produces wrong output vs PyTorch eager reference"
+        comparison = '''\
+    x_tf  = tf.constant(INPUT)
+    out   = np.array(model_jit(x_tf), dtype=np.float32).ravel()
+
+    diff  = float(np.linalg.norm(EXPECTED.astype(np.float64) - out.astype(np.float64))
+                  / (np.linalg.norm(EXPECTED.astype(np.float64)) + 1e-8))
+    print(f"expected (pytorch_eager)        : {EXPECTED[:6]}")
+    print(f"actual   (tf jit_compile=True)  : {out[:6]}")
+    print(f"rel L2 : {diff:.4e}")'''
+    else:
+        exp_line = ""
+        bug_desc = "tf.function(jit_compile=True) diverges from tf.function (no JIT)"
+        comparison = '''\
+    x_tf  = tf.constant(INPUT)
+    ref   = np.array(model_tf(x_tf),  dtype=np.float32).ravel()
+    out   = np.array(model_jit(x_tf), dtype=np.float32).ravel()
+
+    diff  = float(np.linalg.norm(ref.astype(np.float64) - out.astype(np.float64))
+                  / (np.linalg.norm(ref.astype(np.float64)) + 1e-8))
+    print(f"expected (tf.function no-JIT)   : {ref[:6]}")
+    print(f"actual   (tf.function jit=True) : {out[:6]}")
+    print(f"rel L2 : {diff:.4e}")'''
+
+    exp_section = f"\n{exp_line}\n" if exp_line else ""
+    return f'''\
+#!/usr/bin/env python3
+"""
+Bug #{uid:04d}: {bug_desc}.
+
+Patterns    : {patterns}
+Dependencies: numpy tensorflow
+Run         : python unique_{uid:04d}.py  →  exit 0 = BUG REPRODUCED
+"""
+import os, sys
+import numpy as np
+import tensorflow as tf
+import tensorflow.experimental.numpy as tnp
+tnp.experimental_enable_numpy_behavior()
+
+# ── Model weights ─────────────────────────────────────────────────────────────
+{weights}
+
+# ── Triggering input ─────────────────────────────────────────────────────────
+{inp_line}
+{exp_section}
+
+# ── Model computation (translated from ONNX to TF numpy ops) ─────────────────
+def model(x):
+{fn_src}
+
+
+model_jit = tf.function(model, jit_compile=True)
+model_tf  = tf.function(model, jit_compile=False)
+
+
+if __name__ == "__main__":
+{comparison}
+    if diff > 0.001:
+        print("BUG REPRODUCED")
+        sys.exit(0)
+    sys.exit(1)
+'''
+
+
+def make_openvino_repro(uid: int, model_name: str, inp: np.ndarray,
+                         patterns: list, inp_name: str) -> str:
+    return f'''\
+#!/usr/bin/env python3
+"""
+Bug #{uid:04d}: OpenVINO graph optimizer produces wrong output.
+
+Patterns    : {patterns}
+Dependencies: numpy onnx openvino
+Run         : python unique_{uid:04d}.py  →  exit 0 = BUG REPRODUCED
+"""
+import os, sys, tempfile
+import numpy as np
+import onnx
+from openvino import Core, convert_model
+
+MODEL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "{model_name}")
+{_inp_line(inp_name, inp)}
+
+
+def _load_ov(config: dict):
+    """Load model into OpenVINO with the given compilation config."""
+    with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as f:
+        f.write(onnx.load(MODEL).SerializeToString())
+        path = f.name
+    import os as _os
+    try:
+        ov_model = convert_model(path)
+    finally:
+        _os.unlink(path)
+    core = Core()
+    compiled = core.compile_model(ov_model, "CPU", config)
+    req = compiled.create_infer_request()
+    req.infer({{compiled.input(0): INPUT}})
+    return req.get_output_tensor(compiled.output(0).index).data.astype(np.float32).ravel()
+
+
+def reference():
+    """Minimal OV config — f32, single-thread, latency mode."""
+    return _load_ov({{
+        "INFERENCE_PRECISION_HINT": "f32",
+        "PERFORMANCE_HINT": "LATENCY",
+        "INFERENCE_NUM_THREADS": "1",
+    }})
+
+
+def target():
+    """Full OV optimizer — f32 with default fusion/layout passes."""
+    return _load_ov({{"INFERENCE_PRECISION_HINT": "f32"}})
+
+
+if __name__ == "__main__":
+    ref = reference()
+    out = target()
+    diff = float(np.linalg.norm(ref.astype(np.float64) - out.astype(np.float64))
+                 / (np.linalg.norm(ref.astype(np.float64)) + 1e-8))
+    print(f"expected (OV minimal-config) : {{ref[:6]}}")
+    print(f"actual   (OV full-optimize)  : {{out[:6]}}")
+    print(f"rel L2 : {{diff:.4e}}")
+    if diff > 0.001:
+        print("BUG REPRODUCED")
+        sys.exit(0)
+    sys.exit(1)
+'''
+
+
+def make_torchscript_repro(uid: int, model_name: str, inp: np.ndarray,
+                            patterns: list, inp_name: str) -> str:
+    return f'''\
+#!/usr/bin/env python3
+"""
+Bug #{uid:04d}: torch.jit.trace (TorchScript) produces wrong output vs eager.
+
+Patterns    : {patterns}
+Dependencies: numpy onnx torch onnx2torch
+Run         : python unique_{uid:04d}.py  →  exit 0 = BUG REPRODUCED
+"""
+import os, sys
+import numpy as np
+import onnx, onnx2torch
+import torch
+
+MODEL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "{model_name}")
+{_inp_line(inp_name, inp)}
+
+{_TC_PATCH}
+
+if __name__ == "__main__":
+    m = onnx2torch.convert(onnx.load(MODEL)).eval()
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    m = m.to(device)
+    x = torch.from_numpy(INPUT).to(device)
+
+    with torch.no_grad():
+        ref = m(x).cpu().numpy().ravel()
+
+    traced = torch.jit.trace(m, (x,))
+    with torch.no_grad():
+        out = traced(x).cpu().numpy().ravel()
+
+    diff = float(np.linalg.norm(ref.astype(np.float64) - out.astype(np.float64))
+                 / (np.linalg.norm(ref.astype(np.float64)) + 1e-8))
+    print(f"expected (eager)       : {{ref[:6]}}")
+    print(f"actual   (torchscript) : {{out[:6]}}")
+    print(f"rel L2 : {{diff:.4e}}")
+    if diff > 0.001:
+        print("BUG REPRODUCED")
+        sys.exit(0)
+    sys.exit(1)
+'''
+
+
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -979,14 +1232,17 @@ def main():
 
         is_jax = "xla" in backends or "tvm" in backends
         is_tc  = "torch_compile" in backends and not is_jax
+        is_ts  = "torchscript" in backends and not is_jax and not is_tc
+        is_tf  = "tensorflow" in backends and not is_jax and not is_tc and not is_ts
+        is_ov  = "openvino" in backends and not is_jax and not is_tc and not is_ts and not is_tf
 
         model_name = f"unique_{uid:04d}.onnx"
+        delta  = report.get("delta_opt", {})
 
         if is_jax:
             weight_lines, fn_body, ok = _build_jax_body(model)
             if ok:
                 # Determine if this is a true JIT bug or impl-diff bug
-                delta = report.get("delta_opt", {})
                 xla_delta = max(float(delta.get("xla", 0)), float(delta.get("tvm", 0)))
                 if xla_delta > 0.001:
                     # True JIT compiler bug: jax.jit vs jax.disable_jit
@@ -1008,6 +1264,33 @@ def main():
             shutil.copy2(str(src_onnx), out / model_name)
             src  = make_tc_repro(uid, model_name, inp, patterns, inp_name)
             note = "torch-compile"
+        elif is_ts:
+            shutil.copy2(str(src_onnx), out / model_name)
+            src  = make_torchscript_repro(uid, model_name, inp, patterns, inp_name)
+            note = "torchscript"
+        elif is_tf:
+            weight_lines, fn_body, ok = _build_tf_body(model)
+            if ok:
+                tf_delta = float(delta.get("tensorflow", 0))
+                if tf_delta > 0.001:
+                    # True TF JIT bug: jit_compile=True vs jit_compile=False
+                    expected_arr = None
+                else:
+                    # Impl-diff: TF vs pytorch_eager
+                    ref_flat = report.get("expected_outputs", {}).get("__reference__", [])
+                    expected_arr = np.asarray(ref_flat, dtype=np.float32).ravel() if ref_flat else None
+                src  = make_tf_repro(uid, model, inp, patterns,
+                                     inp_name, weight_lines, fn_body,
+                                     expected=expected_arr)
+                note = "tensorflow"
+            else:
+                ops = sorted({n.op_type for n in model.graph.node})
+                print(f"unique_{uid:04d}: [SKIP unsupported-ops for tf]  ops={ops}")
+                continue
+        elif is_ov:
+            shutil.copy2(str(src_onnx), out / model_name)
+            src  = make_openvino_repro(uid, model_name, inp, patterns, inp_name)
+            note = "openvino"
         else:
             shutil.copy2(str(src_onnx), out / model_name)
             src  = make_ort_repro(uid, model_name, inp, patterns, inp_name)

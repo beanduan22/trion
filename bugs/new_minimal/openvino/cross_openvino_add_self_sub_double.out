@@ -1,4 +1,0 @@
-ORT:      [ 33.65159  -46.478348 -28.172342  27.534014]
-OpenVINO: [ 33.55266  -46.616745 -28.106264  27.512966]
-max_abs=0.1797
-BUG REPRODUCED: OpenVINO add_self_sub_double (max_abs=0.1797)

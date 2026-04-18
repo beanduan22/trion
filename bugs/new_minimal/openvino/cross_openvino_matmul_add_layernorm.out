@@ -1,4 +1,0 @@
-ORT:      [-0.8029778  -0.36353838  0.3149736   0.22312963]
-OpenVINO: [-0.8031457  -0.36591285  0.31051213  0.22435154]
-max_abs=0.0086
-BUG REPRODUCED: OpenVINO matmul_add_layernorm (max_abs=0.0086)

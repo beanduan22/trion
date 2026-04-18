@@ -1,4 +1,0 @@
-ORT:      [20.241344 -6.4461   37.495216  6.697869]
-OpenVINO: [20.209951 -6.39095  37.619843  6.732247]
-max_abs=0.2065
-BUG REPRODUCED: OpenVINO slice_full_range (max_abs=0.2065)

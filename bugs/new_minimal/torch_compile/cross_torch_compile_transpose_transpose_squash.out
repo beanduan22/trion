@@ -1,6 +1,0 @@
-ORT: [ -3.3332217   3.0382774   7.048198  -13.206124 ]  (correct)
-eager: [ -3.3332222   3.0382776   7.0481997 -13.206127 ]  (correct)
-BUG REPRODUCED: torch.compile crashes on transpose_transpose_squash: InternalTorchDynamoError: TypeError: torch.Size() takes an iterable of 'int' (item 0 is 'FakeTensor')
-
-from user code:
-   File

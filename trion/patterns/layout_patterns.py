@@ -48,7 +48,12 @@ class FlattenDenseUnflatten(OTP):
     target_optimization = "layout_canonicalization"
 
     def is_compatible(self, ctx):
-        return ctx.rank == 4 and ctx.dtype == "float32"
+        # Cap C*H*W to keep the square weight matrix under ~8 MB (float32).
+        # Without this we build a [feat, feat] weight that OOMs for feat > ~1500.
+        if ctx.rank != 4 or ctx.dtype != "float32":
+            return False
+        _, C, H, W = ctx.shape
+        return C * H * W <= 2048
 
     def instantiate(self, input_name, ctx, rng, node_id):
         N, C, H, W = ctx.shape
@@ -134,7 +139,12 @@ class FlattenUnsqueezeConcat(OTP):
     target_optimization = "shape_concat_canonicalization"
 
     def is_compatible(self, ctx):
-        return ctx.rank == 4 and ctx.dtype == "float32"
+        if ctx.rank != 4 or ctx.dtype != "float32":
+            return False
+        # Cap C*H*W so downstream attention patterns don't try to build
+        # a [flat_dim, flat_dim] weight matrix that blows up max_model_bytes.
+        _, C, H, W = ctx.shape
+        return C * H * W <= 2048
 
     def instantiate(self, input_name, ctx, rng, node_id):
         N, C, H, W = ctx.shape
@@ -466,7 +476,7 @@ class ReshapeBatchedMatMul(OTP):
         K = int(rng.choice([64, 128, 256]))
         p = self._p(node_id, "rbmm")
 
-        w = self._make_linear_weight(K, feat)
+        w = self._make_linear_weight(feat, K)
         b = np.zeros(K, dtype=np.float32)
         s2d = np.array([N, feat], dtype=np.int64)
 
@@ -605,9 +615,9 @@ class GatherReshape(OTP):
         embed = int(rng.choice([32, 64, 128]))
         p = self._p(node_id, "gr")
 
-        # Use first col of float input as integer indices (cast)
-        emb_table = np.full((vocab, embed), 0.02, dtype=np.float32)
-        indices = np.zeros(N, dtype=np.int64)
+        # Deterministic random embedding table; varied indices
+        emb_table = (np.random.default_rng(node_id).standard_normal((vocab, embed)) * 0.02).astype(np.float32)
+        indices = (np.arange(N, dtype=np.int64) * 7 + 3) % vocab   # varied, deterministic
         out_shape = np.array([N, embed], dtype=np.int64)
 
         cast_o = f"{p}_cast"; gath_o = f"{p}_gath"; out = f"{p}_out"
@@ -699,6 +709,243 @@ class CeilModeAvgPoolConv(OTP):
                                                  ctx.dtype, ctx.layout))
 
 
+# ── 21. Transpose → MatMul → Transpose ───────────────────────────────────
+class TransposeMatMulTranspose(OTP):
+    """Transpose inputs, MatMul, then transpose output.
+    Common in batched attention where layout permutation triggers rewriting."""
+    name = "transpose_matmul_transpose"
+    category = CAT_LAYOUT
+    target_optimization = "transpose_matmul_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 3 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        B, S, D = ctx.shape
+        p = self._p(node_id, "tmmt")
+        w = self._make_linear_weight(D, D)
+
+        tr1_o = f"{p}_tr1"; mm_o = f"{p}_mm"; out = f"{p}_out"
+        nodes = [
+            # [B,S,D] → [B,D,S]
+            helper.make_node("Transpose", [input_name], [tr1_o], perm=[0,2,1]),
+            # [B,D,S] x [D,D] → need [B,D,D] via matmul
+            # Actually: transpose back then matmul
+            helper.make_node("Transpose", [tr1_o], [f"{p}_tr2"], perm=[0,2,1]),
+            helper.make_node("MatMul",    [f"{p}_tr2", f"{p}_w"], [mm_o]),
+            helper.make_node("Transpose", [mm_o], [out], perm=[0,2,1]),
+            helper.make_node("Transpose", [out],  [f"{p}_final"], perm=[0,2,1]),
+        ]
+        inits = [numpy_helper.from_array(w, f"{p}_w")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, f"{p}_final",
+                               StructuralContext(3, [B, S, D], ctx.dtype, ctx.layout))
+
+
+# ── 22. Gather (embedding lookup) → LayerNorm ─────────────────────────────
+class GatherLayerNorm(OTP):
+    """Gather embedding rows → LayerNorm: tests index-based layout ops."""
+    name = "gather_layernorm"
+    category = CAT_LAYOUT
+    target_optimization = "embedding_layernorm_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 2 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, D = ctx.shape
+        vocab = min(N * 4, 256)
+        p = self._p(node_id, "gln")
+        embed = np.random.default_rng(node_id).standard_normal((vocab, D)).astype(np.float32) * 0.02
+        indices = np.arange(N, dtype=np.int64) % vocab
+        g = np.ones(D, dtype=np.float32)
+        b = np.zeros(D, dtype=np.float32)
+
+        gth_o = f"{p}_gth"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Gather", [f"{p}_embed", f"{p}_idx"], [gth_o], axis=0),
+            helper.make_node("Add",    [gth_o, input_name], [f"{p}_added"]),
+            helper.make_node("LayerNormalization",
+                             [f"{p}_added", f"{p}_g", f"{p}_b"], [out],
+                             axis=-1, epsilon=1e-5),
+        ]
+        inits = [numpy_helper.from_array(embed,   f"{p}_embed"),
+                 numpy_helper.from_array(indices, f"{p}_idx"),
+                 numpy_helper.from_array(g,       f"{p}_g"),
+                 numpy_helper.from_array(b,       f"{p}_b")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(2, [N, D], ctx.dtype, ctx.layout))
+
+
+# ── 23. Split → Reshape → Concat (channel interleave) ────────────────────
+class SplitReshapeConcat(OTP):
+    """Split along channel → reshape each half → concat: tests shape tracking."""
+    name = "split_reshape_concat"
+    category = CAT_LAYOUT
+    target_optimization = "split_reshape_concat_canonicalization"
+
+    def is_compatible(self, ctx):
+        return (ctx.rank == 4 and ctx.dtype == "float32"
+                and ctx.channels() is not None and ctx.channels() % 2 == 0)
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        half = C // 2
+        p = self._p(node_id, "src")
+        split_sizes = np.array([half, half], dtype=np.int64)
+        # Reshape each half to same shape, then concat back
+        sh = np.array([-1, half, H, W], dtype=np.int64)
+
+        a_o = f"{p}_a"; b_o = f"{p}_b"
+        ra_o = f"{p}_ra"; rb_o = f"{p}_rb"; out = f"{p}_out"
+        nodes = [
+            helper.make_node("Split", [input_name, f"{p}_sp"], [a_o, b_o], axis=1),
+            helper.make_node("Reshape", [a_o, f"{p}_sh"], [ra_o]),
+            helper.make_node("Reshape", [b_o, f"{p}_sh"], [rb_o]),
+            helper.make_node("Concat",  [ra_o, rb_o], [out], axis=1),
+        ]
+        inits = [numpy_helper.from_array(split_sizes, f"{p}_sp"),
+                 numpy_helper.from_array(sh,          f"{p}_sh")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N,C,H,W], ctx.dtype, ctx.layout))
+
+
+# ── 24. Strided slice then reshape (indexing op fusion) ───────────────────
+class StridedSliceReshape(OTP):
+    """Slice with stride 1 (sub-tensor) then reshape: slice+reshape fusion."""
+    name = "strided_slice_reshape"
+    category = CAT_LAYOUT
+    target_optimization = "slice_reshape_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        h2 = max(H // 2, 1)
+        w2 = max(W // 2, 1)
+        p  = self._p(node_id, "ssr")
+        starts = np.array([0, 0, 0, 0],          dtype=np.int64)
+        ends   = np.array([N, C, h2, w2],         dtype=np.int64)
+        out_shape = np.array([N, C * h2 * w2],    dtype=np.int64)
+
+        sl_o=f"{p}_sl"; out=f"{p}_out"
+        nodes = [
+            helper.make_node("Slice",   [input_name, f"{p}_st", f"{p}_en"], [sl_o]),
+            helper.make_node("Reshape", [sl_o, f"{p}_osh"], [out]),
+        ]
+        inits = [numpy_helper.from_array(starts,    f"{p}_st"),
+                 numpy_helper.from_array(ends,      f"{p}_en"),
+                 numpy_helper.from_array(out_shape, f"{p}_osh")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(2, [N, C*h2*w2], ctx.dtype, "NC"))
+
+
+# ── 25. Reflect Pad + Conv (instead of zero pad) ──────────────────────────
+class PadReflectConv(OTP):
+    """Pad with reflect mode then Conv: boundary-aware convolution."""
+    name = "pad_reflect_conv"
+    category = CAT_LAYOUT
+    target_optimization = "reflect_pad_conv_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32" and min(ctx.shape[2], ctx.shape[3]) >= 4
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        out_c = self._rand_channels(rng)
+        p = self._p(node_id, "prc")
+        pads = np.array([0, 0, 1, 1, 0, 0, 1, 1], dtype=np.int64)
+        w = self._make_conv_weight(out_c, C, 3)
+        b = np.zeros(out_c, dtype=np.float32)
+
+        pad_o=f"{p}_pad"; out=f"{p}_out"
+        nodes = [
+            helper.make_node("Pad",  [input_name, f"{p}_pads"], [pad_o], mode="reflect"),
+            helper.make_node("Conv", [pad_o, f"{p}_w", f"{p}_b"], [out],
+                             kernel_shape=[3,3], pads=[0]*4),
+        ]
+        inits = [numpy_helper.from_array(pads, f"{p}_pads"),
+                 numpy_helper.from_array(w,    f"{p}_w"),
+                 numpy_helper.from_array(b,    f"{p}_b")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N,out_c,H,W], ctx.dtype, ctx.layout))
+
+
+# ── 26. ScatterElements + Add (sparse update) ─────────────────────────────
+class ScatterAddUpdate(OTP):
+    """ScatterElements into zeros + Add original: sparse residual update."""
+    name = "scatter_add_update"
+    category = CAT_LAYOUT
+    target_optimization = "scatter_add_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 2 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, D = ctx.shape
+        p = self._p(node_id, "sau")
+        # Update at fixed positions
+        n_updates = max(N // 2, 1)
+        idx = (np.arange(n_updates, dtype=np.int64) * 2 % N).reshape(n_updates, 1)
+        idx = np.broadcast_to(idx, (n_updates, D)).copy()
+        updates = (np.random.default_rng(node_id).standard_normal((n_updates, D)) * 0.1).astype(np.float32)
+        base = np.zeros((N, D), dtype=np.float32)
+
+        sc_o=f"{p}_sc"; out=f"{p}_out"
+        nodes = [
+            helper.make_node("ScatterElements", [f"{p}_base", f"{p}_idx", f"{p}_upd"],
+                             [sc_o], axis=0),
+            helper.make_node("Add", [input_name, sc_o], [out]),
+        ]
+        inits = [numpy_helper.from_array(base,    f"{p}_base"),
+                 numpy_helper.from_array(idx,     f"{p}_idx"),
+                 numpy_helper.from_array(updates, f"{p}_upd")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(2, [N, D], ctx.dtype, ctx.layout))
+
+
+# ── 27. ConvTranspose + Crop (deconv + boundary crop) ─────────────────────
+class ConvTransposeCrop(OTP):
+    """ConvTranspose + Slice to remove border artefacts: upsampling + crop."""
+    name = "conv_transpose_crop"
+    category = CAT_LAYOUT
+    target_optimization = "deconv_crop_fusion"
+
+    def is_compatible(self, ctx):
+        return ctx.rank == 4 and ctx.dtype == "float32"
+
+    def instantiate(self, input_name, ctx, rng, node_id):
+        N, C, H, W = ctx.shape
+        out_c = self._rand_channels(rng)
+        H2, W2 = H * 2, W * 2
+        p = self._p(node_id, "ctc")
+        w = self._make_conv_weight(C, out_c, 4)   # ConvTranspose: (in_c, out_c, k, k)
+        b = np.zeros(out_c, dtype=np.float32)
+        # Crop 1 pixel on each side after deconv
+        starts = np.array([0, 0, 1, 1],          dtype=np.int64)
+        ends   = np.array([N, out_c, H2-1, W2-1], dtype=np.int64)
+
+        ct_o=f"{p}_ct"; out=f"{p}_out"
+        nodes = [
+            helper.make_node("ConvTranspose", [input_name, f"{p}_w", f"{p}_b"], [ct_o],
+                             kernel_shape=[4,4], strides=[2,2], pads=[1,1,1,1]),
+            helper.make_node("Slice", [ct_o, f"{p}_st", f"{p}_en"], [out]),
+        ]
+        inits = [numpy_helper.from_array(w,      f"{p}_w"),
+                 numpy_helper.from_array(b,      f"{p}_b"),
+                 numpy_helper.from_array(starts, f"{p}_st"),
+                 numpy_helper.from_array(ends,   f"{p}_en")]
+        return PatternInstance(self.name, self.category, nodes, inits,
+                               input_name, out,
+                               StructuralContext(4, [N, out_c, H2-2, W2-2], ctx.dtype, ctx.layout))
+
+
 ALL_LAYOUT_PATTERNS = [
     ReshapeTransposeReshape(),
     FlattenDenseUnflatten(),
@@ -710,7 +957,6 @@ ALL_LAYOUT_PATTERNS = [
     ReshapeLayerNormReshape(),
     ChannelShuffle(),
     PadConv(),
-    # New patterns
     SpaceToDepthBlock(),
     DepthToSpaceBlock(),
     ReflectPadConv(),
@@ -721,4 +967,11 @@ ALL_LAYOUT_PATTERNS = [
     GatherReshape(),
     DilatedMaxPool(),
     CeilModeAvgPoolConv(),
+    TransposeMatMulTranspose(),
+    GatherLayerNorm(),
+    SplitReshapeConcat(),
+    StridedSliceReshape(),
+    PadReflectConv(),
+    ScatterAddUpdate(),
+    ConvTransposeCrop(),
 ]

@@ -1,6 +1,0 @@
-torch bf16 ground truth first 8 : [-2.4046977  -4.1797457   2.3329809  -0.31902635]
-|gt - fp32_no_trunc| max_abs   : 0.0202579  (must be >> tol)
-ORT output first 8             : [-2.4046977  -4.1797457   2.3329809  -0.31902617]
-|ORT - gt| max_abs             : 1.78814e-07
-onnx2torch conversion crashed: NotImplementedError: Conversion to "16" is not implemented
-BUG REPRODUCED: onnx2torch cannot materialise Cast(fp32->bf16)->Cast(bf16->fp32)
