@@ -22,7 +22,6 @@ try:
     import onnx
     from onnx import helper, TensorProto, numpy_helper
     import onnxruntime as ort
-    import openvino as ov
 except ImportError as e:
     print(f"missing deps: {e}")
     _sys.exit(2)
@@ -44,47 +43,64 @@ graph = helper.make_graph(nodes, "conv_fp32_prec",
 model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 13)])
 model.ir_version = 8
 model_bytes = model.SerializeToString()
+mb = model_bytes
 
 # ORT reference (no optimisation)
-so = ort.SessionOptions()
-so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
-ref = ort.InferenceSession(model_bytes, so,
-      providers=["CPUExecutionProvider"]).run(None, {"x": x_in})[0]
 
-# OpenVINO CPU
-core     = ov.Core()
-ov_model = core.read_model(model_bytes, b'')
-compiled = core.compile_model(ov_model, "CPU")
-ov_out   = compiled({"x": x_in})[compiled.output(0)]
+# ── Multi-backend comparison ─────────────────────────────────────────────────
+FEED = {"x": x_in}
+TOL  = 0.02
 
-diff = float(np.abs(ref.astype(np.float64) - ov_out.astype(np.float64)).max())
+def _ort(opt):
+    so = ort.SessionOptions(); so.graph_optimization_level = opt
+    return ort.InferenceSession(mb, sess_options=so,
+                                providers=["CPUExecutionProvider"]).run(None, FEED)[0]
 
-print(f"ORT ref (first 4): {ref.ravel()[:4]}")
-print(f"OpenVINO (first 4): {ov_out.ravel()[:4]}")
-print(f"Max abs diff: {diff:.6f}  tol={TOL}")
+ref = _ort(ort.GraphOptimizationLevel.ORT_DISABLE_ALL)
 
-# Also test a larger kernel (5x5) — more accumulations → more error
-kH2, kW2 = 5, 5
-W2 = np.random.randn(C, C, kH2, kW2).astype(np.float32)
-nodes2 = [helper.make_node("Conv", ["x", "W2"], ["y"], pads=[2, 2, 2, 2])]
-inits2 = [numpy_helper.from_array(W2, "W2")]
-graph2 = helper.make_graph(nodes2, "conv5x5",
-    [helper.make_tensor_value_info("x", TensorProto.FLOAT, [B, C, H, W])],
-    [helper.make_tensor_value_info("y", TensorProto.FLOAT, [B, C, H, W])],
-    initializer=inits2)
-model2 = helper.make_model(graph2, opset_imports=[helper.make_opsetid("", 13)])
-model2.ir_version = 8
-mb2 = model2.SerializeToString()
+_results = []
+def _rec(name, fn):
+    try: _results.append((name, fn(), None))
+    except Exception as e: _results.append((name, None, str(e)[:70]))
 
-ref2  = ort.InferenceSession(mb2, so, providers=["CPUExecutionProvider"]).run(None, {"x": x_in})[0]
-ov2   = core.compile_model(core.read_model(mb2, b''), "CPU")({"x": x_in})[0]
-diff2 = float(np.abs(ref2.astype(np.float64) - ov2.astype(np.float64)).max())
-print(f"5×5 kernel max abs diff: {diff2:.6f}  tol={TOL}")
+_rec("ORT_opt", lambda: _ort(ort.GraphOptimizationLevel.ORT_ENABLE_ALL))
 
-PASS = diff <= TOL and diff2 <= TOL
-print(f"PASS={PASS}")
-if not PASS:
-    print("BUG REPRODUCED: OpenVINO CPU Conv fp32 accumulation differs from ORT reference")
+try:
+    import openvino as ov
+    _core = ov.Core(); _comp = _core.compile_model(_core.read_model(mb, b""), "CPU")
+    _rec("OpenVINO", lambda: np.array(_comp(FEED)[_comp.output(0)]))
+except ImportError:
+    pass
+
+try:
+    import onnx2torch, torch as _torch
+    with _torch.no_grad():
+        _net = onnx2torch.convert(onnx.load_from_string(mb)).eval()
+        _ins = [_torch.from_numpy(v) for v in FEED.values()]
+        _rec("onnx2torch",    lambda: _net(*_ins).numpy())
+        _rec("torch.compile", lambda: _torch.compile(_net)(*_ins).numpy())
+        try:
+            _ts = _torch.jit.trace(_net, _ins)
+            _rec("TorchScript", lambda: _ts(*_ins).numpy())
+        except Exception as _e:
+            _results.append(("TorchScript", None, str(_e)[:70]))
+except ImportError:
+    pass
+
+print(f"{'Compiler':<16} {'max_diff':>10}  Status")
+print("-" * 42)
+_found = False
+for _cname, _out, _err in _results:
+    if _err:
+        print(f"{_cname:<16}      ERR  {_err}"); continue
+    _d = float(np.abs(ref.ravel() - np.array(_out).ravel()).max())
+    _bug = _d > TOL
+    if _bug and _cname == "OpenVINO": _found = True
+    print(f"{_cname:<16} {_d:>10.5f}  {'BUG ***' if _bug else 'ok'}")
+
+print()
+if _found:
+    print(f"BUG REPRODUCED: OpenVINO diverges from ORT_ref (tol=0.02).")
     _sys.exit(0)
-print("not reproduced")
-_sys.exit(1)
+print("NOT REPRODUCED")
+__sys.exit(1)

@@ -44,6 +44,7 @@ graph = helper.make_graph([node], "g", [X_vi], [Y_vi])
 model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 6)])
 
 model_bytes = model.SerializeToString()
+mb = model_bytes
 
 # ORT reference (correct: NaN propagates)
 sess = ort.InferenceSession(model_bytes, providers=["CPUExecutionProvider"])

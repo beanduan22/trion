@@ -14,7 +14,7 @@ import sys
 try:
     import numpy as np, onnx
     from onnx import helper as oh, TensorProto as TP, numpy_helper as onh
-    import onnxruntime as ort, openvino as ov
+    import onnxruntime as ort
 except ImportError as e:
     print(f"missing dep: {e}"); sys.exit(2)
 
@@ -39,39 +39,60 @@ model = oh.make_model(graph, opset_imports=[oh.make_opsetid("", 13)])
 model.ir_version = 8
 mb = model.SerializeToString()
 
-so = ort.SessionOptions()
-so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
-ref = ort.InferenceSession(mb, sess_options=so, providers=["CPUExecutionProvider"]).run(None, {"X": x})[0]
+# ── Multi-backend comparison ─────────────────────────────────────────────────
+FEED = {"X": x}
+TOL  = 0.001
 
-core = ov.Core()
-comp = core.compile_model(core.read_model(mb, b""), "CPU")
-ov_out = np.array(comp({"X": x})[comp.output(0)])
+def _ort(opt):
+    so = ort.SessionOptions(); so.graph_optimization_level = opt
+    return ort.InferenceSession(mb, sess_options=so,
+                                providers=["CPUExecutionProvider"]).run(None, FEED)[0]
 
-max_abs = float(np.abs(ref.ravel() - ov_out.ravel()).max())
-print(f"ORT:      {ref.ravel()}")
-print(f"OpenVINO: {ov_out.ravel()}")
-print(f"max_abs={max_abs:.6f}")
+ref = _ort(ort.GraphOptimizationLevel.ORT_DISABLE_ALL)
 
-if max_abs > 0.001:
-    print(f"BUG REPRODUCED: OpenVINO ia_sat_sub near-zero handling (max_abs={max_abs:.6f})")
+_results = []
+def _rec(name, fn):
+    try: _results.append((name, fn(), None))
+    except Exception as e: _results.append((name, None, str(e)[:70]))
+
+_rec("ORT_opt", lambda: _ort(ort.GraphOptimizationLevel.ORT_ENABLE_ALL))
+
+try:
+    import openvino as ov
+    _core = ov.Core(); _comp = _core.compile_model(_core.read_model(mb, b""), "CPU")
+    _rec("OpenVINO", lambda: np.array(_comp(FEED)[_comp.output(0)]))
+except ImportError:
+    pass
+
+try:
+    import onnx2torch, torch as _torch
+    with _torch.no_grad():
+        _net = onnx2torch.convert(onnx.load_from_string(mb)).eval()
+        _ins = [_torch.from_numpy(v) for v in FEED.values()]
+        _rec("onnx2torch",    lambda: _net(*_ins).numpy())
+        _rec("torch.compile", lambda: _torch.compile(_net)(*_ins).numpy())
+        try:
+            _ts = _torch.jit.trace(_net, _ins)
+            _rec("TorchScript", lambda: _ts(*_ins).numpy())
+        except Exception as _e:
+            _results.append(("TorchScript", None, str(_e)[:70]))
+except ImportError:
+    pass
+
+print(f"{'Compiler':<16} {'max_diff':>10}  Status")
+print("-" * 42)
+_found = False
+for _cname, _out, _err in _results:
+    if _err:
+        print(f"{_cname:<16}      ERR  {_err}"); continue
+    _d = float(np.abs(ref.ravel() - np.array(_out).ravel()).max())
+    _bug = _d > TOL
+    if _bug and _cname == "OpenVINO": _found = True
+    print(f"{_cname:<16} {_d:>10.5f}  {'BUG ***' if _bug else 'ok'}")
+
+print()
+if _found:
+    print(f"BUG REPRODUCED: OpenVINO diverges from ORT_ref (tol=0.001).")
     sys.exit(0)
-print("NOT reproduced - trying MatMul pattern instead")
-# Fall back to matmul pattern to expose OV fp32 diff
-x2 = np.random.randn(2, 512).astype(np.float32)
-W2 = np.random.randn(512, 64).astype(np.float32)
-nodes2 = [oh.make_node("MatMul", ["X","W"], ["Y"])]
-graph2 = oh.make_graph(nodes2, "t2",
-    [oh.make_tensor_value_info("X", TP.FLOAT, [2,512])],
-    [oh.make_tensor_value_info("Y", TP.FLOAT, [2,64])],
-    initializer=[onh.from_array(W2,"W")])
-m2 = oh.make_model(graph2, opset_imports=[oh.make_opsetid("", 13)])
-m2.ir_version = 8
-mb2 = m2.SerializeToString()
-ref2 = ort.InferenceSession(mb2, sess_options=so, providers=["CPUExecutionProvider"]).run(None, {"X": x2})[0]
-comp2 = core.compile_model(core.read_model(mb2, b""), "CPU")
-ov2 = np.array(comp2({"X": x2})[comp2.output(0)])
-diff2 = float(np.abs(ref2.ravel() - ov2.ravel()).max())
-if diff2 > 0.01:
-    print(f"BUG REPRODUCED: OpenVINO ia_sat_sub_uint8 (MatMul pattern, max_abs={diff2:.4f})")
-    sys.exit(0)
-print("NOT reproduced"); sys.exit(1)
+print("NOT REPRODUCED")
+sys.exit(1)

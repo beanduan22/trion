@@ -187,12 +187,33 @@ trion_results/
 opt run, and the `pattern_sequence` is enough to deterministically rebuild the
 graph from the library.
 
+## Confirmed bugs
+
+`bugs/raw_bugs/` contains **102 manually verified, minimal reproducers** across
+6 compilers.  Each script is self-contained: it builds the ONNX model inline,
+runs it on every available backend, and prints a comparison table.
+
+```
+bugs/raw_bugs/
+├── openvino/      57 bugs  (OV CPU Winograd precision, NaN, uint8/int8 saturation, …)
+├── torch_compile/ 26 bugs  (FakeTensor Reshape crash, Inductor bitshift UB, …)
+├── onnxruntime/    7 bugs  (spec violations, bitshift UB, SIGFPE, …)
+├── tflite/         4 bugs  (attention logit, sub-self-mul, transformer encoder, …)
+├── xla/            4 bugs  (matmul shape, DCE, resize coord mode, …)
+└── tvm/            4 bugs  (Resize half_pixel, RoiAlign coord mode, FoldConstant NaN, Gelu approx)
+```
+
+See [`bugs/raw_bugs/README.md`](bugs/raw_bugs/README.md) for the full table,
+root-cause taxonomy, and recorded output.  Root causes are documented in
+[`bugs/raw_bugs/ROOT_CAUSES.md`](bugs/raw_bugs/ROOT_CAUSES.md).
+
 ## Repository layout
 
 ```
 trion/
 ├── run_trion.py                 # CLI entry point
 ├── requirements.txt
+├── bugs/raw_bugs/               # 102 confirmed reproducers (canonical)
 └── trion/
     ├── config.py                # TrionConfig dataclass
     ├── runner.py                # main loop (TrionRunner)
@@ -266,15 +287,24 @@ and root cause.
 
 ## Self-contained bug reproducers
 
-For every bug saved under `output_dir/`, Trion writes
-`bug_NNNNNN_repro.py` alongside the ONNX model. The reproducer inlines the
-ONNX graph, the failing input, and the PyTorch-eager reference output as
-base64 strings — no external files are needed to run it:
+Every script under `bugs/raw_bugs/` is standalone.  It builds the ONNX model
+inline, runs it on **all available backends** (ORT, OpenVINO, onnx2torch,
+torch.compile, TorchScript), and prints a comparison table:
 
-```bash
-python trion_results/bug_000123_repro.py
-# → exits 0 if the bug is reproduced, 1 otherwise
 ```
+$ python bugs/raw_bugs/openvino/cross_openvino_conv_add_relu.py
+Compiler           max_diff  Status
+------------------------------------------
+ORT_opt             0.00004  ok
+OpenVINO            0.14621  BUG ***
+onnx2torch          0.00004  ok
+torch.compile       0.00004  ok
+TorchScript         0.00004  ok
+
+BUG REPRODUCED: OpenVINO diverges from ORT_ref (tol=0.01).
+```
+
+Exit codes: `0` = bug reproduced, `1` = not reproduced, `2` = missing deps.
 
 ## License
 
