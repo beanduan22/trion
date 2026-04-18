@@ -915,6 +915,117 @@ print(f"max_abs={max_abs:.4f}  (> 0.01 = BUG)")
 
 ---
 
+---
+
+## RC-23 · TVM Relay Resize nearest — missing half_pixel coordinate shift
+**Category:** Compiler optimization  
+**Affects:** 1 bug — `tvm/github_tvm_004.py`
+
+### What is wrong
+TVM Relay's ONNX importer for `Resize(mode=nearest, coordinate_transformation_mode=half_pixel, nearest_mode=round_prefer_floor)` computes source coordinates without the `−0.5` shift mandated by the `half_pixel` convention. It effectively uses `asymmetric` coordinates and applies `floor` rounding, picking source pixels that are 1–2 positions off from the correct ORT output.
+
+### What is correct
+`half_pixel` convention: `x_in = (x_out + 0.5) / scale − 0.5`. With `round_prefer_floor`, a value of exactly 0.5 rounds down. ORT computes this correctly.
+
+### Minimal reproducer
+**File:** `tvm/github_tvm_004.py`
+```python
+# Run with: /home/binduan/miniconda3/envs/clawwork/bin/python
+import numpy as np, onnx, onnxruntime as ort
+from onnx import helper, TensorProto
+import tvm; from tvm import relay; from tvm.contrib import graph_executor
+
+x = np.arange(9, dtype=np.float32).reshape(1,1,3,3)
+scales = helper.make_tensor("scales", TensorProto.FLOAT, [4], [1.,1.,1.5,1.5])
+node = helper.make_node("Resize", ["X","","scales"], ["Y"],
+    mode="nearest", coordinate_transformation_mode="half_pixel",
+    nearest_mode="round_prefer_floor")
+graph = helper.make_graph([node],"g",
+    [helper.make_tensor_value_info("X",TensorProto.FLOAT,[1,1,3,3])],
+    [helper.make_tensor_value_info("Y",TensorProto.FLOAT,None)],
+    initializer=[scales])
+model = helper.make_model(graph, opset_imports=[helper.make_opsetid("",13)])
+
+ort_out = ort.InferenceSession(model.SerializeToString(),
+          providers=["CPUExecutionProvider"]).run(None, {"X": x})[0]
+
+mod, params = relay.frontend.from_onnx(model, shape={"X": [1,1,3,3]})
+with tvm.transform.PassContext(opt_level=3):
+    lib = relay.build(mod, target="llvm", params=params)
+gm = graph_executor.GraphModule(lib["default"](tvm.cpu()))
+gm.set_input("X", x); gm.run()
+tvm_out = gm.get_output(0).numpy()
+
+print("ORT:", ort_out[0,0])
+print("TVM:", tvm_out[0,0])
+print(f"max_abs={np.abs(ort_out-tvm_out).max():.2f}")  # 4.0 — whole rows off
+```
+**Correct (ORT):**  `[[0,0,1,2],[0,0,1,2],[3,3,4,5],[6,6,7,8]]`  
+**Wrong (TVM):**    `[[0,1,1,2],[3,4,4,5],[3,4,4,5],[6,7,7,8]]`  (rows 1–2 duplicated wrong row)
+
+---
+
+## RC-24 · TVM Relay RoiAlign silently ignores half_pixel coordinate mode
+**Category:** Compiler optimization  
+**Affects:** 1 bug — `tvm/github_tvm_010_simplifyexpr_rsqrt_precision.py`
+
+### What is wrong
+ONNX opset-16 added `coordinate_transformation_mode="half_pixel"` to `RoiAlign`, shifting ROI coordinates by `−0.5` (continuous-pixel convention, matching Detectron2/Mask R-CNN). TVM Relay's importer silently ignores this attribute and routes to a legacy kernel with no coordinate shift, producing outputs that differ from ORT by up to 0.145.
+
+### What is correct
+ORT applies the `−0.5` shift, computing bilinear weights at the shifted positions. TVM should do the same when `coordinate_transformation_mode="half_pixel"`.
+
+### Minimal reproducer
+**File:** `tvm/github_tvm_010_simplifyexpr_rsqrt_precision.py`
+
+**Correct (ORT):** `[0.6476, 0.6806, 0.2975, 0.6976, ...]`  
+**Wrong (TVM):** `[0.6062, 0.6308, 0.2276, 0.6221, ...]`  max_abs = 0.145
+
+---
+
+## RC-25 · TVM Relay FoldConstant folds inf*X − inf*X to 0, violates IEEE-754
+**Category:** Compiler optimization  
+**Affects:** 1 bug — `tvm/github_tvm_011_lifttransformparams_const_bind.py`
+
+### What is wrong
+The graph is `Y = Mul(X, INF) − Mul(X, INF)` where `INF` is a constant initializer with all entries `+inf`. IEEE-754: `+inf − +inf = NaN`. TVM Relay's `FoldConstant` pass sees the `a − a` pattern and rewrites it to a zero constant **before** materialising `INF`, so the compiled graph always outputs `0.0` instead of `NaN`.
+
+### What is correct
+ORT evaluates `+inf * X = +inf`, then `+inf − +inf = NaN`. All outputs must be `NaN`.
+
+### Minimal reproducer
+**File:** `tvm/github_tvm_011_lifttransformparams_const_bind.py`
+```python
+# Graph: Y = X*INF - X*INF  where INF=[inf,inf,inf,inf]
+# IEEE-754: inf - inf = NaN. TVM FoldConstant folds a-a → 0 first.
+```
+**Correct (ORT):** `[nan, nan, nan, nan]`  
+**Wrong (TVM):** `[0., 0., 0., 0.]` (constant-folding erases the NaN)
+
+---
+
+## RC-26 · TVM Relay Gelu ignores approximate='tanh', always uses exact erf
+**Category:** Compiler optimization  
+**Affects:** 1 bug — `tvm/github_tvm_012_gelu_approx_tanh.py`
+
+### What is wrong
+ONNX opset-20 `Gelu` has an `approximate` attribute: `"none"` (exact erf) and `"tanh"` (Hendrycks approximation used in BERT/GPT-2/LLaMA). TVM Relay's importer routes **both** values to the same `relay.nn.gelu` (exact erf) implementation. Models that specify `approximate="tanh"` silently get the wrong formula, diverging from ORT by up to 4.1e-4 at typical LLM activation magnitudes.
+
+### What is correct
+`gelu_tanh(x) = 0.5 * x * (1 + tanh(sqrt(2/π) * (x + 0.044715*x³)))`. ORT implements this correctly. TVM should branch on the `approximate` attribute.
+
+### Minimal reproducer
+**File:** `tvm/github_tvm_012_gelu_approx_tanh.py`
+```python
+# ONNX Gelu opset-20 with approximate="tanh"
+# ORT applies the tanh formula; TVM applies exact erf regardless
+node = helper.make_node("Gelu", ["X"], ["Y"], approximate="tanh")
+```
+**Correct (ORT, tanh):** `[-0.00364, -0.04540, -0.15881, 0., 0.84119, 1.95460, 2.99636]`  
+**Wrong (TVM):**          `[-0.00405, -0.04550, -0.15866, 0., 0.84134, 1.95450, 2.99595]`  (exact erf, wrong formula)
+
+---
+
 ## Summary table
 
 | RC | Root cause | Bugs | Backends | Category |
@@ -941,4 +1052,8 @@ print(f"max_abs={max_abs:.4f}  (> 0.01 = BUG)")
 | RC-20 | OV Exp(NaN) → inf | 1 | OpenVINO | Compiler opt |
 | RC-21 | OV MaxPool invalid pad accepted | 1 | OpenVINO | ONNX convert |
 | RC-22 | OV tiled GEMM / Winograd precision | 47 | OpenVINO | Compiler opt |
-| **Total** | | **98** | | **26 convert / 72 compiler opt** |
+| RC-23 | TVM Relay Resize nearest half_pixel wrong pixel | 1 | TVM | Compiler opt |
+| RC-24 | TVM Relay RoiAlign ignores half_pixel CTM | 1 | TVM | Compiler opt |
+| RC-25 | TVM FoldConstant folds inf*X−inf*X to 0 | 1 | TVM | Compiler opt |
+| RC-26 | TVM Relay Gelu ignores approximate='tanh' | 1 | TVM | Compiler opt |
+| **Total** | | **102** | | **26 convert / 76 compiler opt** |

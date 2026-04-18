@@ -1,7 +1,8 @@
 # Raw Bugs — 98 Confirmed Reproducible Cross-Backend Bugs
 
 > **Verified 2026-04-18** · All outputs below are recorded from actual runs on this machine.  
-> Platform: Linux 6.17, Python 3.x · OpenVINO 2026.0 · ORT 1.24.4 · TF 2.21 · PyTorch 2.x
+> Platform: Linux 6.17, Python 3.x · OpenVINO 2026.0 · ORT 1.24.4 · TF 2.21 · PyTorch 2.x · TVM 0.11.1 (conda env `clawwork`)  
+> Run TVM scripts with: `/home/binduan/miniconda3/envs/clawwork/bin/python tvm/<script>.py`
 
 Discovered by **Trion** cross-backend differential testing (campaign v9, 2026-04-16 → 2026-04-18,
 1 500 random models, 7 backends).
@@ -48,7 +49,11 @@ Every bug falls into one of two categories:
 | ONNXRuntime | 7 | 0 | 7 | Cast fusion, Resize, Mod SIGFPE |
 | XLA | 4 | 0 | 4 | Dead-code elim, silent shape mismatch, JIT precision |
 | TFLite | 4 | 3 | 1 | fp16 weight quantization (convert-time) + XNNPack delegate |
-| **Total** | **98** | **26** | **72** | |
+| TVM | 4 | 0 | 4 | Relay ONNX importer bugs — Resize, RoiAlign, FoldConstant, Gelu |
+| **Total** | **102** | **26** | **76** | |
+
+> **TVM note:** requires `conda activate clawwork` (TVM 0.11.1). Run as:  
+> `/home/binduan/miniconda3/envs/clawwork/bin/python tvm/<script>.py`
 
 ---
 
@@ -184,6 +189,60 @@ Input shape: (1, 4),  W shape: (6, 1)   ← inner dims 4 ≠ 6
 Eager output: None  error=InvalidArgumentError  ← correct
 XLA   output: [[42.]]  error=None               ← BUG: garbage result
 BUG REPRODUCED: XLA silently executes invalid matmul; eager raises error.
+```
+
+### TVM — Resize nearest half_pixel picks wrong pixel (RC-23)
+```
+$ python tvm/github_tvm_004.py
+input:
+[[0. 1. 2.]
+ [3. 4. 5.]
+ [6. 7. 8.]]
+ORT output [0,0]:
+[[0. 0. 1. 2.]
+ [0. 0. 1. 2.]
+ [3. 3. 4. 5.]
+ [6. 6. 7. 8.]]
+TVM output [0,0]:
+[[0. 1. 1. 2.]
+ [3. 4. 4. 5.]
+ [3. 4. 4. 5.]
+ [6. 7. 7. 8.]]
+max_abs=4.000000e+00
+BUG REPRODUCED: TVM Relay Resize(nearest, half_pixel, round_prefer_floor) diverges from ORT
+```
+
+### TVM — RoiAlign ignores half_pixel coordinate mode (RC-24)
+```
+$ python tvm/github_tvm_010_simplifyexpr_rsqrt_precision.py
+ORT[0,0,:]: [0.6476003  0.680636   0.2975294  0.6975541 ...]
+TVM[0,0,:]: [0.6062307  0.63081366 0.22761177 0.62207025 ...]
+max_abs=1.451457e-01
+BUG REPRODUCED: TVM Relay RoiAlign ignores coordinate_transformation_mode='half_pixel'
+```
+
+### TVM — FoldConstant rewrites inf*X - inf*X to 0, violates IEEE-754 (RC-25)
+```
+$ python tvm/github_tvm_011_lifttransformparams_const_bind.py
+input: [1. 2. 3. 4.]
+ORT  : [nan nan nan nan]  (expected all-NaN per IEEE-754)
+TVM  : [0. 0. 0. 0.]     (FoldConstant folds a-a to 0 before materialising INF)
+max_abs=1.000000e+00  (NaN mismatch counted as 1.0)
+BUG REPRODUCED: TVM Relay FoldConstant rewrites inf*X - inf*X to 0, violating IEEE-754
+```
+
+### TVM — Gelu ignores approximate='tanh', returns exact erf instead (RC-26)
+```
+$ python tvm/github_tvm_012_gelu_approx_tanh.py
+-- Control: approximate='none' (exact erf) --
+  ORT: [-0.00404969 -0.04550028 -0.15865526  0.  0.8413447  1.9544997  2.9959502]
+  TVM: [-0.00404969 -0.04550028 -0.15865526  0.  0.8413447  1.9544997  2.9959502]
+  max_abs=0.000000e+00
+-- Target: approximate='tanh' --
+  ORT: [-0.00363752 -0.04540235 -0.15880796  0.  0.841192   1.9545977  2.9963627]
+  TVM: [-0.00404969 -0.04550028 -0.15865526  0.  0.8413447  1.9544997  2.9959502]
+  max_abs=4.124641e-04
+BUG REPRODUCED: TVM Relay Gelu importer ignores approximate='tanh', returns exact erf
 ```
 
 ### torch.compile — FakeTensor crash in Reshape (RC-01)
@@ -393,6 +452,20 @@ out ORT-specific quirks.
 | `cross_openvino_sub_self_mul_zero.py` | Cancellation-sensitive GEMM | varies |
 | `cross_openvino_triple_add_residual.py` | Triple add residual | varies |
 | `cross_openvino_where_mask_fill.py` | Where/mask fill | varies |
+
+---
+
+## TVM — 4 bugs
+
+Reference: ONNXRuntime CPU. All run on TVM Relay 0.11.1 CPU (`llvm` target).  
+**Run with:** `/home/binduan/miniconda3/envs/clawwork/bin/python tvm/<script>.py`
+
+| # | Script | Bug | Category | max_abs |
+|---|--------|-----|----------|---------|
+| 1 | `github_tvm_004.py` | Relay Resize(nearest, `half_pixel`, `round_prefer_floor`): wrong source pixel — missing `−0.5` shift; output off by 1–2 rows | Compiler optimization | **4.0** |
+| 2 | `github_tvm_010_simplifyexpr_rsqrt_precision.py` | Relay RoiAlign silently ignores `coordinate_transformation_mode="half_pixel"` — maps to legacy kernel with no coordinate shift | Compiler optimization | 0.145 |
+| 3 | `github_tvm_011_lifttransformparams_const_bind.py` | Relay `FoldConstant` sees `a − a` pattern and rewrites `INF*X − INF*X` to `0` before materialising the constant — `NaN` (IEEE-754) replaced by `0` | Compiler optimization | NaN→0 |
+| 4 | `github_tvm_012_gelu_approx_tanh.py` | Relay ONNX importer routes both `approximate="none"` and `approximate="tanh"` to the same exact-erf kernel — `tanh` approximation silently ignored | Compiler optimization | 4.1e-4 |
 
 ---
 
