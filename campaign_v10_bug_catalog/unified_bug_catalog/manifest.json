@@ -1,0 +1,2575 @@
+{
+  "total_bugs": 115,
+  "total_root_causes": 22,
+  "bugs": [
+    {
+      "bug_id": "unique_0000",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 81,
+      "worst_rel_l2": 0.060192
+    },
+    {
+      "bug_id": "unique_0001",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 459,
+      "worst_rel_l2": 0.078588
+    },
+    {
+      "bug_id": "unique_0002",
+      "root_cause_id": "RC-10",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "BN -> Mul/Div/Add -> Resize(nearest, asymmetric, round_prefer_floor, non-integer ratio)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc10_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 287,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0003",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 105,
+      "worst_rel_l2": 0.059948
+    },
+    {
+      "bug_id": "unique_0004",
+      "root_cause_id": "RC-11a",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "low",
+      "trigger_pattern": "ReduceMean -> Mul -> Transpose -> MatMul -> Softmax -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11a_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 581,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0005",
+      "root_cause_id": "RC-08",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "depthwise Conv(group=C) -> BN -> Resize(nearest, asymmetric, round_prefer_floor) -> Conv",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc08_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1139,
+      "worst_rel_l2": 0.057486
+    },
+    {
+      "bug_id": "unique_0006",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 310,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0007",
+      "root_cause_id": "RC-11b",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "low",
+      "trigger_pattern": "Reciprocal -> Mul -> Conv -> BN -> Relu (with zero in denominator branch)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11b_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 210,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0008",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 168,
+      "worst_rel_l2": 0.132037
+    },
+    {
+      "bug_id": "unique_0009",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 390,
+      "worst_rel_l2": 0.066873
+    },
+    {
+      "bug_id": "unique_0010",
+      "root_cause_id": "RC-03",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Cast(fp32->fp16) -> Cast(fp16->fp32) -> manual softmax (Sub(max)/Exp/ReduceSum/Div)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc03_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 233,
+      "worst_rel_l2": 0.064485
+    },
+    {
+      "bug_id": "unique_0011",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 136,
+      "worst_rel_l2": 0.053422
+    },
+    {
+      "bug_id": "unique_0012",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 300,
+      "worst_rel_l2": 0.052282
+    },
+    {
+      "bug_id": "unique_0013",
+      "root_cause_id": "RC-04",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Conv -> Relu -> Softmax -> Expand -> Add -> Conv -> Relu",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc04_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1163,
+      "worst_rel_l2": 0.196197
+    },
+    {
+      "bug_id": "unique_0014",
+      "root_cause_id": "RC-11c",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "low",
+      "trigger_pattern": "Relu -> Resize(linear, half_pixel, 5->4)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11c_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 14,
+      "worst_rel_l2": 0.060494
+    },
+    {
+      "bug_id": "unique_0015",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 410,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0016",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 162,
+      "worst_rel_l2": 0.070224
+    },
+    {
+      "bug_id": "unique_0017",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 357,
+      "worst_rel_l2": 0.051115
+    },
+    {
+      "bug_id": "unique_0018",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 17,
+      "worst_rel_l2": 0.063476
+    },
+    {
+      "bug_id": "unique_0019",
+      "root_cause_id": "RC-05",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "3x MatMul -> Softmax(axis=0) -> ReduceMean -> Greater/Where -> Softmax",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc05_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1095,
+      "worst_rel_l2": 0.095711
+    },
+    {
+      "bug_id": "unique_0020",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 47,
+      "worst_rel_l2": 0.051694
+    },
+    {
+      "bug_id": "unique_0021",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 294,
+      "worst_rel_l2": 0.072427
+    },
+    {
+      "bug_id": "unique_0022",
+      "root_cause_id": "RC-06",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Add^3 -> Unsqueeze(axes=[2]) -> Squeeze(axes=[2]) -> bias+Softmax -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc06_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 229,
+      "worst_rel_l2": 0.690849
+    },
+    {
+      "bug_id": "unique_0023",
+      "root_cause_id": "RC-08",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "depthwise Conv(group=C) -> BN -> Resize(nearest, asymmetric, round_prefer_floor) -> Conv",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc08_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1180,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0024",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 374,
+      "worst_rel_l2": 0.109996
+    },
+    {
+      "bug_id": "unique_0025",
+      "root_cause_id": "RC-03",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Cast(fp32->fp16) -> Cast(fp16->fp32) -> manual softmax (Sub(max)/Exp/ReduceSum/Div)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc03_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 99,
+      "worst_rel_l2": 0.085216
+    },
+    {
+      "bug_id": "unique_0026",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 237,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0027",
+      "root_cause_id": "RC-09",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tensorflow",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "MatMul(4-D) -> Slice(step=2) -> Tile -> MatMul -> Resize(nearest, asymmetric)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc09_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 476,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0028",
+      "root_cause_id": "RC-03",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "torch_compile",
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Cast(fp32->fp16) -> Cast(fp16->fp32) -> manual softmax (Sub(max)/Exp/ReduceSum/Div)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc03_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 157,
+      "worst_rel_l2": 0.070501
+    },
+    {
+      "bug_id": "unique_0029",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 11,
+      "worst_rel_l2": 0.062245
+    },
+    {
+      "bug_id": "unique_0030",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 426,
+      "worst_rel_l2": 0.070795
+    },
+    {
+      "bug_id": "unique_0031",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 359,
+      "worst_rel_l2": 0.050173
+    },
+    {
+      "bug_id": "unique_0032",
+      "root_cause_id": "RC-09",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "MatMul(4-D) -> Slice(step=2) -> Tile -> MatMul -> Resize(nearest, asymmetric)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc09_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 362,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0033",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 302,
+      "worst_rel_l2": 0.055335
+    },
+    {
+      "bug_id": "unique_0034",
+      "root_cause_id": "RC-04",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Conv -> Relu -> Softmax -> Expand -> Add -> Conv -> Relu",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc04_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1177,
+      "worst_rel_l2": 0.063479
+    },
+    {
+      "bug_id": "unique_0035",
+      "root_cause_id": "RC-11d",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino"
+      ],
+      "confidence": "low",
+      "trigger_pattern": "Max(x, c1) -> Min(., c2) -> LayerNorm -> Residual Add -> Relu",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11d_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 935,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0036",
+      "root_cause_id": "RC-06",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Add^3 -> Unsqueeze(axes=[2]) -> Squeeze(axes=[2]) -> bias+Softmax -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc06_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 129,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0037",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 444,
+      "worst_rel_l2": 0.641415
+    },
+    {
+      "bug_id": "unique_0038",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 5,
+      "worst_rel_l2": 0.097408
+    },
+    {
+      "bug_id": "unique_0039",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 133,
+      "worst_rel_l2": 0.064436
+    },
+    {
+      "bug_id": "unique_0040",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 311,
+      "worst_rel_l2": 0.052096
+    },
+    {
+      "bug_id": "unique_0041",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 447,
+      "worst_rel_l2": 0.054524
+    },
+    {
+      "bug_id": "unique_0042",
+      "root_cause_id": "RC-09",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "MatMul(4-D) -> Slice(step=2) -> Tile -> MatMul -> Resize(nearest, asymmetric)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc09_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1182,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0043",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 156,
+      "worst_rel_l2": 0.483869
+    },
+    {
+      "bug_id": "unique_0044",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 111,
+      "worst_rel_l2": 0.200947
+    },
+    {
+      "bug_id": "unique_0045",
+      "root_cause_id": "RC-05",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "3x MatMul -> Softmax(axis=0) -> ReduceMean -> Greater/Where -> Softmax",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc05_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1097,
+      "worst_rel_l2": 0.078319
+    },
+    {
+      "bug_id": "unique_0046",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 402,
+      "worst_rel_l2": 0.06378
+    },
+    {
+      "bug_id": "unique_0047",
+      "root_cause_id": "RC-03",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Cast(fp32->fp16) -> Cast(fp16->fp32) -> manual softmax (Sub(max)/Exp/ReduceSum/Div)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc03_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 95,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0048",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 280,
+      "worst_rel_l2": 0.154692
+    },
+    {
+      "bug_id": "unique_0049",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 128,
+      "worst_rel_l2": 0.053393
+    },
+    {
+      "bug_id": "unique_0050",
+      "root_cause_id": "RC-11e",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino"
+      ],
+      "confidence": "low",
+      "trigger_pattern": "3x MatMul -> Add(0) -> Mul(1) -> Greater -> Where(const) (identity-folding breaks mask)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11e_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 6,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0051",
+      "root_cause_id": "RC-10",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "BN -> Mul/Div/Add -> Resize(nearest, asymmetric, round_prefer_floor, non-integer ratio)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc10_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 339,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0052",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 299,
+      "worst_rel_l2": 0.055015
+    },
+    {
+      "bug_id": "unique_0053",
+      "root_cause_id": "RC-04",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tensorflow",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Conv -> Relu -> Softmax -> Expand -> Add -> Conv -> Relu",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc04_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 49,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0054",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 208,
+      "worst_rel_l2": 0.058544
+    },
+    {
+      "bug_id": "unique_0055",
+      "root_cause_id": "RC-11f",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "xla",
+        "torch_compile",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "confidence": "low",
+      "trigger_pattern": "Add(residual) -> Relu -> MatMul(4D) -> Softmax -> MatMul -> Conv",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11f_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 72,
+      "worst_rel_l2": 0.054982
+    },
+    {
+      "bug_id": "unique_0056",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1194,
+      "worst_rel_l2": 0.057607
+    },
+    {
+      "bug_id": "unique_0057",
+      "root_cause_id": "RC-04",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tensorflow",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Conv -> Relu -> Softmax -> Expand -> Add -> Conv -> Relu",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc04_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 257,
+      "worst_rel_l2": 0.080811
+    },
+    {
+      "bug_id": "unique_0058",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 309,
+      "worst_rel_l2": 0.075933
+    },
+    {
+      "bug_id": "unique_0059",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 83,
+      "worst_rel_l2": 0.060406
+    },
+    {
+      "bug_id": "unique_0060",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 445,
+      "worst_rel_l2": 0.099576
+    },
+    {
+      "bug_id": "unique_0061",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 400,
+      "worst_rel_l2": 0.05776
+    },
+    {
+      "bug_id": "unique_0062",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 163,
+      "worst_rel_l2": 0.059507
+    },
+    {
+      "bug_id": "unique_0063",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 471,
+      "worst_rel_l2": 0.079807
+    },
+    {
+      "bug_id": "unique_0064",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 394,
+      "worst_rel_l2": 0.066478
+    },
+    {
+      "bug_id": "unique_0065",
+      "root_cause_id": "RC-11g",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tvm"
+      ],
+      "confidence": "low",
+      "trigger_pattern": "ReduceMean || ReduceMax -> Concat -> Conv -> Sigmoid -> Mul (CBAM spatial attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11g_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1077,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0066",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 224,
+      "worst_rel_l2": 0.055536
+    },
+    {
+      "bug_id": "unique_0067",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 8,
+      "worst_rel_l2": 0.059539
+    },
+    {
+      "bug_id": "unique_0068",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1197,
+      "worst_rel_l2": 0.1026
+    },
+    {
+      "bug_id": "unique_0069",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 45,
+      "worst_rel_l2": 0.057822
+    },
+    {
+      "bug_id": "unique_0070",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 371,
+      "worst_rel_l2": 0.062549
+    },
+    {
+      "bug_id": "unique_0071",
+      "root_cause_id": "RC-05",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "3x MatMul -> Softmax(axis=0) -> ReduceMean -> Greater/Where -> Softmax",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc05_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1099,
+      "worst_rel_l2": 0.667585
+    },
+    {
+      "bug_id": "unique_0072",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 118,
+      "worst_rel_l2": 0.076217
+    },
+    {
+      "bug_id": "unique_0073",
+      "root_cause_id": "RC-11h",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torch_compile",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "xla"
+      ],
+      "confidence": "low",
+      "trigger_pattern": "Expand -> Add -> Mul -> LayerNormalization(axis=1)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11h_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1130,
+      "worst_rel_l2": 0.053312
+    },
+    {
+      "bug_id": "unique_0074",
+      "root_cause_id": "RC-07",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "torchscript",
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "TopK(k=1, axis=-1) -> Tile -> ... -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc07_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 312,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0075",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 77,
+      "worst_rel_l2": 0.264859
+    },
+    {
+      "bug_id": "unique_0076",
+      "root_cause_id": "RC-11i",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torchscript",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tvm"
+      ],
+      "confidence": "low",
+      "trigger_pattern": "Exp -> Sub(1) (manual expm1) -> MatMul -> Tanh",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11i_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 784,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0077",
+      "root_cause_id": "RC-05",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "3x MatMul -> Softmax(axis=0) -> ReduceMean -> Greater/Where -> Softmax",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc05_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1065,
+      "worst_rel_l2": 0.066082
+    },
+    {
+      "bug_id": "unique_0078",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 206,
+      "worst_rel_l2": 0.050423
+    },
+    {
+      "bug_id": "unique_0079",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 261,
+      "worst_rel_l2": 0.238315
+    },
+    {
+      "bug_id": "unique_0080",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 175,
+      "worst_rel_l2": 0.201668
+    },
+    {
+      "bug_id": "unique_0081",
+      "root_cause_id": "RC-07",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "TopK(k=1, axis=-1) -> Tile -> ... -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc07_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 263,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0082",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 135,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0083",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 334,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0084",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 258,
+      "worst_rel_l2": 0.568959
+    },
+    {
+      "bug_id": "unique_0085",
+      "root_cause_id": "RC-05",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tvm",
+        "xla"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "3x MatMul -> Softmax(axis=0) -> ReduceMean -> Greater/Where -> Softmax",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc05_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1102,
+      "worst_rel_l2": 0.074856
+    },
+    {
+      "bug_id": "unique_0086",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 442,
+      "worst_rel_l2": 0.063674
+    },
+    {
+      "bug_id": "unique_0087",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 250,
+      "worst_rel_l2": 0.051566
+    },
+    {
+      "bug_id": "unique_0088",
+      "root_cause_id": "RC-08",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "depthwise Conv(group=C) -> BN -> Resize(nearest, asymmetric, round_prefer_floor) -> Conv",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc08_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1136,
+      "worst_rel_l2": 0.27273
+    },
+    {
+      "bug_id": "unique_0089",
+      "root_cause_id": "RC-06",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "xla",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Add^3 -> Unsqueeze(axes=[2]) -> Squeeze(axes=[2]) -> bias+Softmax -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc06_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 34,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0090",
+      "root_cause_id": "RC-06",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Add^3 -> Unsqueeze(axes=[2]) -> Squeeze(axes=[2]) -> bias+Softmax -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc06_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 403,
+      "worst_rel_l2": 0.130388
+    },
+    {
+      "bug_id": "unique_0091",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 466,
+      "worst_rel_l2": 0.072772
+    },
+    {
+      "bug_id": "unique_0092",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 275,
+      "worst_rel_l2": 0.082249
+    },
+    {
+      "bug_id": "unique_0093",
+      "root_cause_id": "RC-07",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "TopK(k=1, axis=-1) -> Tile -> ... -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc07_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 109,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0094",
+      "root_cause_id": "RC-03",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Cast(fp32->fp16) -> Cast(fp16->fp32) -> manual softmax (Sub(max)/Exp/ReduceSum/Div)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc03_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 262,
+      "worst_rel_l2": 0.11049
+    },
+    {
+      "bug_id": "unique_0095",
+      "root_cause_id": "RC-06",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Add^3 -> Unsqueeze(axes=[2]) -> Squeeze(axes=[2]) -> bias+Softmax -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc06_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 253,
+      "worst_rel_l2": 0.972113
+    },
+    {
+      "bug_id": "unique_0096",
+      "root_cause_id": "RC-04",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tensorflow",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "confidence": "medium",
+      "trigger_pattern": "Conv -> Relu -> Softmax -> Expand -> Add -> Conv -> Relu",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc04_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 181,
+      "worst_rel_l2": 0.84527
+    },
+    {
+      "bug_id": "unique_0097",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 192,
+      "worst_rel_l2": 0.052378
+    },
+    {
+      "bug_id": "unique_0098",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1,
+      "worst_rel_l2": 0.067284
+    },
+    {
+      "bug_id": "unique_0099",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 222,
+      "worst_rel_l2": 0.090904
+    },
+    {
+      "bug_id": "unique_0100",
+      "root_cause_id": "RC-07",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "TopK(k=1, axis=-1) -> Tile -> ... -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc07_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 282,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0101",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 469,
+      "worst_rel_l2": 0.086298
+    },
+    {
+      "bug_id": "unique_0102",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 185,
+      "worst_rel_l2": 0.056863
+    },
+    {
+      "bug_id": "unique_0103",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 441,
+      "worst_rel_l2": 0.080954
+    },
+    {
+      "bug_id": "unique_0104",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 126,
+      "worst_rel_l2": 0.051041
+    },
+    {
+      "bug_id": "unique_0105",
+      "root_cause_id": "RC-02",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 1208,
+      "worst_rel_l2": 0.050388
+    },
+    {
+      "bug_id": "unique_0106",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 467,
+      "worst_rel_l2": 0.738566
+    },
+    {
+      "bug_id": "unique_0107",
+      "root_cause_id": "RC-11j",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "low",
+      "trigger_pattern": "Reciprocal(-0.0) -> Relu (signed-zero IEEE-754 corner)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11j_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 768,
+      "worst_rel_l2": 0.089188
+    },
+    {
+      "bug_id": "unique_0108",
+      "root_cause_id": "RC-11k",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tvm",
+        "xla"
+      ],
+      "confidence": "low",
+      "trigger_pattern": "Mul(x,x) -> ReduceSum -> Add(eps) -> Sqrt -> Div (manual L2-norm)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11k_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 579,
+      "worst_rel_l2": 1.0
+    },
+    {
+      "bug_id": "unique_0109",
+      "root_cause_id": "RC-01",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "source_bug_id": 354,
+      "worst_rel_l2": 0.054524
+    },
+    {
+      "bug_id": "crash_000385__tvm_opt",
+      "root_cause_id": "CR-01",
+      "nature": "crash_bug",
+      "category": "compiler_crash",
+      "affected_backend_or_project": [
+        "tvm"
+      ],
+      "reference_cluster": null,
+      "confidence": "high",
+      "trigger_pattern": "relay.nn.dense(x, W, units=None) -> relay.add(y, y) inside relay.build",
+      "minimal_repro_path": "unified_bug_catalog/repros/cr01_min.py",
+      "source_catalog": "crash_root_cause_catalog",
+      "source_bug_id": 385,
+      "failing_stage": "graph_rewrite_or_build_optimization_pass",
+      "error_signature": "contains free variables: [Var(model_input, ty=TensorType([1, 128], float32)), Var(model_input, ty=TensorType([1, 128], float32)), Var(model_input, ty=TensorType"
+    },
+    {
+      "bug_id": "crash_000905__tvm_opt",
+      "root_cause_id": "CR-01",
+      "nature": "crash_bug",
+      "category": "compiler_crash",
+      "affected_backend_or_project": [
+        "tvm"
+      ],
+      "reference_cluster": null,
+      "confidence": "high",
+      "trigger_pattern": "relay.nn.dense(x, W, units=None) -> relay.add(y, y) inside relay.build",
+      "minimal_repro_path": "unified_bug_catalog/repros/cr01_min.py",
+      "source_catalog": "crash_root_cause_catalog",
+      "source_bug_id": 905,
+      "failing_stage": "graph_rewrite_or_build_optimization_pass",
+      "error_signature": "contains free variables: [Var(model_input, ty=TensorType([1, 64], float32))]"
+    },
+    {
+      "bug_id": "crash_000959__tvm_opt",
+      "root_cause_id": "CR-01",
+      "nature": "crash_bug",
+      "category": "compiler_crash",
+      "affected_backend_or_project": [
+        "tvm"
+      ],
+      "reference_cluster": null,
+      "confidence": "high",
+      "trigger_pattern": "relay.nn.dense(x, W, units=None) -> relay.add(y, y) inside relay.build",
+      "minimal_repro_path": "unified_bug_catalog/repros/cr01_min.py",
+      "source_catalog": "crash_root_cause_catalog",
+      "source_bug_id": 959,
+      "failing_stage": "graph_rewrite_or_build_optimization_pass",
+      "error_signature": "Check failed: fv.size() == 0 (1 vs. 0) : Function:"
+    },
+    {
+      "bug_id": "crash_001225__tvm_opt",
+      "root_cause_id": "CR-01",
+      "nature": "crash_bug",
+      "category": "compiler_crash",
+      "affected_backend_or_project": [
+        "tvm"
+      ],
+      "reference_cluster": null,
+      "confidence": "high",
+      "trigger_pattern": "relay.nn.dense(x, W, units=None) -> relay.add(y, y) inside relay.build",
+      "minimal_repro_path": "unified_bug_catalog/repros/cr01_min.py",
+      "source_catalog": "crash_root_cause_catalog",
+      "source_bug_id": 1225,
+      "failing_stage": "graph_rewrite_or_build_optimization_pass",
+      "error_signature": "contains free variables: [Var(model_input, ty=TensorType([1, 128], float32))]"
+    },
+    {
+      "bug_id": "crash_001452__tvm_opt",
+      "root_cause_id": "CR-01",
+      "nature": "crash_bug",
+      "category": "compiler_crash",
+      "affected_backend_or_project": [
+        "tvm"
+      ],
+      "reference_cluster": null,
+      "confidence": "high",
+      "trigger_pattern": "relay.nn.dense(x, W, units=None) -> relay.add(y, y) inside relay.build",
+      "minimal_repro_path": "unified_bug_catalog/repros/cr01_min.py",
+      "source_catalog": "crash_root_cause_catalog",
+      "source_bug_id": 1452,
+      "failing_stage": "graph_rewrite_or_build_optimization_pass",
+      "error_signature": "Check failed: fv.size() == 0 (1 vs. 0) : Function:"
+    }
+  ]
+}

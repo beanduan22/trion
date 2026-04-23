@@ -1,0 +1,408 @@
+{
+  "root_causes": [
+    {
+      "root_cause_id": "RC-01",
+      "root_cause_name": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "count": 41,
+      "confidence": "high",
+      "suspect_backend_set": [
+        "tensorflow",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0000",
+        "unique_0001",
+        "unique_0003",
+        "unique_0012",
+        "unique_0016",
+        "unique_0018",
+        "unique_0020",
+        "unique_0026",
+        "unique_0029",
+        "unique_0030",
+        "unique_0031",
+        "unique_0037",
+        "unique_0039",
+        "unique_0040",
+        "unique_0041",
+        "unique_0043",
+        "unique_0044",
+        "unique_0046",
+        "unique_0049",
+        "unique_0054",
+        "unique_0058",
+        "unique_0059",
+        "unique_0060",
+        "unique_0061",
+        "unique_0062",
+        "unique_0063",
+        "unique_0066",
+        "unique_0075",
+        "unique_0079",
+        "unique_0082",
+        "unique_0083",
+        "unique_0084",
+        "unique_0086",
+        "unique_0087",
+        "unique_0091",
+        "unique_0097",
+        "unique_0101",
+        "unique_0103",
+        "unique_0104",
+        "unique_0106",
+        "unique_0109"
+      ],
+      "nature": "backend_bug"
+    },
+    {
+      "root_cause_id": "RC-02",
+      "root_cause_name": "xla_and_inductor_conv_bn_relu_fusion",
+      "count": 26,
+      "confidence": "high",
+      "suspect_backend_set": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0006",
+        "unique_0008",
+        "unique_0009",
+        "unique_0011",
+        "unique_0015",
+        "unique_0017",
+        "unique_0021",
+        "unique_0024",
+        "unique_0033",
+        "unique_0038",
+        "unique_0048",
+        "unique_0052",
+        "unique_0056",
+        "unique_0064",
+        "unique_0067",
+        "unique_0068",
+        "unique_0069",
+        "unique_0070",
+        "unique_0072",
+        "unique_0078",
+        "unique_0080",
+        "unique_0092",
+        "unique_0098",
+        "unique_0099",
+        "unique_0102",
+        "unique_0105"
+      ],
+      "nature": "backend_bug"
+    },
+    {
+      "root_cause_id": "RC-03",
+      "root_cause_name": "fp16_cast_roundtrip_and_softmax_stability_fusion",
+      "count": 5,
+      "confidence": "medium",
+      "suspect_backend_set": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0010",
+        "unique_0025",
+        "unique_0028",
+        "unique_0047",
+        "unique_0094"
+      ],
+      "nature": "uncertain"
+    },
+    {
+      "root_cause_id": "RC-04",
+      "root_cause_name": "inductor_conv_relu_softmax_chain",
+      "count": 5,
+      "confidence": "medium",
+      "suspect_backend_set": [
+        "torch_compile"
+      ],
+      "bug_ids": [
+        "unique_0013",
+        "unique_0034",
+        "unique_0053",
+        "unique_0057",
+        "unique_0096"
+      ],
+      "nature": "backend_bug"
+    },
+    {
+      "root_cause_id": "RC-05",
+      "root_cause_name": "tf_graphmode_attention_softmax_broadcast",
+      "count": 5,
+      "confidence": "medium",
+      "suspect_backend_set": [
+        "tensorflow"
+      ],
+      "bug_ids": [
+        "unique_0019",
+        "unique_0045",
+        "unique_0071",
+        "unique_0077",
+        "unique_0085"
+      ],
+      "nature": "backend_bug"
+    },
+    {
+      "root_cause_id": "RC-06",
+      "root_cause_name": "onnx_spec_squeeze_unsqueeze_bias_softmax_fusion_ambiguity",
+      "count": 5,
+      "confidence": "medium",
+      "suspect_backend_set": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0022",
+        "unique_0036",
+        "unique_0089",
+        "unique_0090",
+        "unique_0095"
+      ],
+      "nature": "spec_ambiguity"
+    },
+    {
+      "root_cause_id": "RC-07",
+      "root_cause_name": "topk_k1_plus_layernorm_axis_shape_handling",
+      "count": 4,
+      "confidence": "high",
+      "suspect_backend_set": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0074",
+        "unique_0081",
+        "unique_0093",
+        "unique_0100"
+      ],
+      "nature": "backend_bug"
+    },
+    {
+      "root_cause_id": "RC-08",
+      "root_cause_name": "resize_nearest_asymmetric_or_depthwise_conv_bn_fold",
+      "count": 3,
+      "confidence": "medium",
+      "suspect_backend_set": [
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0005",
+        "unique_0023",
+        "unique_0088"
+      ],
+      "nature": "uncertain"
+    },
+    {
+      "root_cause_id": "RC-09",
+      "root_cause_name": "xla_only_resize_pool_squeeze_lowering",
+      "count": 3,
+      "confidence": "medium",
+      "suspect_backend_set": [
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0027",
+        "unique_0032",
+        "unique_0042"
+      ],
+      "nature": "backend_bug"
+    },
+    {
+      "root_cause_id": "RC-10",
+      "root_cause_name": "resize_nearest_round_prefer_floor_semantics",
+      "count": 2,
+      "confidence": "high",
+      "suspect_backend_set": [
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0002",
+        "unique_0051"
+      ],
+      "nature": "spec_ambiguity"
+    },
+    {
+      "root_cause_id": "RC-11a",
+      "root_cause_name": "row_reduce_mul_transpose_softmax_layernorm_misfold",
+      "count": 1,
+      "confidence": "low",
+      "suspect_backend_set": [
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0004"
+      ],
+      "nature": "uncertain"
+    },
+    {
+      "root_cause_id": "RC-11b",
+      "root_cause_name": "reciprocal_zero_and_conv_bn_fuse_corner",
+      "count": 1,
+      "confidence": "low",
+      "suspect_backend_set": [
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "bug_ids": [
+        "unique_0007"
+      ],
+      "nature": "spec_ambiguity"
+    },
+    {
+      "root_cause_id": "RC-11c",
+      "root_cause_name": "tf_and_inductor_resize_linear_halfpixel",
+      "count": 1,
+      "confidence": "low",
+      "suspect_backend_set": [
+        "tensorflow",
+        "torch_compile"
+      ],
+      "bug_ids": [
+        "unique_0014"
+      ],
+      "nature": "backend_bug"
+    },
+    {
+      "root_cause_id": "RC-11d",
+      "root_cause_name": "branch_min_max_plus_layernorm_residual",
+      "count": 1,
+      "confidence": "low",
+      "suspect_backend_set": [
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0035"
+      ],
+      "nature": "backend_bug"
+    },
+    {
+      "root_cause_id": "RC-11e",
+      "root_cause_name": "foldable_add_zero_matmul_triple_constant_folding",
+      "count": 1,
+      "confidence": "low",
+      "suspect_backend_set": [
+        "tensorflow",
+        "torch_compile",
+        "torchscript"
+      ],
+      "bug_ids": [
+        "unique_0050"
+      ],
+      "nature": "spec_ambiguity"
+    },
+    {
+      "root_cause_id": "RC-11f",
+      "root_cause_name": "residual_add_relu_plus_attention_matmul_4d_except_ts",
+      "count": 1,
+      "confidence": "low",
+      "suspect_backend_set": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "tvm",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0055"
+      ],
+      "nature": "backend_bug"
+    },
+    {
+      "root_cause_id": "RC-11g",
+      "root_cause_name": "spatial_attention_cbam_reduce_max_ambiguity",
+      "count": 1,
+      "confidence": "low",
+      "suspect_backend_set": [
+        "tensorflow",
+        "torchscript",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0065"
+      ],
+      "nature": "backend_bug"
+    },
+    {
+      "root_cause_id": "RC-11h",
+      "root_cause_name": "expand_add_mul_with_layernorm_axis1_fold",
+      "count": 1,
+      "confidence": "low",
+      "suspect_backend_set": [
+        "torch_compile",
+        "tvm"
+      ],
+      "bug_ids": [
+        "unique_0073"
+      ],
+      "nature": "uncertain"
+    },
+    {
+      "root_cause_id": "RC-11i",
+      "root_cause_name": "expm1_bounded_plus_resize_layout",
+      "count": 1,
+      "confidence": "low",
+      "suspect_backend_set": [
+        "torchscript",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0076"
+      ],
+      "nature": "backend_bug"
+    },
+    {
+      "root_cause_id": "RC-11j",
+      "root_cause_name": "reciprocal_neg_zero_with_cast_chain",
+      "count": 1,
+      "confidence": "low",
+      "suspect_backend_set": [
+        "openvino",
+        "xla"
+      ],
+      "bug_ids": [
+        "unique_0107"
+      ],
+      "nature": "spec_ambiguity"
+    },
+    {
+      "root_cause_id": "RC-11k",
+      "root_cause_name": "torchscript_only_reduce_l2_manual_layernorm",
+      "count": 1,
+      "confidence": "low",
+      "suspect_backend_set": [
+        "torchscript"
+      ],
+      "bug_ids": [
+        "unique_0108"
+      ],
+      "nature": "backend_bug"
+    }
+  ]
+}

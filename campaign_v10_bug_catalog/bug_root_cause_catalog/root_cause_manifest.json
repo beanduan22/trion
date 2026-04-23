@@ -1,0 +1,7901 @@
+{
+  "generated_for": "campaign_v10_results/bugs_unique",
+  "total_unique_bugs": 110,
+  "crashes": 0,
+  "env_only_excluded": 0,
+  "note": "All 110 validated unique bugs are numerical-divergence bugs between compiler/runtime backends. The frontend gate is pytorch_eager (onnx2torch + eager). ORT is in the reference cluster for 100% of bugs, so none are classified as ONNX conversion/export bugs. No crash-only unique bugs are present.",
+  "bugs": [
+    {
+      "unique_id": "unique_0000",
+      "bug_num": 81,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0602) vs reference cluster",
+      "worst_rel_l2": 0.060192,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Tanh",
+        "Sign",
+        "Mul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "Add",
+        "LayerNormalization",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Sigmoid",
+        "Mul",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "broadcast",
+          "sign_unary"
+        ],
+        [
+          "attention",
+          "cross_attention_fixed_kv"
+        ],
+        [
+          "fusion",
+          "auto_softm_matmu"
+        ],
+        [
+          "attention",
+          "attention_residual_layernorm"
+        ],
+        [
+          "attention",
+          "attention_gated_swiglu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0000.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0001",
+      "bug_num": 459,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0786) vs reference cluster",
+      "worst_rel_l2": 0.078588,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Add",
+        "Add",
+        "Pad",
+        "Add",
+        "Add",
+        "Add",
+        "Div",
+        "Softmax",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "broadcast",
+          "auto_add_add"
+        ],
+        [
+          "layout",
+          "pad_reflect_asymmetric"
+        ],
+        [
+          "branch",
+          "triple_add_residual"
+        ],
+        [
+          "broadcast",
+          "softmax_mul"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0001.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0002",
+      "bug_num": 287,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-10",
+      "root_cause": "resize_nearest_round_prefer_floor_semantics",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "BatchNormalization",
+        "Mul",
+        "Div",
+        "Add",
+        "Resize",
+        "Mul",
+        "Greater",
+        "Where",
+        "Tanh",
+        "Add",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_batch_mul"
+        ],
+        [
+          "broadcast",
+          "auto_div_add"
+        ],
+        [
+          "layout",
+          "rs_nearest_asymmetric_roundpreferfloor_26to64"
+        ],
+        [
+          "branch",
+          "rrelu_inference_identity"
+        ],
+        [
+          "broadcast",
+          "tanh_add_mul_chain"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0002_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0002.py",
+      "nature": "spec_ambiguity"
+    },
+    {
+      "unique_id": "unique_0003",
+      "bug_num": 105,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0599) vs reference cluster",
+      "worst_rel_l2": 0.059948,
+      "worst_pair": [
+        "torchscript",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Relu",
+        "Mul",
+        "LayerNormalization",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "Transpose",
+        "Transpose"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "residual_add_relu"
+        ],
+        [
+          "normalization",
+          "auto_mul_layer"
+        ],
+        [
+          "attention",
+          "attention_causal_only"
+        ],
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ],
+        [
+          "layout",
+          "row_reduce_mul_transpose"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0003.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0004",
+      "bug_num": 581,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-11a",
+      "root_cause": "row_reduce_mul_transpose_softmax_layernorm_misfold",
+      "confidence": "low",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Softmax",
+        "MatMul",
+        "Add",
+        "LayerNormalization",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "Transpose",
+        "Transpose",
+        "Split",
+        "Sigmoid",
+        "Mul",
+        "Unsqueeze",
+        "Squeeze"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_softm_matmu"
+        ],
+        [
+          "normalization",
+          "auto_add_layer"
+        ],
+        [
+          "layout",
+          "row_reduce_mul_transpose"
+        ],
+        [
+          "branch",
+          "glu"
+        ],
+        [
+          "layout",
+          "squeeze_unsqueeze"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0004_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0004.py",
+      "nature": "uncertain"
+    },
+    {
+      "unique_id": "unique_0005",
+      "bug_num": 1139,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-08",
+      "root_cause": "resize_nearest_asymmetric_or_depthwise_conv_bn_fold",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.0575) vs reference cluster",
+      "worst_rel_l2": 0.057486,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Conv",
+        "BatchNormalization",
+        "Relu",
+        "Resize",
+        "Abs",
+        "Ceil",
+        "Cast",
+        "Cast",
+        "Mul",
+        "ReduceMax",
+        "Sub",
+        "Exp",
+        "ReduceSum",
+        "Div",
+        "Reshape",
+        "LayerNormalization",
+        "Reshape"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "depthwise_conv_bn_relu"
+        ],
+        [
+          "layout",
+          "resize_nearest_asymmetric"
+        ],
+        [
+          "constant",
+          "cast_fp32_int32_roundtrip"
+        ],
+        [
+          "normalization",
+          "stable_softmax"
+        ],
+        [
+          "normalization",
+          "groupnorm_manual_chain"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0088_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0005.py",
+      "nature": "uncertain"
+    },
+    {
+      "unique_id": "unique_0006",
+      "bug_num": 310,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Mul",
+        "LayerNormalization",
+        "MatMul",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Concat",
+        "Add",
+        "Cast",
+        "Cast",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "normalization",
+          "auto_mul_layer"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "branch",
+          "three_branch_concat"
+        ],
+        [
+          "constant",
+          "cp_roundtrip_int32_trunc"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0006.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0007",
+      "bug_num": 210,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-11b",
+      "root_cause": "reciprocal_zero_and_conv_bn_fuse_corner",
+      "confidence": "low",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Mul",
+        "Relu",
+        "Conv",
+        "BatchNormalization",
+        "Conv",
+        "BatchNormalization",
+        "Mul",
+        "Add",
+        "Mul",
+        "Add",
+        "Relu",
+        "Conv",
+        "Concat",
+        "Reciprocal",
+        "Slice"
+      ],
+      "pattern_sequence": [
+        [
+          "constant",
+          "add_zero_identity"
+        ],
+        [
+          "fusion",
+          "auto_relu_conv_batch"
+        ],
+        [
+          "fusion",
+          "auto_conv_batch_mul_add"
+        ],
+        [
+          "fusion",
+          "auto_mul_add_relu_conv"
+        ],
+        [
+          "broadcast",
+          "ei_reciprocal_zero"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0007_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0007.py",
+      "nature": "spec_ambiguity"
+    },
+    {
+      "unique_id": "unique_0008",
+      "bug_num": 168,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.1320) vs reference cluster",
+      "worst_rel_l2": 0.132037,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Conv",
+        "BatchNormalization",
+        "Conv",
+        "Mul",
+        "Add",
+        "Add",
+        "Conv",
+        "Relu",
+        "Conv",
+        "Where",
+        "Mul",
+        "LogSoftmax",
+        "Mul",
+        "InstanceNormalization"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "conv_bn_fusion_both_paths"
+        ],
+        [
+          "fusion",
+          "auto_conv_relu_conv"
+        ],
+        [
+          "constant",
+          "where_const_condition"
+        ],
+        [
+          "normalization",
+          "log_softmax_chain"
+        ],
+        [
+          "normalization",
+          "instance_normalization_native"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0008.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0009",
+      "bug_num": 390,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0669) vs reference cluster",
+      "worst_rel_l2": 0.066873,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "MatMul",
+        "ReduceMean",
+        "ReduceMax",
+        "Concat",
+        "Conv",
+        "Sigmoid",
+        "Mul",
+        "Conv",
+        "Relu",
+        "Conv",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "branch",
+          "spatial_attention_cbam"
+        ],
+        [
+          "fusion",
+          "auto_conv_relu_conv"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0009.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0010",
+      "bug_num": 233,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-03",
+      "root_cause": "fp16_cast_roundtrip_and_softmax_stability_fusion",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.0645) vs reference cluster",
+      "worst_rel_l2": 0.064485,
+      "worst_pair": [
+        "onnxruntime",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Cast",
+        "Cast",
+        "Mul",
+        "Add",
+        "Relu",
+        "Sub",
+        "Add",
+        "LayerNormalization",
+        "Neg",
+        "Neg",
+        "Mul",
+        "ReduceMax",
+        "Sub",
+        "Exp",
+        "ReduceSum",
+        "Div",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "constant",
+          "cp_roundtrip_fp16_small"
+        ],
+        [
+          "branch",
+          "add_relu_sub"
+        ],
+        [
+          "normalization",
+          "embed_layernorm_sum"
+        ],
+        [
+          "constant",
+          "neg_neg_cancel"
+        ],
+        [
+          "normalization",
+          "softmax_sub_max_stable"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0010_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0010.py",
+      "nature": "uncertain"
+    },
+    {
+      "unique_id": "unique_0011",
+      "bug_num": 136,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0534) vs reference cluster",
+      "worst_rel_l2": 0.053422,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Neg",
+        "Neg",
+        "Mul",
+        "Reshape",
+        "Transpose",
+        "Reshape",
+        "Conv",
+        "MatMul",
+        "MatMul",
+        "Add",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "constant",
+          "neg_neg_cancel"
+        ],
+        [
+          "layout",
+          "space_to_depth_block"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "constant",
+          "foldable_add_zero_mul_one"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0011.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0012",
+      "bug_num": 300,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0523) vs reference cluster",
+      "worst_rel_l2": 0.052282,
+      "worst_pair": [
+        "torchscript",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Div",
+        "Tanh",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Relu",
+        "ReduceL2",
+        "Add",
+        "Div",
+        "Mul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "attention_logit_softcap"
+        ],
+        [
+          "broadcast",
+          "auto_mul_add_relu"
+        ],
+        [
+          "normalization",
+          "l2_normalize"
+        ],
+        [
+          "attention",
+          "alibi_attention"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0012.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0013",
+      "bug_num": 1163,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-04",
+      "root_cause": "inductor_conv_relu_softmax_chain",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.1962) vs reference cluster",
+      "worst_rel_l2": 0.196197,
+      "worst_pair": [
+        "torch_compile",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "suspect_backends": [
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Concat",
+        "MatMul",
+        "Cast",
+        "Mul",
+        "ReduceMax",
+        "Sub",
+        "Exp",
+        "ReduceSum",
+        "Div",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "branch",
+          "inception_v3_branch"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "constant",
+          "cast_identity_float"
+        ],
+        [
+          "normalization",
+          "softmax_sub_max_stable"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0034_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0013.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0014",
+      "bug_num": 14,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-11c",
+      "root_cause": "tf_and_inductor_resize_linear_halfpixel",
+      "confidence": "low",
+      "symptom": "rel_l2 mismatch (worst = 0.0605) vs reference cluster",
+      "worst_rel_l2": 0.060494,
+      "worst_pair": [
+        "torch_compile",
+        "openvino"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Mul",
+        "Add",
+        "Relu",
+        "Conv",
+        "Resize",
+        "Relu",
+        "Conv",
+        "Relu",
+        "Conv",
+        "Conv",
+        "Add",
+        "Relu",
+        "Greater",
+        "Where"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_mul_add_relu_conv"
+        ],
+        [
+          "layout",
+          "rs_linear_halfpixel_5to4"
+        ],
+        [
+          "fusion",
+          "auto_relu_conv_relu_conv"
+        ],
+        [
+          "fusion",
+          "conv_add_relu"
+        ],
+        [
+          "broadcast",
+          "where_mask"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0014_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0014.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0015",
+      "bug_num": 410,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Tanh",
+        "Cos",
+        "Mul",
+        "Resize",
+        "Conv",
+        "BatchNormalization",
+        "Mul",
+        "Add",
+        "MatMul",
+        "Conv",
+        "BatchNormalization",
+        "Relu"
+      ],
+      "pattern_sequence": [
+        [
+          "broadcast",
+          "cos_unary"
+        ],
+        [
+          "layout",
+          "rs_linear_halfpixel_32to30"
+        ],
+        [
+          "fusion",
+          "auto_conv_batch_mul_add"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "fusion",
+          "depthwise_conv_bn_relu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0015.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0016",
+      "bug_num": 162,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0702) vs reference cluster",
+      "worst_rel_l2": 0.070224,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Mul",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Pow",
+        "Div",
+        "Mul",
+        "MatMul",
+        "Add",
+        "LayerNormalization"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "windowed_attention_banded"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "normalization",
+          "manual_rmsnorm_last_axis"
+        ],
+        [
+          "normalization",
+          "power_norm"
+        ],
+        [
+          "normalization",
+          "postnorm_residual_linear"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0016.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0017",
+      "bug_num": 357,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0511) vs reference cluster",
+      "worst_rel_l2": 0.051115,
+      "worst_pair": [
+        "torch_compile",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Add",
+        "Add",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Pow",
+        "Div",
+        "Mul",
+        "Add",
+        "Cast",
+        "ReduceSum",
+        "Mul",
+        "Add",
+        "Pad",
+        "Conv"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "branch",
+          "multi_scale_conv_branch"
+        ],
+        [
+          "normalization",
+          "variance_whitening"
+        ],
+        [
+          "broadcast",
+          "ia_sat_add_int8_overflow"
+        ],
+        [
+          "layout",
+          "pad_conv"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0017.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0018",
+      "bug_num": 17,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0635) vs reference cluster",
+      "worst_rel_l2": 0.063476,
+      "worst_pair": [
+        "torchscript",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "Greater",
+        "Where",
+        "Mul",
+        "Sigmoid",
+        "Mul",
+        "Softsign",
+        "Mul",
+        "MatMul",
+        "MatMul",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ],
+        [
+          "branch",
+          "where_mask_fill"
+        ],
+        [
+          "broadcast",
+          "auto_sigmo_mul"
+        ],
+        [
+          "broadcast",
+          "softsign_activation"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0018.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0019",
+      "bug_num": 1095,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-05",
+      "root_cause": "tf_graphmode_attention_softmax_broadcast",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.0957) vs reference cluster",
+      "worst_rel_l2": 0.095711,
+      "worst_pair": [
+        "torchscript",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "suspect_backends": [
+        "tensorflow"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Softmax",
+        "Add",
+        "Mean",
+        "Mul",
+        "Mul",
+        "Greater",
+        "Where",
+        "Softmax",
+        "MatMul",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "normalization",
+          "softmax_axis0_residual"
+        ],
+        [
+          "broadcast",
+          "mean_binary"
+        ],
+        [
+          "branch",
+          "rrelu_inference_identity"
+        ],
+        [
+          "fusion",
+          "auto_softm_matmu_matmu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0019_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0019.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0020",
+      "bug_num": 47,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0517) vs reference cluster",
+      "worst_rel_l2": 0.051694,
+      "worst_pair": [
+        "xla",
+        "openvino"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Tanh",
+        "Exp",
+        "Sub",
+        "Mul",
+        "MatMul",
+        "MatMul",
+        "Conv",
+        "BatchNormalization",
+        "LeakyRelu",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "broadcast",
+          "expm1_bounded"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "fusion",
+          "conv_bn_leakyrelu"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0020.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0021",
+      "bug_num": 294,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0724) vs reference cluster",
+      "worst_rel_l2": 0.072427,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Conv",
+        "Relu",
+        "Softmax",
+        "LayerNormalization",
+        "Mul",
+        "Add",
+        "Unsqueeze",
+        "Expand",
+        "Mul",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "fusion",
+          "auto_conv_relu_softm"
+        ],
+        [
+          "normalization",
+          "ada_layer_norm"
+        ],
+        [
+          "layout",
+          "unsqueeze_expand_mul"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0021.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0022",
+      "bug_num": 229,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-06",
+      "root_cause": "onnx_spec_squeeze_unsqueeze_bias_softmax_fusion_ambiguity",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.6908) vs reference cluster",
+      "worst_rel_l2": 0.690849,
+      "worst_pair": [
+        "onnxruntime",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Reshape",
+        "LayerNormalization",
+        "Reshape",
+        "Mul",
+        "Add",
+        "Add",
+        "Relu",
+        "Conv",
+        "BatchNormalization",
+        "Sub",
+        "Mul",
+        "Add",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Add",
+        "Add",
+        "Add",
+        "Cast",
+        "Cast",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "normalization",
+          "manual_group_norm"
+        ],
+        [
+          "fusion",
+          "auto_add_relu_conv_batch"
+        ],
+        [
+          "broadcast",
+          "sub_mul_add"
+        ],
+        [
+          "branch",
+          "dilated_branch_sum"
+        ],
+        [
+          "constant",
+          "cp_roundtrip_int32_trunc_neg"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0095_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0022.py",
+      "nature": "spec_ambiguity"
+    },
+    {
+      "unique_id": "unique_0023",
+      "bug_num": 1180,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-08",
+      "root_cause": "resize_nearest_asymmetric_or_depthwise_conv_bn_fold",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "LayerNormalization",
+        "Mul",
+        "Add",
+        "Sqrt",
+        "Mul",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "Transpose",
+        "Transpose",
+        "Less",
+        "Cast",
+        "Mul",
+        "MatMul",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "normalization",
+          "embed_layernorm_sum"
+        ],
+        [
+          "constant",
+          "mul_self_to_pow"
+        ],
+        [
+          "layout",
+          "row_reduce_mul_transpose"
+        ],
+        [
+          "broadcast",
+          "less_binary"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0088_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0023.py",
+      "nature": "uncertain"
+    },
+    {
+      "unique_id": "unique_0024",
+      "bug_num": 374,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.1100) vs reference cluster",
+      "worst_rel_l2": 0.109996,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Mul",
+        "Add",
+        "Relu",
+        "Conv",
+        "GlobalAveragePool",
+        "Flatten",
+        "MatMul",
+        "Add",
+        "Relu",
+        "MatMul",
+        "Add",
+        "Sigmoid",
+        "Unsqueeze",
+        "Mul",
+        "Add",
+        "Abs",
+        "Add",
+        "Sqrt",
+        "Mul",
+        "Mul",
+        "Add",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Mul",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_mul_add_relu_conv"
+        ],
+        [
+          "branch",
+          "se_residual"
+        ],
+        [
+          "broadcast",
+          "sqrt_abs_eps"
+        ],
+        [
+          "constant",
+          "identity_chain"
+        ],
+        [
+          "normalization",
+          "layer_norm_manual_chain"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0024.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0025",
+      "bug_num": 99,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-03",
+      "root_cause": "fp16_cast_roundtrip_and_softmax_stability_fusion",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.0852) vs reference cluster",
+      "worst_rel_l2": 0.085216,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Relu",
+        "Softmax",
+        "Cast",
+        "Cast",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Mul",
+        "Mul",
+        "ReduceMax",
+        "Sub",
+        "Exp",
+        "ReduceSum",
+        "Div",
+        "Mul",
+        "Reshape",
+        "Reshape"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_relu_softm"
+        ],
+        [
+          "constant",
+          "cast_roundtrip"
+        ],
+        [
+          "normalization",
+          "crms_norm"
+        ],
+        [
+          "normalization",
+          "softmax_sub_max_stable"
+        ],
+        [
+          "constant",
+          "redundant_reshape"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0010_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0025.py",
+      "nature": "uncertain"
+    },
+    {
+      "unique_id": "unique_0026",
+      "bug_num": 237,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Add",
+        "Cast",
+        "Cast",
+        "Mul",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Mul",
+        "Mul",
+        "Neg",
+        "Abs",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Add",
+        "LayerNormalization"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "constant",
+          "cp_roundtrip_int32_trunc_neg"
+        ],
+        [
+          "normalization",
+          "crms_norm"
+        ],
+        [
+          "constant",
+          "neg_abs_identity"
+        ],
+        [
+          "attention",
+          "self_attention_residual"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0026.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0027",
+      "bug_num": 476,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-09",
+      "root_cause": "xla_only_resize_pool_squeeze_lowering",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tensorflow",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Add",
+        "Sub",
+        "Mul",
+        "Resize",
+        "GlobalAveragePool",
+        "Flatten",
+        "MatMul",
+        "Add",
+        "Relu",
+        "MatMul",
+        "Add",
+        "Sigmoid",
+        "Reshape",
+        "Mul",
+        "Unsqueeze",
+        "Squeeze",
+        "ReduceMean",
+        "ReduceMax",
+        "Concat",
+        "Conv",
+        "Sigmoid",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "broadcast",
+          "auto_add_add_sub_mul"
+        ],
+        [
+          "layout",
+          "rs_linear_halfpixel_5to4"
+        ],
+        [
+          "branch",
+          "se_block"
+        ],
+        [
+          "layout",
+          "squeeze_unsqueeze"
+        ],
+        [
+          "branch",
+          "spatial_attention_cbam"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0042_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0027.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0028",
+      "bug_num": 157,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-03",
+      "root_cause": "fp16_cast_roundtrip_and_softmax_stability_fusion",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.0705) vs reference cluster",
+      "worst_rel_l2": 0.070501,
+      "worst_pair": [
+        "xla",
+        "openvino"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "torch_compile",
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "LayerNormalization",
+        "LayerNormalization",
+        "LayerNormalization",
+        "LayerNormalization",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Pow",
+        "Div",
+        "Mul",
+        "Cast",
+        "Cast",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Sigmoid",
+        "Mul",
+        "Mul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "Add",
+        "LayerNormalization"
+      ],
+      "pattern_sequence": [
+        [
+          "normalization",
+          "layernorm_chain_multichoice_3d"
+        ],
+        [
+          "normalization",
+          "variance_whitening"
+        ],
+        [
+          "constant",
+          "cast_roundtrip"
+        ],
+        [
+          "attention",
+          "attention_gated_swiglu"
+        ],
+        [
+          "attention",
+          "attention_residual_layernorm"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0010_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0028.py",
+      "nature": "uncertain"
+    },
+    {
+      "unique_id": "unique_0029",
+      "bug_num": 11,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0622) vs reference cluster",
+      "worst_rel_l2": 0.062245,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "LayerNormalization",
+        "LayerNormalization",
+        "Div",
+        "Add",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Where",
+        "Mul",
+        "MatMul",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "add_layernorm"
+        ],
+        [
+          "normalization",
+          "layernorm_temperature"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "constant",
+          "where_const_condition"
+        ],
+        [
+          "branch",
+          "matmul_residual_projection"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0029.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0030",
+      "bug_num": 426,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0708) vs reference cluster",
+      "worst_rel_l2": 0.070795,
+      "worst_pair": [
+        "onnxruntime",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Greater",
+        "Where",
+        "Mul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Where",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Slice",
+        "Slice",
+        "Mul",
+        "Mul",
+        "Mul",
+        "Add",
+        "Mul",
+        "Mul",
+        "Add",
+        "Concat",
+        "Slice",
+        "Slice",
+        "Mul",
+        "Mul",
+        "Mul",
+        "Add",
+        "Mul",
+        "Mul",
+        "Add",
+        "Concat",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "ReduceMean",
+        "MatMul",
+        "Add",
+        "Relu",
+        "MatMul",
+        "Add",
+        "Sigmoid",
+        "Mul",
+        "LayerNormalization",
+        "Add",
+        "Relu",
+        "Sub"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "where_mask_fill"
+        ],
+        [
+          "attention",
+          "causal_masked_attention"
+        ],
+        [
+          "attention",
+          "rotary_embedding_attention"
+        ],
+        [
+          "branch",
+          "squeeze_excite_norm"
+        ],
+        [
+          "branch",
+          "add_relu_sub"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0030.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0031",
+      "bug_num": 359,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0502) vs reference cluster",
+      "worst_rel_l2": 0.050173,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Concat",
+        "Relu",
+        "Slice",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "Add",
+        "LayerNormalization",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Pow",
+        "Div",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "broadcast",
+          "ei_relu_neg_inf"
+        ],
+        [
+          "layout",
+          "row_reduce_mul_transpose"
+        ],
+        [
+          "attention",
+          "attention_residual_layernorm"
+        ],
+        [
+          "attention",
+          "attention_with_bias"
+        ],
+        [
+          "normalization",
+          "power_norm"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0031.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0032",
+      "bug_num": 362,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-09",
+      "root_cause": "xla_only_resize_pool_squeeze_lowering",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Tanh",
+        "Sign",
+        "Mul",
+        "BatchNormalization",
+        "Mul",
+        "Add",
+        "Unsqueeze",
+        "Squeeze",
+        "Resize",
+        "Transpose",
+        "Transpose"
+      ],
+      "pattern_sequence": [
+        [
+          "broadcast",
+          "sign_unary"
+        ],
+        [
+          "fusion",
+          "auto_batch_mul_add"
+        ],
+        [
+          "layout",
+          "squeeze_unsqueeze"
+        ],
+        [
+          "layout",
+          "rs_linear_halfpixel_20to6"
+        ],
+        [
+          "constant",
+          "transpose_inverse_cancel"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0042_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0032.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0033",
+      "bug_num": 302,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0553) vs reference cluster",
+      "worst_rel_l2": 0.055335,
+      "worst_pair": [
+        "torch_compile",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Reshape",
+        "Transpose",
+        "Reshape",
+        "Conv",
+        "Concat",
+        "Conv",
+        "LayerNormalization",
+        "Div",
+        "Add",
+        "LayerNormalization",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "layout",
+          "space_to_depth_block"
+        ],
+        [
+          "branch",
+          "concat_conv"
+        ],
+        [
+          "normalization",
+          "layernorm_temperature"
+        ],
+        [
+          "normalization",
+          "layernorm_residual_add"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0033.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0034",
+      "bug_num": 1177,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-04",
+      "root_cause": "inductor_conv_relu_softmax_chain",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.0635) vs reference cluster",
+      "worst_rel_l2": 0.063479,
+      "worst_pair": [
+        "torchscript",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "suspect_backends": [
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Conv",
+        "Relu",
+        "Softmax",
+        "Expand",
+        "Add",
+        "Conv",
+        "Relu",
+        "Conv",
+        "Relu",
+        "Conv",
+        "Relu",
+        "Mul",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_conv_relu_softm"
+        ],
+        [
+          "broadcast",
+          "expand_right_align"
+        ],
+        [
+          "fusion",
+          "auto_conv_relu_conv"
+        ],
+        [
+          "fusion",
+          "auto_relu_conv_relu"
+        ],
+        [
+          "broadcast",
+          "auto_mul_matmu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0034_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0034.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0035",
+      "bug_num": 935,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-11d",
+      "root_cause": "branch_min_max_plus_layernorm_residual",
+      "confidence": "low",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino"
+      ],
+      "suspect_backends": [
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Mul",
+        "Add",
+        "Relu",
+        "Conv",
+        "LayerNormalization",
+        "Add",
+        "Conv",
+        "Conv",
+        "Min",
+        "Max",
+        "Resize",
+        "Softmax",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_mul_add_relu_conv"
+        ],
+        [
+          "normalization",
+          "layernorm_residual_add"
+        ],
+        [
+          "branch",
+          "branch_min_then_max"
+        ],
+        [
+          "layout",
+          "rs_nearest_asymmetric_roundpreferfloor_26to64"
+        ],
+        [
+          "fusion",
+          "auto_softm_matmu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0035_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0035.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0036",
+      "bug_num": 129,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-06",
+      "root_cause": "onnx_spec_squeeze_unsqueeze_bias_softmax_fusion_ambiguity",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "xla",
+        "tvm"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "TopK",
+        "Tile",
+        "Reshape",
+        "InstanceNormalization",
+        "Reshape",
+        "Mul",
+        "Greater",
+        "Where",
+        "Add",
+        "Add",
+        "Add",
+        "Add",
+        "Add",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "topk_last_axis_k1"
+        ],
+        [
+          "normalization",
+          "instance_norm_1d"
+        ],
+        [
+          "branch",
+          "rrelu_inference_identity"
+        ],
+        [
+          "branch",
+          "triple_add_residual"
+        ],
+        [
+          "branch",
+          "triple_add_residual"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0095_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0036.py",
+      "nature": "spec_ambiguity"
+    },
+    {
+      "unique_id": "unique_0037",
+      "bug_num": 444,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.6414) vs reference cluster",
+      "worst_rel_l2": 0.641415,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Greater",
+        "Where",
+        "Mul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Max",
+        "Mul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "Softmax",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "where_mask_fill"
+        ],
+        [
+          "attention",
+          "scaled_dot_product_attention"
+        ],
+        [
+          "broadcast",
+          "max_binary"
+        ],
+        [
+          "attention",
+          "alibi_attention"
+        ],
+        [
+          "fusion",
+          "auto_softm_matmu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0037.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0038",
+      "bug_num": 5,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0974) vs reference cluster",
+      "worst_rel_l2": 0.097408,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Conv",
+        "BatchNormalization",
+        "Conv",
+        "Mul",
+        "Add",
+        "Add",
+        "Abs",
+        "Add",
+        "Pow",
+        "Sqrt",
+        "Concat",
+        "Exp",
+        "Slice",
+        "Conv",
+        "BatchNormalization",
+        "Conv",
+        "Mul",
+        "Add",
+        "Add",
+        "Resize"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "conv_bn_fusion_both_paths"
+        ],
+        [
+          "constant",
+          "pow_canonical"
+        ],
+        [
+          "broadcast",
+          "ei_exp_nan"
+        ],
+        [
+          "branch",
+          "conv_bn_fusion_both_paths"
+        ],
+        [
+          "layout",
+          "resize_nearest_asymmetric"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0038.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0039",
+      "bug_num": 133,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0644) vs reference cluster",
+      "worst_rel_l2": 0.064436,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Unsqueeze",
+        "Squeeze",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Add",
+        "MatMul",
+        "Add",
+        "Sigmoid",
+        "Mul",
+        "Mul",
+        "MatMul",
+        "Add",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Pow",
+        "Div",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "squeeze_unsqueeze"
+        ],
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ],
+        [
+          "attention",
+          "swiglu_ffn"
+        ],
+        [
+          "attention",
+          "attention_causal_only"
+        ],
+        [
+          "normalization",
+          "variance_whitening"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0039.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0040",
+      "bug_num": 311,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0521) vs reference cluster",
+      "worst_rel_l2": 0.052096,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Slice",
+        "Tile",
+        "Transpose",
+        "MatMul",
+        "MatMul",
+        "Where",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "slice_step2_tile"
+        ],
+        [
+          "layout",
+          "transpose_hw_swap"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "constant",
+          "where_const_condition"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0040.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0041",
+      "bug_num": 447,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0545) vs reference cluster",
+      "worst_rel_l2": 0.054524,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Sub",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "Add",
+        "Cast",
+        "ReduceSum",
+        "Mul",
+        "Add",
+        "Unsqueeze",
+        "Squeeze"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "broadcast",
+          "sub_mul_add"
+        ],
+        [
+          "fusion",
+          "auto_softm_matmu"
+        ],
+        [
+          "broadcast",
+          "ia_sat_add_int32_overflow"
+        ],
+        [
+          "layout",
+          "squeeze_unsqueeze"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0041.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0042",
+      "bug_num": 1182,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-09",
+      "root_cause": "xla_only_resize_pool_squeeze_lowering",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Slice",
+        "Tile",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Relu",
+        "Resize"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "layout",
+          "slice_step2_tile"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "broadcast",
+          "auto_mul_add_relu"
+        ],
+        [
+          "layout",
+          "rs_linear_halfpixel_32to30"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0042_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0042.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0043",
+      "bug_num": 156,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.4839) vs reference cluster",
+      "worst_rel_l2": 0.483869,
+      "worst_pair": [
+        "tvm",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "LayerNormalization",
+        "Sigmoid",
+        "Mul",
+        "Mul",
+        "Add",
+        "Sqrt",
+        "Reciprocal",
+        "Mul",
+        "Mul",
+        "Mul",
+        "Tanh",
+        "Mul",
+        "Add",
+        "Concat",
+        "Relu",
+        "Slice"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "normalization",
+          "layernorm_gate"
+        ],
+        [
+          "constant",
+          "sqrt_reciprocal_mul"
+        ],
+        [
+          "broadcast",
+          "tanh_rescaled_to_sigmoid"
+        ],
+        [
+          "broadcast",
+          "ei_relu_nan"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0043.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0044",
+      "bug_num": 111,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.2009) vs reference cluster",
+      "worst_rel_l2": 0.200947,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "Transpose",
+        "Transpose",
+        "Add",
+        "Add",
+        "Add",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "Add",
+        "Relu",
+        "Sub"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "row_reduce_mul_transpose"
+        ],
+        [
+          "branch",
+          "triple_add_residual"
+        ],
+        [
+          "attention",
+          "attention_causal_only"
+        ],
+        [
+          "fusion",
+          "auto_softm_matmu_matmu"
+        ],
+        [
+          "branch",
+          "add_relu_sub"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0044.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0045",
+      "bug_num": 1097,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-05",
+      "root_cause": "tf_graphmode_attention_softmax_broadcast",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.0783) vs reference cluster",
+      "worst_rel_l2": 0.078319,
+      "worst_pair": [
+        "torchscript",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "suspect_backends": [
+        "tensorflow"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Add",
+        "Add",
+        "Add",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Mul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "LayerNormalization",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Add",
+        "LayerNormalization",
+        "MatMul",
+        "Add",
+        "Div",
+        "Erf",
+        "Add",
+        "Mul",
+        "Mul",
+        "MatMul",
+        "Add",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "branch",
+          "triple_add_residual"
+        ],
+        [
+          "normalization",
+          "crms_norm"
+        ],
+        [
+          "normalization",
+          "bias_softmax_fusion"
+        ],
+        [
+          "attention",
+          "transformer_encoder_layer"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0019_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0045.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0046",
+      "bug_num": 402,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0638) vs reference cluster",
+      "worst_rel_l2": 0.06378,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Split",
+        "Sigmoid",
+        "Mul",
+        "MatMul",
+        "Elu",
+        "Mul",
+        "MatMul",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "branch",
+          "glu"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "broadcast",
+          "elu_activation"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0046.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0047",
+      "bug_num": 95,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-03",
+      "root_cause": "fp16_cast_roundtrip_and_softmax_stability_fusion",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Tanh",
+        "Add",
+        "Mul",
+        "Conv",
+        "Relu",
+        "Conv",
+        "Relu",
+        "Add",
+        "Cast",
+        "Cast",
+        "Mul",
+        "Sigmoid",
+        "Mul",
+        "Sub",
+        "Add",
+        "Cast",
+        "Cast",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "broadcast",
+          "tanh_add_mul_chain"
+        ],
+        [
+          "fusion",
+          "auto_conv_relu_conv_relu"
+        ],
+        [
+          "constant",
+          "cp_roundtrip_fp16_small"
+        ],
+        [
+          "broadcast",
+          "sigmoid_scale"
+        ],
+        [
+          "constant",
+          "cp_roundtrip_int32_trunc"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0010_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0047.py",
+      "nature": "uncertain"
+    },
+    {
+      "unique_id": "unique_0048",
+      "bug_num": 280,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.1547) vs reference cluster",
+      "worst_rel_l2": 0.154692,
+      "worst_pair": [
+        "torchscript",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Conv",
+        "Relu",
+        "Softmax",
+        "Add",
+        "Mul",
+        "Pad",
+        "Conv",
+        "Split",
+        "Sigmoid",
+        "Mul",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Mul",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "normalization",
+          "softmax_axis1_last"
+        ],
+        [
+          "constant",
+          "constant_add_mul"
+        ],
+        [
+          "layout",
+          "pad_conv"
+        ],
+        [
+          "branch",
+          "glu"
+        ],
+        [
+          "normalization",
+          "layer_norm_manual_chain"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0048.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0049",
+      "bug_num": 128,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0534) vs reference cluster",
+      "worst_rel_l2": 0.053393,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Relu",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Pow",
+        "Div",
+        "Mul",
+        "Reshape",
+        "Reshape",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Div",
+        "Tanh",
+        "Mul",
+        "Softmax",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "residual_add_relu"
+        ],
+        [
+          "attention",
+          "windowed_attention_banded"
+        ],
+        [
+          "normalization",
+          "power_norm"
+        ],
+        [
+          "constant",
+          "redundant_reshape"
+        ],
+        [
+          "attention",
+          "attention_logit_softcap"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0049.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0050",
+      "bug_num": 6,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-11e",
+      "root_cause": "foldable_add_zero_matmul_triple_constant_folding",
+      "confidence": "low",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "torch_compile",
+        "torchscript"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Add",
+        "Mul",
+        "Where",
+        "Mul",
+        "Concat",
+        "Pow",
+        "Slice",
+        "Relu",
+        "Sigmoid",
+        "Tanh",
+        "Abs",
+        "Mean"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "constant",
+          "foldable_add_zero_mul_one"
+        ],
+        [
+          "constant",
+          "where_const_condition"
+        ],
+        [
+          "broadcast",
+          "ei_pow_zero_pow_neg"
+        ],
+        [
+          "branch",
+          "four_branch_average"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0050_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0050.py",
+      "nature": "spec_ambiguity"
+    },
+    {
+      "unique_id": "unique_0051",
+      "bug_num": 339,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-10",
+      "root_cause": "resize_nearest_round_prefer_floor_semantics",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Reshape",
+        "Softmax",
+        "Reshape",
+        "BatchNormalization",
+        "Relu",
+        "Sub",
+        "Mul",
+        "Add",
+        "Resize",
+        "Conv",
+        "BatchNormalization",
+        "Relu"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "reshape_softmax_reshape"
+        ],
+        [
+          "fusion",
+          "auto_batch_relu"
+        ],
+        [
+          "broadcast",
+          "sub_mul_add"
+        ],
+        [
+          "layout",
+          "rs_nearest_asymmetric_roundpreferfloor_26to64"
+        ],
+        [
+          "fusion",
+          "conv_bn_relu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0002_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0051.py",
+      "nature": "spec_ambiguity"
+    },
+    {
+      "unique_id": "unique_0052",
+      "bug_num": 299,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0550) vs reference cluster",
+      "worst_rel_l2": 0.055015,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "ReduceMean",
+        "Add",
+        "MatMul",
+        "MatMul",
+        "Add",
+        "Relu",
+        "Conv",
+        "BatchNormalization",
+        "Conv",
+        "Relu",
+        "Conv",
+        "Add",
+        "Conv",
+        "Resize",
+        "Resize",
+        "Conv",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "normalization",
+          "reduce_mean_first_axis"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu"
+        ],
+        [
+          "fusion",
+          "auto_add_relu_conv_batch"
+        ],
+        [
+          "branch",
+          "conv_branch_add"
+        ],
+        [
+          "branch",
+          "fpn_branch"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0052.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0053",
+      "bug_num": 49,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-04",
+      "root_cause": "inductor_conv_relu_softmax_chain",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tensorflow",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "suspect_backends": [
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Pad",
+        "Conv",
+        "Add",
+        "Cast",
+        "Cast",
+        "Mul",
+        "Concat",
+        "Add",
+        "Slice",
+        "Transpose",
+        "Transpose",
+        "Mul",
+        "ReduceSum",
+        "Add",
+        "Sqrt",
+        "Div"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "pad_conv"
+        ],
+        [
+          "constant",
+          "cp_roundtrip_int32_trunc_neg"
+        ],
+        [
+          "broadcast",
+          "ei_add_subnormal_add_0"
+        ],
+        [
+          "layout",
+          "transpose_transpose_squash"
+        ],
+        [
+          "normalization",
+          "l2_norm_manual_primitives"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0034_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0053.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0054",
+      "bug_num": 208,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0585) vs reference cluster",
+      "worst_rel_l2": 0.058544,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Unsqueeze",
+        "Squeeze",
+        "Add",
+        "MatMul",
+        "ReduceMax",
+        "Sub",
+        "Exp",
+        "ReduceSum",
+        "Div",
+        "Concat",
+        "Reciprocal",
+        "Slice",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "constant",
+          "unsqueeze_three_squeeze"
+        ],
+        [
+          "broadcast",
+          "auto_add_matmu"
+        ],
+        [
+          "normalization",
+          "stable_softmax"
+        ],
+        [
+          "broadcast",
+          "ei_reciprocal_zero"
+        ],
+        [
+          "attention",
+          "attention_causal_only"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0054.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0055",
+      "bug_num": 72,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-11f",
+      "root_cause": "residual_add_relu_plus_attention_matmul_4d_except_ts",
+      "confidence": "low",
+      "symptom": "rel_l2 mismatch (worst = 0.0550) vs reference cluster",
+      "worst_rel_l2": 0.054982,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "tensorflow",
+        "xla",
+        "torch_compile",
+        "tvm"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Relu",
+        "MatMul",
+        "Conv",
+        "Relu",
+        "Softmax",
+        "Conv",
+        "Relu",
+        "Conv",
+        "Add",
+        "Cast",
+        "Cast"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "residual_add_relu"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "fusion",
+          "auto_conv_relu_softm"
+        ],
+        [
+          "branch",
+          "residual_double_conv"
+        ],
+        [
+          "constant",
+          "cast_roundtrip"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0055_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0055.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0056",
+      "bug_num": 1194,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0576) vs reference cluster",
+      "worst_rel_l2": 0.057607,
+      "worst_pair": [
+        "torch_compile",
+        "openvino"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Mul",
+        "Add",
+        "Concat",
+        "Min",
+        "Slice",
+        "Reshape",
+        "Transpose",
+        "Reshape",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Concat",
+        "Conv",
+        "Relu",
+        "Conv"
+      ],
+      "pattern_sequence": [
+        [
+          "constant",
+          "mul_zero_elim"
+        ],
+        [
+          "broadcast",
+          "ei_min_nan_vs_1"
+        ],
+        [
+          "layout",
+          "space_to_depth_block"
+        ],
+        [
+          "branch",
+          "three_branch_concat"
+        ],
+        [
+          "fusion",
+          "auto_conv_relu_conv"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0056.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0057",
+      "bug_num": 257,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-04",
+      "root_cause": "inductor_conv_relu_softmax_chain",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.0808) vs reference cluster",
+      "worst_rel_l2": 0.080811,
+      "worst_pair": [
+        "torchscript",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tensorflow",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "suspect_backends": [
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Conv",
+        "Relu",
+        "Conv",
+        "Relu",
+        "Gather",
+        "LayerNormalization",
+        "Mul",
+        "LayerNormalization",
+        "Abs",
+        "Add",
+        "Log",
+        "Mul",
+        "Mul",
+        "Greater",
+        "Where"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_conv_relu_conv_relu"
+        ],
+        [
+          "layout",
+          "gather_channel_permute"
+        ],
+        [
+          "normalization",
+          "double_layernorm"
+        ],
+        [
+          "broadcast",
+          "log1p_abs"
+        ],
+        [
+          "branch",
+          "rrelu_inference_identity"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0034_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0057.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0058",
+      "bug_num": 309,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0759) vs reference cluster",
+      "worst_rel_l2": 0.075933,
+      "worst_pair": [
+        "torchscript",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "LayerNormalization",
+        "MatMul",
+        "MatMul",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "Transpose",
+        "Transpose",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "Transpose",
+        "Transpose",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Mul",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "add_layernorm"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu"
+        ],
+        [
+          "layout",
+          "row_reduce_mul_transpose"
+        ],
+        [
+          "layout",
+          "row_reduce_mul_transpose"
+        ],
+        [
+          "normalization",
+          "crms_norm"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0058.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0059",
+      "bug_num": 83,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0604) vs reference cluster",
+      "worst_rel_l2": 0.060406,
+      "worst_pair": [
+        "torch_compile",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Add",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "MatMul",
+        "Greater",
+        "Where",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "broadcast",
+          "auto_add_add"
+        ],
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ],
+        [
+          "layout",
+          "row_reduce_mul_transpose"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu"
+        ],
+        [
+          "branch",
+          "where_mask_fill"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0059.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0060",
+      "bug_num": 445,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0996) vs reference cluster",
+      "worst_rel_l2": 0.099576,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "ReduceMax",
+        "Sub",
+        "MatMul",
+        "Conv",
+        "Relu",
+        "Conv",
+        "Add",
+        "Reshape",
+        "Reshape",
+        "Div",
+        "Softmax",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "normalization",
+          "reduce_max_spatial_pair"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "branch",
+          "residual_double_conv"
+        ],
+        [
+          "constant",
+          "reshape_reshape_cancel"
+        ],
+        [
+          "broadcast",
+          "softmax_mul"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0060.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0061",
+      "bug_num": 400,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0578) vs reference cluster",
+      "worst_rel_l2": 0.05776,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Concat",
+        "Conv",
+        "MatMul",
+        "ReduceMax",
+        "Sub",
+        "Exp",
+        "ReduceSum",
+        "Div",
+        "Mul",
+        "BatchNormalization",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "branch",
+          "concat_conv"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "normalization",
+          "softmax_sub_max_stable"
+        ],
+        [
+          "fusion",
+          "auto_batch_mul"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0061.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0062",
+      "bug_num": 163,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0595) vs reference cluster",
+      "worst_rel_l2": 0.059507,
+      "worst_pair": [
+        "torchscript",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "Relu",
+        "Sigmoid",
+        "Add",
+        "Relu",
+        "Softmax",
+        "Pad",
+        "Slice"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "layout",
+          "shared_transpose_fanout"
+        ],
+        [
+          "fusion",
+          "auto_relu_softm"
+        ],
+        [
+          "constant",
+          "pad_slice_noop"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0062.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0063",
+      "bug_num": 471,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0798) vs reference cluster",
+      "worst_rel_l2": 0.079807,
+      "worst_pair": [
+        "torchscript",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Relu",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Mul",
+        "Add",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Add",
+        "LayerNormalization"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "residual_add_relu"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "normalization",
+          "layer_norm_manual_chain"
+        ],
+        [
+          "attention",
+          "self_attention_residual"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0063.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0064",
+      "bug_num": 394,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0665) vs reference cluster",
+      "worst_rel_l2": 0.066478,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "MatMul",
+        "Relu",
+        "Softmax",
+        "MatMul",
+        "Conv",
+        "BatchNormalization",
+        "Relu"
+      ],
+      "pattern_sequence": [
+        [
+          "broadcast",
+          "broadcast_1x1x1x1"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "fusion",
+          "auto_relu_softm"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "fusion",
+          "conv_bn_relu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0064.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0065",
+      "bug_num": 1077,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-11g",
+      "root_cause": "spatial_attention_cbam_reduce_max_ambiguity",
+      "confidence": "low",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torchscript"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Mul",
+        "ReduceMean",
+        "ReduceMax",
+        "Concat",
+        "Conv",
+        "Sigmoid",
+        "Mul",
+        "Resize",
+        "BatchNormalization",
+        "Mul",
+        "Add",
+        "Relu",
+        "BatchNormalization",
+        "Mul",
+        "Add",
+        "Relu"
+      ],
+      "pattern_sequence": [
+        [
+          "constant",
+          "constant_add_mul"
+        ],
+        [
+          "branch",
+          "spatial_attention_cbam"
+        ],
+        [
+          "layout",
+          "rs_nearest_asymmetric_roundpreferfloor_32to30"
+        ],
+        [
+          "fusion",
+          "auto_batch_mul_add_relu"
+        ],
+        [
+          "fusion",
+          "auto_batch_mul_add_relu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0065_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0065.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0066",
+      "bug_num": 224,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0555) vs reference cluster",
+      "worst_rel_l2": 0.055536,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "ReduceMax",
+        "Mul",
+        "Add",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "Add",
+        "Add",
+        "Add",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Reshape",
+        "Reshape",
+        "Reshape",
+        "Transpose",
+        "Transpose",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Transpose",
+        "Reshape",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "Add",
+        "LayerNormalization"
+      ],
+      "pattern_sequence": [
+        [
+          "normalization",
+          "reduce_max_last"
+        ],
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ],
+        [
+          "branch",
+          "triple_add_residual"
+        ],
+        [
+          "attention",
+          "multi_head_self_attention"
+        ],
+        [
+          "attention",
+          "attention_residual_layernorm"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0066.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0067",
+      "bug_num": 8,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0595) vs reference cluster",
+      "worst_rel_l2": 0.059539,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "InstanceNormalization",
+        "Relu",
+        "Mul",
+        "Add",
+        "Relu",
+        "Conv",
+        "Relu",
+        "Conv",
+        "MatMul",
+        "MatMul",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "normalization",
+          "instancenorm_relu"
+        ],
+        [
+          "constant",
+          "mul_by_reciprocal"
+        ],
+        [
+          "fusion",
+          "auto_relu_conv_relu_conv"
+        ],
+        [
+          "broadcast",
+          "auto_matmu_matmu_mul"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0067.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0068",
+      "bug_num": 1197,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.1026) vs reference cluster",
+      "worst_rel_l2": 0.1026,
+      "worst_pair": [
+        "torch_compile",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Conv",
+        "Conv",
+        "Add",
+        "Tanh",
+        "Sin",
+        "Mul",
+        "Mul",
+        "Add",
+        "Relu",
+        "Conv",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Add",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "two_conv_sum"
+        ],
+        [
+          "broadcast",
+          "sin_unary"
+        ],
+        [
+          "fusion",
+          "auto_mul_add_relu_conv"
+        ],
+        [
+          "broadcast",
+          "auto_matmu_mul_softm"
+        ],
+        [
+          "branch",
+          "dilated_branch_sum"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0068.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0069",
+      "bug_num": 45,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0578) vs reference cluster",
+      "worst_rel_l2": 0.057822,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Reshape",
+        "Split",
+        "Concat",
+        "Tile",
+        "Conv"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "layout",
+          "reshape_split_injective"
+        ],
+        [
+          "layout",
+          "tile_conv"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0069.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0070",
+      "bug_num": 371,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0625) vs reference cluster",
+      "worst_rel_l2": 0.062549,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Resize",
+        "Conv",
+        "Relu",
+        "Conv",
+        "Relu",
+        "Slice",
+        "Tile",
+        "MatMul",
+        "Sigmoid",
+        "Mul",
+        "Sub"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "resize_nearest_asymmetric"
+        ],
+        [
+          "fusion",
+          "auto_conv_relu_conv_relu"
+        ],
+        [
+          "layout",
+          "slice_step2_tile"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "broadcast",
+          "sigmoid_rescaled_to_tanh"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0070.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0071",
+      "bug_num": 1099,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-05",
+      "root_cause": "tf_graphmode_attention_softmax_broadcast",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.6676) vs reference cluster",
+      "worst_rel_l2": 0.667585,
+      "worst_pair": [
+        "torchscript",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "suspect_backends": [
+        "tensorflow"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Reshape",
+        "Reshape",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Sqrt",
+        "Reciprocal",
+        "Mul",
+        "Mul",
+        "Add",
+        "Mul",
+        "Add",
+        "Mul",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "constant",
+          "reshape_reshape_cancel"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "constant",
+          "sqrt_reciprocal_mul"
+        ],
+        [
+          "constant",
+          "add_self_sub_double"
+        ],
+        [
+          "broadcast",
+          "auto_mul_matmu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0019_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0071.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0072",
+      "bug_num": 118,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0762) vs reference cluster",
+      "worst_rel_l2": 0.076217,
+      "worst_pair": [
+        "xla",
+        "openvino"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Conv",
+        "Conv",
+        "Conv",
+        "Concat",
+        "Conv",
+        "MatMul",
+        "Abs",
+        "Add",
+        "Div",
+        "Relu",
+        "Conv",
+        "Relu",
+        "Conv",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "aspp_dilated_branch"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "broadcast",
+          "manual_softsign"
+        ],
+        [
+          "fusion",
+          "auto_relu_conv_relu_conv"
+        ],
+        [
+          "normalization",
+          "manual_rmsnorm_last_axis"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0072.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0073",
+      "bug_num": 1130,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-11h",
+      "root_cause": "expand_add_mul_with_layernorm_axis1_fold",
+      "confidence": "low",
+      "symptom": "rel_l2 mismatch (worst = 0.0533) vs reference cluster",
+      "worst_rel_l2": 0.053312,
+      "worst_pair": [
+        "torch_compile",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "xla"
+      ],
+      "suspect_backends": [
+        "torch_compile",
+        "tvm"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "LayerNormalization",
+        "Relu",
+        "Conv",
+        "BatchNormalization",
+        "Mul",
+        "LayerNormalization",
+        "Expand",
+        "Mul",
+        "Add",
+        "Pad",
+        "Conv"
+      ],
+      "pattern_sequence": [
+        [
+          "normalization",
+          "layernorm_axis1"
+        ],
+        [
+          "fusion",
+          "auto_relu_conv_batch_mul"
+        ],
+        [
+          "normalization",
+          "layernorm_axis1"
+        ],
+        [
+          "broadcast",
+          "expand_add_mul"
+        ],
+        [
+          "layout",
+          "pad_reflect_conv"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0073_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0073.py",
+      "nature": "uncertain"
+    },
+    {
+      "unique_id": "unique_0074",
+      "bug_num": 312,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-07",
+      "root_cause": "topk_k1_plus_layernorm_axis_shape_handling",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "torchscript",
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "TopK",
+        "Tile",
+        "Add",
+        "Mul",
+        "Concat",
+        "Exp",
+        "Slice",
+        "Mul",
+        "LayerNormalization",
+        "Add",
+        "Relu",
+        "Sub"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "topk_last_axis_k1"
+        ],
+        [
+          "constant",
+          "constant_add_mul"
+        ],
+        [
+          "broadcast",
+          "ei_exp_neg_inf"
+        ],
+        [
+          "normalization",
+          "auto_mul_layer"
+        ],
+        [
+          "branch",
+          "add_relu_sub"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0074_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0074.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0075",
+      "bug_num": 77,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.2649) vs reference cluster",
+      "worst_rel_l2": 0.264859,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Cast",
+        "Mul",
+        "Greater",
+        "Sub",
+        "Where",
+        "Less",
+        "Add",
+        "Where",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Reshape",
+        "Transpose",
+        "Reshape",
+        "Expand",
+        "Reshape",
+        "Expand",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Transpose",
+        "Reshape",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "Transpose",
+        "Transpose"
+      ],
+      "pattern_sequence": [
+        [
+          "constant",
+          "cast_identity_float"
+        ],
+        [
+          "broadcast",
+          "manual_shrink"
+        ],
+        [
+          "attention",
+          "multi_query_attention"
+        ],
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ],
+        [
+          "layout",
+          "row_reduce_mul_transpose"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0075.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0076",
+      "bug_num": 784,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-11i",
+      "root_cause": "expm1_bounded_plus_resize_layout",
+      "confidence": "low",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "torchscript",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Tanh",
+        "Exp",
+        "Sub",
+        "Mul",
+        "MatMul",
+        "Resize",
+        "Cast",
+        "Cast",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Concat"
+      ],
+      "pattern_sequence": [
+        [
+          "broadcast",
+          "expm1_bounded"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "layout",
+          "rs_nearest_asymmetric_roundpreferfloor_32to30"
+        ],
+        [
+          "constant",
+          "cast_roundtrip"
+        ],
+        [
+          "branch",
+          "three_branch_concat"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0076_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0076.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0077",
+      "bug_num": 1065,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-05",
+      "root_cause": "tf_graphmode_attention_softmax_broadcast",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.0661) vs reference cluster",
+      "worst_rel_l2": 0.066082,
+      "worst_pair": [
+        "torchscript",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "suspect_backends": [
+        "tensorflow"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "Greater",
+        "Where",
+        "Mul",
+        "Unsqueeze",
+        "Squeeze",
+        "Mul",
+        "Sigmoid",
+        "Sub",
+        "Mul",
+        "Mul",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ],
+        [
+          "attention",
+          "relative_position_bias_attention"
+        ],
+        [
+          "branch",
+          "where_mask_fill"
+        ],
+        [
+          "layout",
+          "squeeze_unsqueeze"
+        ],
+        [
+          "branch",
+          "gated_residual"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0019_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0077.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0078",
+      "bug_num": 206,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0504) vs reference cluster",
+      "worst_rel_l2": 0.050423,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Sub",
+        "Div",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Concat",
+        "Concat",
+        "Mul",
+        "Gather"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "broadcast",
+          "auto_sub_div"
+        ],
+        [
+          "branch",
+          "three_branch_concat"
+        ],
+        [
+          "constant",
+          "concat_single_input"
+        ],
+        [
+          "layout",
+          "gather_channel_permute"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0078.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0079",
+      "bug_num": 261,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.2383) vs reference cluster",
+      "worst_rel_l2": 0.238315,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Reshape",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Reshape",
+        "Mul",
+        "Add",
+        "Sigmoid",
+        "Mul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Mul",
+        "Add",
+        "Sqrt",
+        "Reciprocal",
+        "Mul",
+        "Mul",
+        "GlobalAveragePool",
+        "Sigmoid",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "normalization",
+          "groupnorm_silu"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "constant",
+          "mul_by_reciprocal"
+        ],
+        [
+          "constant",
+          "sqrt_reciprocal_mul"
+        ],
+        [
+          "branch",
+          "global_branch_mul"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0079.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0080",
+      "bug_num": 175,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.2017) vs reference cluster",
+      "worst_rel_l2": 0.201668,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "BatchNormalization",
+        "Mul",
+        "Conv",
+        "BatchNormalization",
+        "LeakyRelu",
+        "Mul",
+        "Add",
+        "Relu",
+        "Conv",
+        "Pad",
+        "Conv",
+        "InstanceNormalization"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_batch_mul"
+        ],
+        [
+          "fusion",
+          "conv_bn_leakyrelu"
+        ],
+        [
+          "fusion",
+          "auto_mul_add_relu_conv"
+        ],
+        [
+          "layout",
+          "reflect_pad_conv"
+        ],
+        [
+          "normalization",
+          "instance_normalization_native"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0080.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0081",
+      "bug_num": 263,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-07",
+      "root_cause": "topk_k1_plus_layernorm_axis_shape_handling",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "openvino"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Slice",
+        "Reshape",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Mul",
+        "Mul",
+        "TopK",
+        "Tile",
+        "Add",
+        "LayerNormalization",
+        "Softmax",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "strided_slice_reshape"
+        ],
+        [
+          "normalization",
+          "crms_norm"
+        ],
+        [
+          "layout",
+          "topk_last_axis_k1"
+        ],
+        [
+          "branch",
+          "add_layernorm"
+        ],
+        [
+          "normalization",
+          "softmax_axis0_residual"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0074_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0081.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0082",
+      "bug_num": 135,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Clip",
+        "Exp",
+        "Log",
+        "Mul",
+        "Clip",
+        "Cast",
+        "Cast",
+        "Mul",
+        "Div",
+        "Cast",
+        "ReduceSum",
+        "Mul",
+        "Add",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Add",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "constant",
+          "log_exp_cancel"
+        ],
+        [
+          "constant",
+          "cast_int_roundtrip"
+        ],
+        [
+          "broadcast",
+          "ia_intdiv_truncate_neg_rhs"
+        ],
+        [
+          "branch",
+          "dilated_branch_sum"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0082.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0083",
+      "bug_num": 334,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Mul",
+        "LayerNormalization",
+        "Split",
+        "Reshape",
+        "Reshape",
+        "Concat",
+        "Reshape",
+        "LayerNormalization",
+        "Reshape",
+        "Ceil",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "normalization",
+          "auto_mul_layer"
+        ],
+        [
+          "layout",
+          "split_reshape_concat"
+        ],
+        [
+          "normalization",
+          "groupnorm_manual_chain"
+        ],
+        [
+          "broadcast",
+          "ceil_unary"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0083.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0084",
+      "bug_num": 258,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.5690) vs reference cluster",
+      "worst_rel_l2": 0.568959,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "Transpose",
+        "Transpose",
+        "Unsqueeze",
+        "Squeeze",
+        "Where",
+        "Mul",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "Add",
+        "Cast",
+        "Cast",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "row_reduce_mul_transpose"
+        ],
+        [
+          "constant",
+          "unsqueeze_three_squeeze"
+        ],
+        [
+          "constant",
+          "where_const_condition"
+        ],
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ],
+        [
+          "constant",
+          "cp_roundtrip_int32_trunc"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0084.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0085",
+      "bug_num": 1102,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-05",
+      "root_cause": "tf_graphmode_attention_softmax_broadcast",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.0749) vs reference cluster",
+      "worst_rel_l2": 0.074856,
+      "worst_pair": [
+        "tvm",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tvm",
+        "xla"
+      ],
+      "suspect_backends": [
+        "tensorflow"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Mul",
+        "Add",
+        "CumSum",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Sigmoid",
+        "Mul",
+        "Mul",
+        "MatMul",
+        "Add",
+        "Div",
+        "Erf",
+        "Add",
+        "Mul",
+        "Mul",
+        "MatMul",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "constant",
+          "add_self_sub_double"
+        ],
+        [
+          "broadcast",
+          "cumsum_last_axis"
+        ],
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ],
+        [
+          "attention",
+          "attention_gated_swiglu"
+        ],
+        [
+          "attention",
+          "transformer_ffn"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0019_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0085.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0086",
+      "bug_num": 442,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0637) vs reference cluster",
+      "worst_rel_l2": 0.063674,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Sub",
+        "Add",
+        "Mul",
+        "Mul",
+        "Mul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "constant",
+          "self_sub_zero"
+        ],
+        [
+          "constant",
+          "mul_by_one_chain"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0086.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0087",
+      "bug_num": 250,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0516) vs reference cluster",
+      "worst_rel_l2": 0.051566,
+      "worst_pair": [
+        "torchscript",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Softmax",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "LogSoftmax",
+        "Mul",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "Mul",
+        "ReduceSum",
+        "Add",
+        "Sqrt",
+        "Div"
+      ],
+      "pattern_sequence": [
+        [
+          "normalization",
+          "softmax_axis0_residual"
+        ],
+        [
+          "fusion",
+          "auto_softm_matmu_matmu"
+        ],
+        [
+          "normalization",
+          "log_softmax_chain"
+        ],
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ],
+        [
+          "normalization",
+          "l2_norm_manual_primitives"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0087.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0088",
+      "bug_num": 1136,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-08",
+      "root_cause": "resize_nearest_asymmetric_or_depthwise_conv_bn_fold",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.2727) vs reference cluster",
+      "worst_rel_l2": 0.27273,
+      "worst_pair": [
+        "onnxruntime",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Relu",
+        "Conv",
+        "Add",
+        "Mul",
+        "Cast",
+        "Mul",
+        "Conv",
+        "Resize",
+        "Resize",
+        "Conv",
+        "Add",
+        "Mul",
+        "Add",
+        "LayerNormalization"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_add_relu_conv"
+        ],
+        [
+          "constant",
+          "constant_add_mul"
+        ],
+        [
+          "constant",
+          "cast_identity_float"
+        ],
+        [
+          "branch",
+          "fpn_branch"
+        ],
+        [
+          "normalization",
+          "auto_mul_add_layer"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0088_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0088.py",
+      "nature": "uncertain"
+    },
+    {
+      "unique_id": "unique_0089",
+      "bug_num": 34,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-06",
+      "root_cause": "onnx_spec_squeeze_unsqueeze_bias_softmax_fusion_ambiguity",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "tensorflow",
+        "xla",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Relu",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "Sub",
+        "Cast",
+        "ReduceSum",
+        "Mul",
+        "Add",
+        "Add",
+        "LayerNormalization",
+        "Greater",
+        "Where",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_relu_softm"
+        ],
+        [
+          "attention",
+          "windowed_attention_banded"
+        ],
+        [
+          "broadcast",
+          "ia_sat_sub_uint8_underflow"
+        ],
+        [
+          "normalization",
+          "auto_add_layer"
+        ],
+        [
+          "branch",
+          "where_mask_fill"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0095_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0089.py",
+      "nature": "spec_ambiguity"
+    },
+    {
+      "unique_id": "unique_0090",
+      "bug_num": 403,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-06",
+      "root_cause": "onnx_spec_squeeze_unsqueeze_bias_softmax_fusion_ambiguity",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.1304) vs reference cluster",
+      "worst_rel_l2": 0.130388,
+      "worst_pair": [
+        "xla",
+        "openvino"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Add",
+        "LayerNormalization",
+        "Add",
+        "LayerNormalization",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Reshape",
+        "Transpose",
+        "Reshape",
+        "Expand",
+        "Reshape",
+        "Expand",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Transpose",
+        "Reshape",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu"
+        ],
+        [
+          "attention",
+          "self_attention_residual"
+        ],
+        [
+          "normalization",
+          "embed_layernorm_sum"
+        ],
+        [
+          "attention",
+          "multi_query_attention"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0095_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0090.py",
+      "nature": "spec_ambiguity"
+    },
+    {
+      "unique_id": "unique_0091",
+      "bug_num": 466,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0728) vs reference cluster",
+      "worst_rel_l2": 0.072772,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "LayerNormalization",
+        "Relu",
+        "Sub",
+        "Div",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Add",
+        "Div",
+        "Erf",
+        "Add",
+        "Mul",
+        "Mul",
+        "MatMul",
+        "Add",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Softmax",
+        "MatMul",
+        "Sigmoid",
+        "Mul",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "normalization",
+          "layernorm_relu"
+        ],
+        [
+          "constant",
+          "foldable_sub_zero_div_one"
+        ],
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ],
+        [
+          "attention",
+          "transformer_ffn"
+        ],
+        [
+          "attention",
+          "attention_gated_swiglu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0091.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0092",
+      "bug_num": 275,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0822) vs reference cluster",
+      "worst_rel_l2": 0.082249,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Conv",
+        "Relu",
+        "Conv",
+        "Conv",
+        "BatchNormalization",
+        "Mul",
+        "InstanceNormalization",
+        "Relu",
+        "Conv",
+        "Relu",
+        "Conv",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Mul",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_conv_relu_conv"
+        ],
+        [
+          "fusion",
+          "auto_conv_batch_mul"
+        ],
+        [
+          "normalization",
+          "instancenorm_relu"
+        ],
+        [
+          "fusion",
+          "auto_conv_relu_conv"
+        ],
+        [
+          "normalization",
+          "crms_norm"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0092.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0093",
+      "bug_num": 109,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-07",
+      "root_cause": "topk_k1_plus_layernorm_axis_shape_handling",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Relu",
+        "Sub",
+        "LayerNormalization",
+        "Mul",
+        "Add",
+        "TopK",
+        "Tile",
+        "Mul",
+        "Add",
+        "LayerNormalization",
+        "Mul",
+        "Greater",
+        "Where"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "add_relu_sub"
+        ],
+        [
+          "normalization",
+          "ada_layer_norm"
+        ],
+        [
+          "layout",
+          "topk_last_axis_k1"
+        ],
+        [
+          "normalization",
+          "auto_mul_add_layer"
+        ],
+        [
+          "branch",
+          "rrelu_inference_identity"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0074_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0093.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0094",
+      "bug_num": 262,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-03",
+      "root_cause": "fp16_cast_roundtrip_and_softmax_stability_fusion",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.1105) vs reference cluster",
+      "worst_rel_l2": 0.11049,
+      "worst_pair": [
+        "torchscript",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "Transpose",
+        "Transpose",
+        "Add",
+        "Cast",
+        "Cast",
+        "Mul",
+        "Add",
+        "Relu",
+        "ReduceMax",
+        "Sub",
+        "Exp",
+        "ReduceSum",
+        "Div",
+        "Mul",
+        "Relu",
+        "Softmax"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "row_reduce_mul_transpose"
+        ],
+        [
+          "constant",
+          "cp_roundtrip_fp16_small"
+        ],
+        [
+          "branch",
+          "residual_add_relu"
+        ],
+        [
+          "normalization",
+          "softmax_sub_max_stable"
+        ],
+        [
+          "fusion",
+          "auto_relu_softm"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0010_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0094.py",
+      "nature": "uncertain"
+    },
+    {
+      "unique_id": "unique_0095",
+      "bug_num": 253,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-06",
+      "root_cause": "onnx_spec_squeeze_unsqueeze_bias_softmax_fusion_ambiguity",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.9721) vs reference cluster",
+      "worst_rel_l2": 0.972113,
+      "worst_pair": [
+        "onnxruntime",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "xla",
+        "tvm"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Add",
+        "Add",
+        "Unsqueeze",
+        "Squeeze",
+        "Add",
+        "Softmax",
+        "Sigmoid",
+        "Mul",
+        "Add",
+        "LayerNormalization"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "triple_add_residual"
+        ],
+        [
+          "layout",
+          "squeeze_unsqueeze"
+        ],
+        [
+          "normalization",
+          "bias_softmax_fusion"
+        ],
+        [
+          "broadcast",
+          "auto_sigmo_mul"
+        ],
+        [
+          "branch",
+          "add_layernorm"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0095_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0095.py",
+      "nature": "spec_ambiguity"
+    },
+    {
+      "unique_id": "unique_0096",
+      "bug_num": 181,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-04",
+      "root_cause": "inductor_conv_relu_softmax_chain",
+      "confidence": "medium",
+      "symptom": "rel_l2 mismatch (worst = 0.8453) vs reference cluster",
+      "worst_rel_l2": 0.84527,
+      "worst_pair": [
+        "onnxruntime",
+        "torch_compile"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tensorflow",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "suspect_backends": [
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Slice",
+        "Slice",
+        "Concat",
+        "BatchNormalization",
+        "Clip",
+        "Conv",
+        "BatchNormalization",
+        "Sigmoid",
+        "Mul",
+        "LayerNormalization",
+        "Mul",
+        "Add",
+        "Sqrt",
+        "Reciprocal",
+        "Mul",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "slice_concat_identity"
+        ],
+        [
+          "normalization",
+          "batchnorm_relu6"
+        ],
+        [
+          "fusion",
+          "conv_bn_sigmoid"
+        ],
+        [
+          "normalization",
+          "auto_mul_layer"
+        ],
+        [
+          "constant",
+          "sqrt_reciprocal_mul"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0034_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0096.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0097",
+      "bug_num": 192,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0524) vs reference cluster",
+      "worst_rel_l2": 0.052378,
+      "worst_pair": [
+        "torch_compile",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "MatMul",
+        "LayerNormalization",
+        "Mul",
+        "LayerNormalization",
+        "ReduceSum",
+        "Add",
+        "Add",
+        "MatMul",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Concat"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_matmu_matmu"
+        ],
+        [
+          "normalization",
+          "double_layernorm"
+        ],
+        [
+          "normalization",
+          "reduce_sum_middle_axis"
+        ],
+        [
+          "broadcast",
+          "auto_add_matmu"
+        ],
+        [
+          "branch",
+          "three_branch_concat"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0097.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0098",
+      "bug_num": 1,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0673) vs reference cluster",
+      "worst_rel_l2": 0.067284,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Conv",
+        "BatchNormalization",
+        "Mul",
+        "Conv",
+        "BatchNormalization",
+        "Mul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Split",
+        "Mul",
+        "Mul",
+        "Concat",
+        "LayerNormalization",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_conv_batch_mul"
+        ],
+        [
+          "fusion",
+          "auto_conv_batch_mul"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "branch",
+          "split_transform_concat"
+        ],
+        [
+          "normalization",
+          "layernorm_residual_add"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0098.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0099",
+      "bug_num": 222,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0909) vs reference cluster",
+      "worst_rel_l2": 0.090904,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Conv",
+        "BatchNormalization",
+        "Mul",
+        "Add",
+        "Expand",
+        "Mul",
+        "Conv",
+        "BatchNormalization",
+        "Relu",
+        "MatMul",
+        "Conv",
+        "BatchNormalization",
+        "Sigmoid"
+      ],
+      "pattern_sequence": [
+        [
+          "fusion",
+          "auto_conv_batch_mul_add"
+        ],
+        [
+          "constant",
+          "expand_noop_identity"
+        ],
+        [
+          "fusion",
+          "depthwise_conv_bn_relu"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "fusion",
+          "conv_bn_sigmoid"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0099.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0100",
+      "bug_num": 282,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-07",
+      "root_cause": "topk_k1_plus_layernorm_axis_shape_handling",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Mul",
+        "Greater",
+        "Where",
+        "Reshape",
+        "InstanceNormalization",
+        "Reshape",
+        "Add",
+        "LayerNormalization",
+        "ReduceMax",
+        "Mul",
+        "Add",
+        "LayerNormalization",
+        "Add"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "rrelu_inference_identity"
+        ],
+        [
+          "normalization",
+          "instance_norm_1d"
+        ],
+        [
+          "branch",
+          "add_layernorm"
+        ],
+        [
+          "normalization",
+          "reduce_max_last"
+        ],
+        [
+          "normalization",
+          "layernorm_residual_add"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0074_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0100.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0101",
+      "bug_num": 469,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0863) vs reference cluster",
+      "worst_rel_l2": 0.086298,
+      "worst_pair": [
+        "xla",
+        "openvino"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "Add",
+        "Relu",
+        "Sub",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Sqrt",
+        "Mul",
+        "MatMul",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "alibi_attention"
+        ],
+        [
+          "branch",
+          "add_relu_sub"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "constant",
+          "mul_self_to_pow"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0101.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0102",
+      "bug_num": 185,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0569) vs reference cluster",
+      "worst_rel_l2": 0.056863,
+      "worst_pair": [
+        "torch_compile",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Mul",
+        "Mul",
+        "Mul",
+        "Reshape",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Reshape",
+        "Mul",
+        "Add",
+        "Sigmoid",
+        "Mul",
+        "Conv",
+        "Conv",
+        "Conv",
+        "Add",
+        "Add",
+        "Softmax",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "constant",
+          "mul_by_one_chain"
+        ],
+        [
+          "normalization",
+          "groupnorm_silu"
+        ],
+        [
+          "branch",
+          "dilated_branch_sum"
+        ],
+        [
+          "fusion",
+          "auto_softm_matmu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0102.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0103",
+      "bug_num": 441,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0810) vs reference cluster",
+      "worst_rel_l2": 0.080954,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Mul",
+        "Sigmoid",
+        "Sub",
+        "Mul",
+        "Mul",
+        "Add",
+        "MatMul",
+        "Mul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "Add",
+        "Mul",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "MatMul"
+      ],
+      "pattern_sequence": [
+        [
+          "branch",
+          "gated_residual"
+        ],
+        [
+          "attention",
+          "attention_bart_scale_first"
+        ],
+        [
+          "constant",
+          "foldable_add_zero_mul_one"
+        ],
+        [
+          "layout",
+          "row_reduce_mul_transpose"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0103.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0104",
+      "bug_num": 126,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0510) vs reference cluster",
+      "worst_rel_l2": 0.051041,
+      "worst_pair": [
+        "tvm",
+        "tensorflow"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Unsqueeze",
+        "Squeeze",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Relu",
+        "Add",
+        "Mul",
+        "Greater",
+        "Where",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Mul",
+        "Mul"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "squeeze_unsqueeze"
+        ],
+        [
+          "fusion",
+          "auto_matmu_matmu_matmu"
+        ],
+        [
+          "constant",
+          "relu_residual_sum"
+        ],
+        [
+          "branch",
+          "rrelu_inference_identity"
+        ],
+        [
+          "normalization",
+          "crms_norm"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0104.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0105",
+      "bug_num": 1208,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-02",
+      "root_cause": "xla_and_inductor_conv_bn_relu_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0504) vs reference cluster",
+      "worst_rel_l2": 0.050388,
+      "worst_pair": [
+        "onnxruntime",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla",
+        "torch_compile"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Reshape",
+        "Transpose",
+        "Reshape",
+        "Softmax",
+        "MatMul",
+        "MatMul",
+        "Conv",
+        "Transpose",
+        "Reshape",
+        "Transpose",
+        "Reshape",
+        "Pad",
+        "Slice"
+      ],
+      "pattern_sequence": [
+        [
+          "layout",
+          "reshape_transpose5d_back"
+        ],
+        [
+          "fusion",
+          "auto_softm_matmu_matmu"
+        ],
+        [
+          "layout",
+          "conv_transpose_channel_reorder"
+        ],
+        [
+          "layout",
+          "channel_shuffle"
+        ],
+        [
+          "constant",
+          "pad_slice_noop"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0064_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0105.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0106",
+      "bug_num": 467,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.7386) vs reference cluster",
+      "worst_rel_l2": 0.738566,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "MatMul",
+        "Abs",
+        "Ceil",
+        "Cast",
+        "Cast",
+        "Mul",
+        "Flatten",
+        "Reshape",
+        "MatMul",
+        "Div",
+        "Mul",
+        "Add",
+        "Div"
+      ],
+      "pattern_sequence": [
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "constant",
+          "cast_fp32_int32_roundtrip"
+        ],
+        [
+          "layout",
+          "flatten_axis2_restore"
+        ],
+        [
+          "attention",
+          "matmul_4d_batch"
+        ],
+        [
+          "constant",
+          "div_by_constant"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0106.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0107",
+      "bug_num": 768,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-11j",
+      "root_cause": "reciprocal_neg_zero_with_cast_chain",
+      "confidence": "low",
+      "symptom": "rel_l2 mismatch (worst = 0.0892) vs reference cluster",
+      "worst_rel_l2": 0.089188,
+      "worst_pair": [
+        "xla",
+        "tvm"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "openvino",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Add",
+        "Cast",
+        "Cast",
+        "Mul",
+        "Div",
+        "Mul",
+        "Concat",
+        "Mul",
+        "Concat",
+        "Reciprocal",
+        "Slice",
+        "Add",
+        "Relu",
+        "Sub"
+      ],
+      "pattern_sequence": [
+        [
+          "constant",
+          "cp_roundtrip_fp16_small"
+        ],
+        [
+          "broadcast",
+          "auto_div_mul"
+        ],
+        [
+          "constant",
+          "concat_single_input"
+        ],
+        [
+          "broadcast",
+          "ei_reciprocal_neg_zero"
+        ],
+        [
+          "branch",
+          "add_relu_sub"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0107_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0107.py",
+      "nature": "spec_ambiguity"
+    },
+    {
+      "unique_id": "unique_0108",
+      "bug_num": 579,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-11k",
+      "root_cause": "torchscript_only_reduce_l2_manual_layernorm",
+      "confidence": "low",
+      "symptom": "rel_l2 mismatch (worst = 1.0000) vs reference cluster",
+      "worst_rel_l2": 1.0,
+      "worst_pair": [
+        "onnxruntime",
+        "torchscript"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "tvm",
+        "xla"
+      ],
+      "suspect_backends": [
+        "torchscript"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Mul",
+        "Add",
+        "ReduceL2",
+        "Mul",
+        "Add",
+        "ReduceMean",
+        "Sub",
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Sqrt",
+        "Div",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Add",
+        "Softmax",
+        "MatMul",
+        "Abs",
+        "ReduceSum",
+        "Add",
+        "Div"
+      ],
+      "pattern_sequence": [
+        [
+          "constant",
+          "mul_zero_elim"
+        ],
+        [
+          "normalization",
+          "reduce_l2_last"
+        ],
+        [
+          "normalization",
+          "manual_layernorm"
+        ],
+        [
+          "attention",
+          "relative_position_bias_attention"
+        ],
+        [
+          "broadcast",
+          "reduce_broadcast_norm"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0108_min.py",
+      "minimal_repro_note": "own minimal repro",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0108.py",
+      "nature": "backend_bug"
+    },
+    {
+      "unique_id": "unique_0109",
+      "bug_num": 354,
+      "category": "compiler_backend_bug",
+      "root_cause_id": "RC-01",
+      "root_cause": "xla_hlo_attention_matmul_transpose_softmax_fusion",
+      "confidence": "high",
+      "symptom": "rel_l2 mismatch (worst = 0.0545) vs reference cluster",
+      "worst_rel_l2": 0.054524,
+      "worst_pair": [
+        "torch_compile",
+        "xla"
+      ],
+      "reference_cluster": [
+        "onnxruntime",
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm"
+      ],
+      "suspect_backends": [
+        "tensorflow",
+        "xla"
+      ],
+      "is_crash": false,
+      "op_types": [
+        "Mul",
+        "ReduceMean",
+        "Add",
+        "Pow",
+        "Div",
+        "Mul",
+        "MatMul",
+        "MatMul",
+        "MatMul",
+        "Transpose",
+        "MatMul",
+        "Mul",
+        "Where",
+        "Softmax",
+        "MatMul",
+        "Mul",
+        "ReduceSum",
+        "Add",
+        "Sqrt",
+        "Div",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose",
+        "Transpose",
+        "Transpose",
+        "MatMul",
+        "Transpose",
+        "Transpose"
+      ],
+      "pattern_sequence": [
+        [
+          "normalization",
+          "power_norm"
+        ],
+        [
+          "attention",
+          "causal_masked_attention"
+        ],
+        [
+          "broadcast",
+          "variance_norm"
+        ],
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ],
+        [
+          "layout",
+          "transpose_matmul_transpose"
+        ]
+      ],
+      "minimal_repro_path": "bug_root_cause_catalog/repros/unique_0040_min.py",
+      "minimal_repro_note": "cluster representative \u2014 the generated minimal repro exercises the same root cause",
+      "full_fidelity_repro": "campaign_v10_results/bugs_unique/unique_0109.py",
+      "nature": "backend_bug"
+    }
+  ]
+}

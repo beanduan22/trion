@@ -1,0 +1,514 @@
+{
+  "total_root_causes": 22,
+  "root_causes": [
+    {
+      "root_cause_id": "CR-01",
+      "title": "TVM relay.build 'contains free variables' on nn.dense(units=None) + add(y,y)",
+      "nature": "crash_bug",
+      "category": "compiler_crash",
+      "affected_backend_or_project": [
+        "tvm"
+      ],
+      "num_cases": 5,
+      "confidence": "high",
+      "trigger_pattern": "relay.nn.dense(x, W, units=None) -> relay.add(y, y) inside relay.build",
+      "minimal_repro_path": "unified_bug_catalog/repros/cr01_min.py",
+      "source_catalog": "crash_root_cause_catalog",
+      "member_bug_ids": [
+        "crash_000385__tvm_opt",
+        "crash_000905__tvm_opt",
+        "crash_000959__tvm_opt",
+        "crash_001225__tvm_opt",
+        "crash_001452__tvm_opt"
+      ]
+    },
+    {
+      "root_cause_id": "RC-01",
+      "title": "XLA HLO lowering of attention-style matmul/transpose/softmax pipelines",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "xla"
+      ],
+      "num_cases": 41,
+      "confidence": "high",
+      "trigger_pattern": "MatMul -> Transpose -> Softmax -> MatMul (4-D batched attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc01_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0000",
+        "unique_0001",
+        "unique_0003",
+        "unique_0012",
+        "unique_0016",
+        "unique_0018",
+        "unique_0020",
+        "unique_0026",
+        "unique_0029",
+        "unique_0030",
+        "unique_0031",
+        "unique_0037",
+        "unique_0039",
+        "unique_0040",
+        "unique_0041",
+        "unique_0043",
+        "unique_0044",
+        "unique_0046",
+        "unique_0049",
+        "unique_0054",
+        "unique_0058",
+        "unique_0059",
+        "unique_0060",
+        "unique_0061",
+        "unique_0062",
+        "unique_0063",
+        "unique_0066",
+        "unique_0075",
+        "unique_0079",
+        "unique_0082",
+        "unique_0083",
+        "unique_0084",
+        "unique_0086",
+        "unique_0087",
+        "unique_0091",
+        "unique_0097",
+        "unique_0101",
+        "unique_0103",
+        "unique_0104",
+        "unique_0106",
+        "unique_0109"
+      ]
+    },
+    {
+      "root_cause_id": "RC-02",
+      "title": "XLA + Inductor conv/BN/Relu fusion under broadcast upstream",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "num_cases": 26,
+      "confidence": "high",
+      "trigger_pattern": "Conv -> BatchNormalization -> Relu with broadcast Add/Mul upstream",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc02_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0006",
+        "unique_0008",
+        "unique_0009",
+        "unique_0011",
+        "unique_0015",
+        "unique_0017",
+        "unique_0021",
+        "unique_0024",
+        "unique_0033",
+        "unique_0038",
+        "unique_0048",
+        "unique_0052",
+        "unique_0056",
+        "unique_0064",
+        "unique_0067",
+        "unique_0068",
+        "unique_0069",
+        "unique_0070",
+        "unique_0072",
+        "unique_0078",
+        "unique_0080",
+        "unique_0092",
+        "unique_0098",
+        "unique_0099",
+        "unique_0102",
+        "unique_0105"
+      ]
+    },
+    {
+      "root_cause_id": "RC-03",
+      "title": "fp16 cast-roundtrip + fused softmax-stability chain",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "xla"
+      ],
+      "num_cases": 5,
+      "confidence": "medium",
+      "trigger_pattern": "Cast(fp32->fp16) -> Cast(fp16->fp32) -> manual softmax (Sub(max)/Exp/ReduceSum/Div)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc03_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0010",
+        "unique_0025",
+        "unique_0028",
+        "unique_0047",
+        "unique_0094"
+      ]
+    },
+    {
+      "root_cause_id": "RC-04",
+      "title": "Inductor-only Conv->Relu->Softmax chain miscompile",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torch_compile"
+      ],
+      "num_cases": 5,
+      "confidence": "medium",
+      "trigger_pattern": "Conv -> Relu -> Softmax -> Expand -> Add -> Conv -> Relu",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc04_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0013",
+        "unique_0034",
+        "unique_0053",
+        "unique_0057",
+        "unique_0096"
+      ]
+    },
+    {
+      "root_cause_id": "RC-05",
+      "title": "TF graph-mode drift on triple-MatMul + Softmax(axis=0) + Greater/Where",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow"
+      ],
+      "num_cases": 5,
+      "confidence": "medium",
+      "trigger_pattern": "3x MatMul -> Softmax(axis=0) -> ReduceMean -> Greater/Where -> Softmax",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc05_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0019",
+        "unique_0045",
+        "unique_0071",
+        "unique_0077",
+        "unique_0085"
+      ]
+    },
+    {
+      "root_cause_id": "RC-06",
+      "title": "ONNX spec ambiguity in Squeeze/Unsqueeze + bias-softmax fusion",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "num_cases": 5,
+      "confidence": "medium",
+      "trigger_pattern": "Add^3 -> Unsqueeze(axes=[2]) -> Squeeze(axes=[2]) -> bias+Softmax -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc06_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0022",
+        "unique_0036",
+        "unique_0089",
+        "unique_0090",
+        "unique_0095"
+      ]
+    },
+    {
+      "root_cause_id": "RC-07",
+      "title": "TopK(k=1) singleton-axis dropped before LayerNorm",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "xla"
+      ],
+      "num_cases": 4,
+      "confidence": "high",
+      "trigger_pattern": "TopK(k=1, axis=-1) -> Tile -> ... -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc07_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0074",
+        "unique_0081",
+        "unique_0093",
+        "unique_0100"
+      ]
+    },
+    {
+      "root_cause_id": "RC-08",
+      "title": "Depthwise Conv + BN fold AND Resize-nearest-asymmetric rounding (confounded)",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "num_cases": 3,
+      "confidence": "medium",
+      "trigger_pattern": "depthwise Conv(group=C) -> BN -> Resize(nearest, asymmetric, round_prefer_floor) -> Conv",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc08_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0005",
+        "unique_0023",
+        "unique_0088"
+      ]
+    },
+    {
+      "root_cause_id": "RC-09",
+      "title": "XLA-only Resize/Squeeze/GlobalAveragePool lowering",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "xla"
+      ],
+      "num_cases": 3,
+      "confidence": "medium",
+      "trigger_pattern": "MatMul(4-D) -> Slice(step=2) -> Tile -> MatMul -> Resize(nearest, asymmetric)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc09_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0027",
+        "unique_0032",
+        "unique_0042"
+      ]
+    },
+    {
+      "root_cause_id": "RC-10",
+      "title": "Resize nearest-asymmetric `round_prefer_floor` (spec ambiguity)",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "num_cases": 2,
+      "confidence": "high",
+      "trigger_pattern": "BN -> Mul/Div/Add -> Resize(nearest, asymmetric, round_prefer_floor, non-integer ratio)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc10_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0002",
+        "unique_0051"
+      ]
+    },
+    {
+      "root_cause_id": "RC-11a",
+      "title": "row-reduce + mul + transpose + softmax + layernorm misfold",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "num_cases": 1,
+      "confidence": "low",
+      "trigger_pattern": "ReduceMean -> Mul -> Transpose -> MatMul -> Softmax -> LayerNormalization",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11a_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0004"
+      ]
+    },
+    {
+      "root_cause_id": "RC-11b",
+      "title": "Reciprocal(zero) + Conv + BN fuse corner",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "torchscript",
+        "tvm"
+      ],
+      "num_cases": 1,
+      "confidence": "low",
+      "trigger_pattern": "Reciprocal -> Mul -> Conv -> BN -> Relu (with zero in denominator branch)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11b_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0007"
+      ]
+    },
+    {
+      "root_cause_id": "RC-11c",
+      "title": "TF + Inductor Resize(linear, half_pixel) 5->4",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile"
+      ],
+      "num_cases": 1,
+      "confidence": "low",
+      "trigger_pattern": "Relu -> Resize(linear, half_pixel, 5->4)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11c_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0014"
+      ]
+    },
+    {
+      "root_cause_id": "RC-11d",
+      "title": "branch Min/Max + LayerNorm + residual",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torchscript",
+        "tvm",
+        "xla"
+      ],
+      "num_cases": 1,
+      "confidence": "low",
+      "trigger_pattern": "Max(x, c1) -> Min(., c2) -> LayerNorm -> Residual Add -> Relu",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11d_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0035"
+      ]
+    },
+    {
+      "root_cause_id": "RC-11e",
+      "title": "identity-folding removes Where(const) mask branch (spec ambiguity)",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torch_compile",
+        "torchscript"
+      ],
+      "num_cases": 1,
+      "confidence": "low",
+      "trigger_pattern": "3x MatMul -> Add(0) -> Mul(1) -> Greater -> Where(const) (identity-folding breaks mask)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11e_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0050"
+      ]
+    },
+    {
+      "root_cause_id": "RC-11f",
+      "title": "residual-add-relu + 4D matmul; only TorchScript correct",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "tensorflow",
+        "torch_compile",
+        "tvm",
+        "xla"
+      ],
+      "num_cases": 1,
+      "confidence": "low",
+      "trigger_pattern": "Add(residual) -> Relu -> MatMul(4D) -> Softmax -> MatMul -> Conv",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11f_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0055"
+      ]
+    },
+    {
+      "root_cause_id": "RC-11g",
+      "title": "CBAM spatial-attention ReduceMax axis ambiguity",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "tensorflow",
+        "torchscript",
+        "xla"
+      ],
+      "num_cases": 1,
+      "confidence": "low",
+      "trigger_pattern": "ReduceMean || ReduceMax -> Concat -> Conv -> Sigmoid -> Mul (CBAM spatial attention)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11g_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0065"
+      ]
+    },
+    {
+      "root_cause_id": "RC-11h",
+      "title": "Expand+Add+Mul with LayerNorm(axis=1) fold",
+      "nature": "uncertain",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torch_compile",
+        "tvm"
+      ],
+      "num_cases": 1,
+      "confidence": "low",
+      "trigger_pattern": "Expand -> Add -> Mul -> LayerNormalization(axis=1)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11h_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0073"
+      ]
+    },
+    {
+      "root_cause_id": "RC-11i",
+      "title": "manual expm1 + attention + resize layout",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torchscript",
+        "xla"
+      ],
+      "num_cases": 1,
+      "confidence": "low",
+      "trigger_pattern": "Exp -> Sub(1) (manual expm1) -> MatMul -> Tanh",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11i_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0076"
+      ]
+    },
+    {
+      "root_cause_id": "RC-11j",
+      "title": "Reciprocal(-0.0) sign (IEEE-754 corner)",
+      "nature": "spec_ambiguity",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "openvino",
+        "xla"
+      ],
+      "num_cases": 1,
+      "confidence": "low",
+      "trigger_pattern": "Reciprocal(-0.0) -> Relu (signed-zero IEEE-754 corner)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11j_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0107"
+      ]
+    },
+    {
+      "root_cause_id": "RC-11k",
+      "title": "TorchScript-only ReduceL2 + manual-LayerNorm",
+      "nature": "backend_bug",
+      "category": "numerical_divergence",
+      "affected_backend_or_project": [
+        "torchscript"
+      ],
+      "num_cases": 1,
+      "confidence": "low",
+      "trigger_pattern": "Mul(x,x) -> ReduceSum -> Add(eps) -> Sqrt -> Div (manual L2-norm)",
+      "minimal_repro_path": "unified_bug_catalog/repros/rc11k_min.py",
+      "source_catalog": "bug_root_cause_catalog",
+      "member_bug_ids": [
+        "unique_0108"
+      ]
+    }
+  ]
+}
