@@ -110,13 +110,13 @@ def main() -> int:
         pass_df = _load_indicator_df(src, "pass")
         n_all_pass = int(pass_df.all(axis=1).sum())
         print(f"[stat] all-pass patterns = {n_all_pass} / {len(pass_df)}")
-        _plot(pass_df, out_dir / "pass_upset.png", args.min_size, args.title)
+        _plot(pass_df, out_dir / "upset_pass_8compilers.png", args.min_size, args.title)
 
     if args.mode in ("fail", "both"):
         fail_df = _load_indicator_df(src, "fail")
         n_any_fail = int(fail_df.any(axis=1).sum())
         print(f"[stat] any-fail patterns = {n_any_fail} / {len(fail_df)}")
-        _plot(fail_df, out_dir / "fail_upset.png", args.min_size, args.title)
+        _plot(fail_df, out_dir / "upset_fail_8compilers.png", args.min_size, args.title)
 
     if args.mode == "both":
         combo = (
